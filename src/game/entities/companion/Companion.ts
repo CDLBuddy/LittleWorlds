@@ -30,19 +30,27 @@ export class Companion {
     // Create placeholder mesh (sphere with cute color)
     this.mesh = MeshBuilder.CreateSphere(
       'companion',
-      { diameter: 0.8, segments: 16 },
+      { diameter: 1.2, segments: 16 }, // Larger: 1.2 instead of 0.8
       scene
     );
     this.mesh.position = position.clone();
     
     const mat = new StandardMaterial('companionMat', scene);
-    mat.diffuseColor = new Color3(0.9, 0.7, 0.3); // Golden/tan color
-    mat.emissiveColor = new Color3(0.3, 0.2, 0.1);
+    mat.diffuseColor = new Color3(1.0, 0.8, 0.2); // Brighter golden color
+    mat.emissiveColor = new Color3(0.6, 0.4, 0.1); // More emissive
     this.mesh.material = mat;
+    
+    console.log('[Companion] Spawned at:', position);
   }
 
   update(dt: number, playerPosition: Vector3): void {
     this.stateTime += dt;
+    
+    // Safety check: reset if position becomes invalid
+    if (isNaN(this.mesh.position.x) || isNaN(this.mesh.position.z)) {
+      console.warn('[Companion] Position became NaN, resetting to start position');
+      this.mesh.position = new Vector3(3, 0.4, 2);
+    }
     
     switch (this.state) {
       case 'FollowPlayer':
@@ -61,6 +69,12 @@ export class Companion {
   }
 
   private updateFollow(dt: number, playerPosition: Vector3): void {
+    // Validate player position
+    if (!playerPosition || isNaN(playerPosition.x) || isNaN(playerPosition.z)) {
+      console.warn('[Companion] Invalid player position in follow:', playerPosition);
+      return;
+    }
+    
     // Stay behind player at followDistance
     const targetPos = playerPosition.clone();
     targetPos.z -= this.followDistance; // Behind player
@@ -105,6 +119,8 @@ export class Companion {
 
   transitionTo(newState: CompanionState, targetPos?: Vector3, targetId?: string): void {
     if (this.state === newState) return;
+    
+    console.log(`[Companion] State transition: ${this.state} -> ${newState}`, { targetId, targetPos });
     
     this.state = newState;
     this.stateTime = 0;

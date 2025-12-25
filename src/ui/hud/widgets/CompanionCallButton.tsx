@@ -2,6 +2,7 @@ import { eventBus } from '@game/shared/events';
 
 export default function CompanionCallButton() {
   const handleCall = () => {
+    console.log('[CompanionCallButton] Button clicked, emitting ui/callCompanion');
     eventBus.emit({ type: 'ui/callCompanion' });
   };
 

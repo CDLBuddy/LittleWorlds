@@ -72,7 +72,10 @@ export class TaskSystem {
         stepIndex: this.currentStepIndex,
         complete: true,
       });
-      this.currentTask = null;
+      // Reset to beginning for testing (in production, would load next task)
+      this.currentStepIndex = 0;
+      this.inventory.clear();
+      console.log('[TaskSystem] Task complete - reset to step 0');
     } else {
       this.emitTaskEvent();
     }

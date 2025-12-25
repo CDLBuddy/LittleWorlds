@@ -105,8 +105,8 @@ export function createBootWorld(scene: Scene, eventBus: any): {
   
   const interactables: Interactable[] = [axe, logPile, campfire];
 
-  // Spawn companion near player
-  const companion = new Companion(scene, new Vector3(-2, 0.4, -2), eventBus);
+  // Spawn companion in visible position (front-left of player)
+  const companion = new Companion(scene, new Vector3(3, 0.4, 2), eventBus);
 
   // Dispose function
   const dispose = () => {

@@ -26,6 +26,8 @@ export class GameApp {
   private player: AbstractMesh | null = null;
   private companion: Companion | null = null;
   private debugOverlay: DebugOverlay | null = null;
+  private interactables: Array<{ id: string; mesh: AbstractMesh }> = [];
+  private eventUnsubscribe: (() => void) | null = null;
 
   constructor(canvas: HTMLCanvasElement, private bus: typeof eventBus) {
     // Initialize Babylon engine with iPad-friendly settings
@@ -45,7 +47,7 @@ export class GameApp {
     window.addEventListener('resize', this.resizeHandler);
     
     // Subscribe to UI events
-    this.bus.on((event) => {
+    this.eventUnsubscribe = this.bus.on((event) => {
       if (event.type === 'ui/callCompanion') {
         this.onCompanionCall();
       }
@@ -53,15 +55,34 @@ export class GameApp {
   }
   
   private onCompanionCall() {
-    if (!this.companion || !this.taskSystem) return;
+    console.log('[GameApp] Companion call button pressed');
+    
+    if (!this.companion) {
+      console.warn('[GameApp] No companion available');
+      return;
+    }
+    
+    if (!this.taskSystem) {
+      console.warn('[GameApp] No task system available');
+      return;
+    }
     
     const targetId = this.taskSystem.getCurrentTargetId();
-    if (!targetId) return;
+    console.log('[GameApp] Current task target:', targetId);
     
-    // Find target interactable
-    const target = this.scene.getMeshByName(targetId);
-    if (target) {
-      this.companion.transitionTo('LeadToTarget', target.position, targetId);
+    if (!targetId) {
+      console.warn('[GameApp] No task target available');
+      return;
+    }
+    
+    // Find target interactable from stored array
+    const interactable = this.interactables.find(i => i.id === targetId);
+    if (interactable) {
+      console.log('[GameApp] Leading companion to:', targetId, 'at position:', interactable.mesh.position);
+      this.companion.transitionTo('LeadToTarget', interactable.mesh.position, targetId);
+    } else {
+      console.warn('[GameApp] Could not find interactable with id:', targetId);
+      console.log('[GameApp] Available interactables:', this.interactables.map(i => i.id));
     }
   }
 
@@ -77,6 +98,12 @@ export class GameApp {
     this.worldDispose = world.dispose;
     this.player = world.player;
     this.companion = world.companion;
+    this.interactables = world.interactables;
+    
+    console.log('[GameApp] World loaded:', {
+      companion: this.companion.mesh.position,
+      interactables: this.interactables.length
+    });
 
     // Create player controller
     this.playerController = new PlayerController(this.scene, world.player);
@@ -114,15 +141,20 @@ export class GameApp {
     // Add interactables as wakeables
     if (this.wakeRadiusSystem) {
       world.interactables.forEach((interactable) => {
+        // Start interactables disabled (asleep)
+        interactable.mesh.setEnabled(false);
+        
         const wakeable: Wakeable = {
           id: interactable.id,
           mesh: interactable.mesh,
           asleep: true,
           wake: () => {
+            console.log('[WakeRadius] Waking:', interactable.id);
             interactable.mesh.setEnabled(true);
             wakeable.asleep = false;
           },
           sleep: () => {
+            console.log('[WakeRadius] Sleeping:', interactable.id);
             interactable.mesh.setEnabled(false);
             wakeable.asleep = true;
           },
@@ -202,6 +234,7 @@ export class GameApp {
     // Clean up interaction system
     this.interactionSystem?.dispose();
     this.interactionSystem = null;
+    this.interactables = [];
 
     // Clean up wake radius system
     this.wakeRadiusSystem?.dispose();
@@ -218,6 +251,10 @@ export class GameApp {
 
     // Remove listeners
     window.removeEventListener('resize', this.resizeHandler);
+    
+    // Unsubscribe from events
+    this.eventUnsubscribe?.();
+    this.eventUnsubscribe = null;
 
     // Dispose scene and engine
     this.scene.dispose();
