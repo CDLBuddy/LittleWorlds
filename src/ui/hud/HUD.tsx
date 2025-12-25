@@ -18,7 +18,9 @@ export default function HUD() {
           worldPos: event.worldPos,
         });
       } else if (event.type === 'game/promptClear') {
-        removePrompt(event.id);
+        if (event.id) {
+          removePrompt(event.id);
+        }
       } else if (event.type === 'game/companion/state') {
         setCompanionState(event.state);
       }

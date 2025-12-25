@@ -22,8 +22,8 @@ export type GameToUi =
   | { type: 'game/ready' }
   | { type: 'game/fps'; fps: number }
   | { type: 'game/prompt'; id: string; icon: PromptIcon; worldPos?: { x: number; y: number; z: number } }
-  | { type: 'game/promptClear'; id: string }
-  | { type: 'game/task'; id: string; status: 'started' | 'done' }
+  | { type: 'game/promptClear'; id?: string }
+  | { type: 'game/task'; taskId: string; stepIndex: number; complete?: boolean }
   | { type: 'game/companion/state'; state: CompanionState; targetId?: string };
 
 export type AppEvent = UiToGame | GameToUi;

@@ -1,49 +1,103 @@
 /**
- * Interaction System - proximity prompts + action execution
+ * Interaction System - proximity prompts + auto-interact on dwell
  */
 
 import { Vector3 } from '@babylonjs/core';
-import { Interactable } from '@game/entities/props/Interactable';
+import type { TaskSystem } from '../tasks/TaskSystem';
+import type { GameToUi } from '@game/shared/events';
+
+interface Interactable {
+  id: string;
+  mesh: { position: Vector3 };
+  interact: () => void;
+}
+
+interface EventBus {
+  emit(event: GameToUi): void;
+}
+
+const DWELL_DURATION = 500; // ms
 
 export class InteractionSystem {
   private interactables: Interactable[] = [];
-  private nearestInteractable: Interactable | null = null;
+  private dwellTarget: string | null = null;
+  private dwellTime = 0;
+  private lastPromptId: string | null = null;
+
+  constructor(
+    private taskSystem: TaskSystem,
+    private eventBus: EventBus
+  ) {}
 
   registerInteractable(interactable: Interactable): void {
     this.interactables.push(interactable);
   }
 
-  unregisterInteractable(id: string): void {
-    this.interactables = this.interactables.filter((i) => i.id !== id);
-  }
-
-  update(playerPosition: Vector3, interactionRadius: number): void {
-    let nearest: Interactable | null = null;
-    let nearestDistance = Infinity;
-
-    this.interactables.forEach((interactable) => {
-      if (!interactable.canInteract()) return;
-
-      const distance = Vector3.Distance(playerPosition, interactable.position);
-      
-      if (distance < interactionRadius && distance < nearestDistance) {
-        nearest = interactable;
-        nearestDistance = distance;
-      }
-    });
-
-    this.nearestInteractable = nearest;
-  }
-
-  getNearestInteractable(): Interactable | null {
-    return this.nearestInteractable;
-  }
-
-  interact(): boolean {
-    if (this.nearestInteractable?.canInteract()) {
-      this.nearestInteractable.interact();
-      return true;
+  update(playerPos: Vector3, dt: number): void {
+    const targetId = this.taskSystem.getCurrentTargetId();
+    if (!targetId) {
+      this.clearDwell();
+      return;
     }
-    return false;
+
+    const target = this.interactables.find((i) => i.id === targetId);
+    if (!target) {
+      this.clearDwell();
+      return;
+    }
+
+    const distance = Vector3.Distance(playerPos, target.mesh.position);
+    const interactRadius = 3.0;
+
+    if (distance < interactRadius) {
+      // Player near target - accumulate dwell time
+      if (this.dwellTarget !== targetId) {
+        this.dwellTarget = targetId;
+        this.dwellTime = 0;
+      }
+      
+      this.dwellTime += dt * 1000; // Convert to ms
+
+      // Show prompt if not shown yet
+      if (!this.lastPromptId || this.lastPromptId !== targetId) {
+        const step = this.taskSystem.getCurrentStep();
+        if (step) {
+          this.eventBus.emit({
+            type: 'game/prompt',
+            id: targetId,
+            icon: step.promptIcon,
+            worldPos: { 
+              x: target.mesh.position.x, 
+              y: target.mesh.position.y + 1.5, 
+              z: target.mesh.position.z 
+            },
+          });
+          this.lastPromptId = targetId;
+        }
+      }
+
+      // Auto-interact on dwell complete
+      if (this.dwellTime >= DWELL_DURATION && this.taskSystem.canInteract(targetId)) {
+        target.interact();
+        this.taskSystem.completeCurrentStep();
+        this.clearDwell();
+      }
+    } else {
+      this.clearDwell();
+    }
+  }
+
+  private clearDwell(): void {
+    if (this.lastPromptId) {
+      this.eventBus.emit({ type: 'game/promptClear', id: this.lastPromptId });
+      this.lastPromptId = null;
+    }
+    this.dwellTarget = null;
+    this.dwellTime = 0;
+  }
+
+  dispose(): void {
+    this.clearDwell();
+    this.interactables = [];
   }
 }

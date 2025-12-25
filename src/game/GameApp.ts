@@ -4,6 +4,10 @@ import { createBootWorld } from './worlds/BootWorld';
 import { PlayerController } from './entities/player/controller';
 import { WakeRadiusSystem, type Wakeable } from './systems/interactions/wakeRadius';
 import { DebugOverlay } from './debug/DebugOverlay';
+import type { Companion } from './entities/companion/Companion';
+import { TaskSystem } from './systems/tasks/TaskSystem';
+import { InteractionSystem } from './systems/interactions/InteractionSystem';
+import { campfire_v1 } from './content/tasks';
 
 /**
  * GameApp - Main orchestrator for the Babylon.js game
@@ -17,7 +21,10 @@ export class GameApp {
   private worldDispose: (() => void) | null = null;
   private playerController: PlayerController | null = null;
   private wakeRadiusSystem: WakeRadiusSystem | null = null;
+  private taskSystem: TaskSystem | null = null;
+  private interactionSystem: InteractionSystem | null = null;
   private player: AbstractMesh | null = null;
+  private companion: Companion | null = null;
   private debugOverlay: DebugOverlay | null = null;
 
   constructor(canvas: HTMLCanvasElement, private bus: typeof eventBus) {
@@ -36,6 +43,26 @@ export class GameApp {
       this.engine.resize();
     };
     window.addEventListener('resize', this.resizeHandler);
+    
+    // Subscribe to UI events
+    this.bus.on((event) => {
+      if (event.type === 'ui/callCompanion') {
+        this.onCompanionCall();
+      }
+    });
+  }
+  
+  private onCompanionCall() {
+    if (!this.companion || !this.taskSystem) return;
+    
+    const targetId = this.taskSystem.getCurrentTargetId();
+    if (!targetId) return;
+    
+    // Find target interactable
+    const target = this.scene.getMeshByName(targetId);
+    if (target) {
+      this.companion.transitionTo('LeadToTarget', target.position, targetId);
+    }
   }
 
   /**
@@ -46,38 +73,62 @@ export class GameApp {
     this.isRunning = true;
 
     // Create the boot world
-    const world = createBootWorld(this.scene);
+    const world = createBootWorld(this.scene, this.bus);
     this.worldDispose = world.dispose;
     this.player = world.player;
+    this.companion = world.companion;
 
     // Create player controller
     this.playerController = new PlayerController(this.scene, world.player);
 
+    // Create task system
+    this.taskSystem = new TaskSystem(this.bus);
+    
+    // Create interaction system
+    this.interactionSystem = new InteractionSystem(this.taskSystem, this.bus);
+    
+    // Register interactables
+    world.interactables.forEach((interactable) => {
+      this.interactionSystem!.registerInteractable(interactable);
+    });
+    
+    // Wire interactable callbacks to task system
+    world.interactables.forEach((interactable) => {
+      interactable.interact = () => {
+        console.log(`Interacted with ${interactable.id}`);
+      };
+    });
+
+    // Start the first task
+    this.taskSystem.startTask(campfire_v1);
+
     // Create wake radius system
     this.wakeRadiusSystem = new WakeRadiusSystem(this.scene, this.bus);
+    this.wakeRadiusSystem.setTaskSystem(this.taskSystem);
 
     // Create debug overlay (dev only)
     if (import.meta.env.DEV) {
       this.debugOverlay = new DebugOverlay();
     }
 
-    // Add campfire as wakeable
-    if (world.interactables.length > 0) {
-      const campfire = world.interactables[0];
-      const wakeable: Wakeable = {
-        id: 'campfire',
-        mesh: campfire,
-        asleep: true,
-        wake: () => {
-          campfire.setEnabled(true);
-          wakeable.asleep = false;
-        },
-        sleep: () => {
-          campfire.setEnabled(false);
-          wakeable.asleep = true;
-        },
-      };
-      this.wakeRadiusSystem.addWakeable(wakeable);
+    // Add interactables as wakeables
+    if (this.wakeRadiusSystem) {
+      world.interactables.forEach((interactable) => {
+        const wakeable: Wakeable = {
+          id: interactable.id,
+          mesh: interactable.mesh,
+          asleep: true,
+          wake: () => {
+            interactable.mesh.setEnabled(true);
+            wakeable.asleep = false;
+          },
+          sleep: () => {
+            interactable.mesh.setEnabled(false);
+            wakeable.asleep = true;
+          },
+        };
+        this.wakeRadiusSystem!.addWakeable(wakeable);
+      });
     }
 
     // Start render loop
@@ -100,6 +151,16 @@ export class GameApp {
     // Update player controller
     this.playerController?.update(dt);
 
+    // Update companion AI
+    if (this.companion && this.player) {
+      this.companion.update(dt, this.player.position);
+    }
+
+    // Update interaction system
+    if (this.interactionSystem && this.player) {
+      this.interactionSystem.update(this.player.position, dt);
+    }
+
     // Update wake radius system
     if (this.player && this.wakeRadiusSystem) {
       this.wakeRadiusSystem.update(this.player.position);
@@ -109,7 +170,10 @@ export class GameApp {
     if (this.debugOverlay && this.player) {
       this.debugOverlay.updateFPS(this.engine.getFps());
       this.debugOverlay.updatePosition(this.player.position);
-      this.debugOverlay.updateWakeState(1, 'campfire');
+      const targetId = this.taskSystem?.getCurrentTargetId();
+      if (targetId) {
+        this.debugOverlay.updateWakeState(1, targetId);
+      }
     }
   }
 
@@ -126,6 +190,18 @@ export class GameApp {
     // Clean up player controller
     this.playerController?.dispose();
     this.playerController = null;
+
+    // Clean up companion
+    this.companion?.dispose();
+    this.companion = null;
+
+    // Clean up task system
+    this.taskSystem?.dispose();
+    this.taskSystem = null;
+
+    // Clean up interaction system
+    this.interactionSystem?.dispose();
+    this.interactionSystem = null;
 
     // Clean up wake radius system
     this.wakeRadiusSystem?.dispose();

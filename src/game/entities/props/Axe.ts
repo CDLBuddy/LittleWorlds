@@ -2,30 +2,41 @@
  * Axe interactable
  */
 
-import { Vector3 } from '@babylonjs/core';
-import { BaseInteractable } from './Interactable';
+import { Scene, Vector3, MeshBuilder, StandardMaterial, Color3, AbstractMesh } from '@babylonjs/core';
 
-export class Axe extends BaseInteractable {
-  private pickedUp = false;
+export class Axe {
+  id: string;
+  mesh: AbstractMesh;
+  private onInteractCallback: (() => void) | null = null;
 
-  constructor(id: string, position: Vector3) {
-    super(id, 'axe', position);
+  constructor(scene: Scene, position: Vector3, id: string) {
+    this.id = id;
+    
+    // Create simple axe mesh (box for now)
+    this.mesh = MeshBuilder.CreateBox(
+      id, // Use id as mesh name for easy lookup
+      { width: 0.3, height: 1.0, depth: 0.1 },
+      scene
+    );
+    this.mesh.position = position.clone();
+    this.mesh.position.y = 0.5; // Hover above ground
+    
+    const mat = new StandardMaterial('axeMat', scene);
+    mat.diffuseColor = new Color3(0.6, 0.4, 0.2); // Wood handle
+    mat.emissiveColor = new Color3(0.2, 0.15, 0.1);
+    this.mesh.material = mat;
+  }
+
+  onInteract(callback: () => void): void {
+    this.onInteractCallback = callback;
   }
 
   interact(): void {
-    if (!this.pickedUp) {
-      this.pickedUp = true;
-      this.enabled = false;
-      console.log('Picked up axe');
-      // TODO: Add to inventory, hide mesh
-    }
+    this.onInteractCallback?.();
+    this.mesh.setEnabled(false); // Hide after pickup
   }
 
-  getPromptText(): string {
-    return 'Pick Up Axe';
-  }
-
-  isPickedUp(): boolean {
-    return this.pickedUp;
+  dispose(): void {
+    this.mesh.dispose();
   }
 }
