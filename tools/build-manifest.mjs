@@ -60,6 +60,15 @@ export interface AssetManifest {
 }
 
 export const assetManifest: AssetManifest = ${JSON.stringify(manifest, null, 2)};
+
+// Keyed audio paths for easy loading
+export const AUDIO: Record<string, string> = {
+${manifest.audio.map(path => {
+  const filename = path.split('/').pop() || '';
+  const key = filename.replace(/\.(ogg|mp3|wav)$/, '');
+  return `  '${key}': '${path}'`;
+}).join(',\n')}
+};
 `;
 
     await writeFile(OUTPUT_FILE, output);

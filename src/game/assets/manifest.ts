@@ -14,7 +14,26 @@ export interface AssetManifest {
 export const assetManifest: AssetManifest = {
   "models": [],
   "textures": [],
-  "audio": [],
+  "audio": [
+    "assets/audio/amb-forest.ogg",
+    "assets/audio/sfx-chop-01.ogg",
+    "assets/audio/sfx-companion-call.ogg",
+    "assets/audio/sfx-companion-lead.ogg",
+    "assets/audio/sfx-fire-ignite.ogg",
+    "assets/audio/sfx-step-01.ogg",
+    "assets/audio/sfx-success.ogg"
+  ],
   "ui": [],
   "data": []
+};
+
+// Keyed audio paths for easy loading
+export const AUDIO: Record<string, string> = {
+  'amb-forest': 'assets/audio/amb-forest.ogg',
+  'sfx-chop-01': 'assets/audio/sfx-chop-01.ogg',
+  'sfx-companion-call': 'assets/audio/sfx-companion-call.ogg',
+  'sfx-companion-lead': 'assets/audio/sfx-companion-lead.ogg',
+  'sfx-fire-ignite': 'assets/audio/sfx-fire-ignite.ogg',
+  'sfx-step-01': 'assets/audio/sfx-step-01.ogg',
+  'sfx-success': 'assets/audio/sfx-success.ogg'
 };

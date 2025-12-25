@@ -15,7 +15,9 @@ export type UiToGame =
   | { type: 'ui/resume' }
   | { type: 'ui/setQuality'; preset: 'low' | 'med' | 'high' }
   | { type: 'ui/callCompanion' }
-  | { type: 'ui/toggleHelp' };
+  | { type: 'ui/toggleHelp' }
+  | { type: 'ui/audio/unlock' }
+  | { type: 'ui/audio/volume'; bus: 'master' | 'music' | 'sfx'; value: number };
 
 // Game → UI events
 export type GameToUi =
@@ -24,7 +26,11 @@ export type GameToUi =
   | { type: 'game/prompt'; id: string; icon: PromptIcon; worldPos?: { x: number; y: number; z: number } }
   | { type: 'game/promptClear'; id?: string }
   | { type: 'game/task'; taskId: string; stepIndex: number; complete?: boolean }
-  | { type: 'game/companion/state'; state: CompanionState; targetId?: string };
+  | { type: 'game/companion/state'; state: CompanionState; targetId?: string }
+  | { type: 'game/audio/locked'; locked: boolean }
+  | { type: 'game/interact'; targetId: string }
+  | { type: 'game/dwell'; id: string; progress: number } // Dwell progress 0..1
+  | { type: 'game/dwellClear'; id: string }; // Clear dwell for specific id
 
 export type AppEvent = UiToGame | GameToUi;
 

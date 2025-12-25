@@ -57,6 +57,14 @@ export class InteractionSystem {
       }
       
       this.dwellTime += dt * 1000; // Convert to ms
+      
+      // Emit dwell progress
+      const progress = Math.min(this.dwellTime / DWELL_DURATION, 1.0);
+      this.eventBus.emit({
+        type: 'game/dwell',
+        id: targetId,
+        progress,
+      });
 
       // Show prompt if not shown yet
       if (!this.lastPromptId || this.lastPromptId !== targetId) {
@@ -80,6 +88,10 @@ export class InteractionSystem {
       if (this.dwellTime >= DWELL_DURATION && this.taskSystem.canInteract(targetId)) {
         target.interact();
         this.taskSystem.completeCurrentStep();
+        
+        // Emit interact event for SFX
+        this.eventBus.emit({ type: 'game/interact', targetId });
+        
         this.clearDwell();
       }
     } else {
@@ -88,6 +100,9 @@ export class InteractionSystem {
   }
 
   private clearDwell(): void {
+    if (this.dwellTarget) {
+      this.eventBus.emit({ type: 'game/dwellClear', id: this.dwellTarget });
+    }
     if (this.lastPromptId) {
       this.eventBus.emit({ type: 'game/promptClear', id: this.lastPromptId });
       this.lastPromptId = null;

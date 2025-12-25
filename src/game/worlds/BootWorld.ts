@@ -31,6 +31,7 @@ export function createBootWorld(scene: Scene, eventBus: any): {
   player: AbstractMesh;
   companion: Companion;
   interactables: Interactable[];
+  campfire: Campfire;
   dispose: () => void;
 } {
   // Sky-like background
@@ -127,6 +128,7 @@ export function createBootWorld(scene: Scene, eventBus: any): {
     player,
     companion,
     interactables,
+    campfire,
     dispose,
   };
 }

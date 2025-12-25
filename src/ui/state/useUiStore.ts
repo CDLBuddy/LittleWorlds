@@ -5,6 +5,7 @@ interface ActivePrompt {
   id: string;
   icon: PromptIcon;
   worldPos?: { x: number; y: number; z: number };
+  dwellProgress?: number; // 0..1 dwell progress
 }
 
 interface UiState {
@@ -22,6 +23,8 @@ interface UiState {
   addPrompt: (prompt: ActivePrompt) => void;
   removePrompt: (id: string) => void;
   setCompanionState: (state: CompanionState) => void;
+  setDwellProgress: (id: string, progress: number) => void;
+  clearDwell: (id: string) => void;
 }
 
 export const useUiStore = create<UiState>((set) => ({
@@ -60,4 +63,20 @@ export const useUiStore = create<UiState>((set) => ({
       return { activePrompts: newPrompts };
     }),
   setCompanionState: (companionState) => set({ companionState }),
+  setDwellProgress: (id, progress) =>
+    set((state) => {
+      const prompt = state.activePrompts.get(id);
+      if (!prompt) return state;
+      const newPrompts = new Map(state.activePrompts);
+      newPrompts.set(id, { ...prompt, dwellProgress: progress });
+      return { activePrompts: newPrompts };
+    }),
+  clearDwell: (id) =>
+    set((state) => {
+      const prompt = state.activePrompts.get(id);
+      if (!prompt) return state;
+      const newPrompts = new Map(state.activePrompts);
+      newPrompts.set(id, { ...prompt, dwellProgress: 0 });
+      return { activePrompts: newPrompts };
+    }),
 }));

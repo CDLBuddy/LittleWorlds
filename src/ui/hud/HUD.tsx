@@ -6,7 +6,7 @@ import InventoryBubbles from './widgets/InventoryBubbles';
 import CompanionCallButton from './widgets/CompanionCallButton';
 
 export default function HUD() {
-  const { addPrompt, removePrompt, setCompanionState, activePrompts } = useUiStore();
+  const { addPrompt, removePrompt, setCompanionState, setDwellProgress, clearDwell, activePrompts } = useUiStore();
 
   useEffect(() => {
     // Subscribe to game events
@@ -23,11 +23,15 @@ export default function HUD() {
         }
       } else if (event.type === 'game/companion/state') {
         setCompanionState(event.state);
+      } else if (event.type === 'game/dwell') {
+        setDwellProgress(event.id, event.progress);
+      } else if (event.type === 'game/dwellClear') {
+        clearDwell(event.id);
       }
     });
 
     return unsub;
-  }, [addPrompt, removePrompt, setCompanionState]);
+  }, [addPrompt, removePrompt, setCompanionState, setDwellProgress, clearDwell]);
 
   return (
     <div className="hud" style={{ position: 'fixed', width: '100%', height: '100%', pointerEvents: 'none' }}>
@@ -42,7 +46,7 @@ export default function HUD() {
         pointerEvents: 'none',
       }}>
         {Array.from(activePrompts.values()).map((prompt) => (
-          <HintPulse key={prompt.id} icon={prompt.icon} />
+          <HintPulse key={prompt.id} icon={prompt.icon} dwellProgress={prompt.dwellProgress} />
         ))}
       </div>
 

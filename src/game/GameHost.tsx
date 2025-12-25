@@ -42,6 +42,10 @@ export default function GameHost({ running, onReady }: GameHostProps) {
         ref={canvasRef} 
         id="lw-canvas"
         style={{ width: '100%', height: '100%', display: 'block', touchAction: 'none' }}
+        onPointerDown={() => {
+          // Ensure audio unlocks on first interaction
+          eventBus.emit({ type: 'ui/audio/unlock' });
+        }}
       />
       {running && <HUD />}
     </div>

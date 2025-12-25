@@ -8,6 +8,9 @@ import type { Companion } from './entities/companion/Companion';
 import { TaskSystem } from './systems/tasks/TaskSystem';
 import { InteractionSystem } from './systems/interactions/InteractionSystem';
 import { campfire_v1 } from './content/tasks';
+import { AudioSystem, type LoopHandle } from './systems/audio/AudioSystem';
+import { AMBIENT_KEYS, SFX_KEYS } from './systems/audio/sfx';
+import { AUDIO } from './assets/manifest';
 
 /**
  * GameApp - Main orchestrator for the Babylon.js game
@@ -25,9 +28,13 @@ export class GameApp {
   private interactionSystem: InteractionSystem | null = null;
   private player: AbstractMesh | null = null;
   private companion: Companion | null = null;
+  private campfire: typeof import('@game/entities/props/Campfire').Campfire.prototype | null = null;
   private debugOverlay: DebugOverlay | null = null;
   private interactables: Array<{ id: string; mesh: AbstractMesh }> = [];
   private eventUnsubscribe: (() => void) | null = null;
+  private audioSystem: AudioSystem | null = null;
+  private ambientLoop: LoopHandle | null = null;
+  private lastLeadSfxTime = 0; // Throttle companion lead SFX
 
   constructor(canvas: HTMLCanvasElement, private bus: typeof eventBus) {
     // Initialize Babylon engine with iPad-friendly settings
@@ -46,16 +53,36 @@ export class GameApp {
     };
     window.addEventListener('resize', this.resizeHandler);
     
-    // Subscribe to UI events
+    // Subscribe to UI events and game events for SFX
     this.eventUnsubscribe = this.bus.on((event) => {
       if (event.type === 'ui/callCompanion') {
         this.onCompanionCall();
+      } else if (event.type === 'ui/audio/unlock') {
+        this.audioSystem?.unlock();
+      } else if (event.type === 'ui/audio/volume') {
+        this.audioSystem?.setVolume(event.bus, event.value);
+      } else if (event.type === 'game/companion/state') {
+        // Play SFX based on companion state
+        if (event.state === 'LeadToTarget') {
+          // Throttle: only play lead SFX once every 2 seconds
+          const now = Date.now();
+          if (now - this.lastLeadSfxTime > 2000) {
+            this.audioSystem?.playSfx(SFX_KEYS.COMPANION_LEAD, { volume: 0.6 });
+            this.lastLeadSfxTime = now;
+          }
+        }
+      } else if (event.type === 'game/interact') {
+        // Play SFX based on what was interacted with
+        this.onInteract(event.targetId);
       }
     });
   }
   
   private onCompanionCall() {
     console.log('[GameApp] Companion call button pressed');
+    
+    // Play call SFX
+    this.audioSystem?.playSfx(SFX_KEYS.COMPANION_CALL, { volume: 0.7 });
     
     if (!this.companion) {
       console.warn('[GameApp] No companion available');
@@ -85,19 +112,37 @@ export class GameApp {
       console.log('[GameApp] Available interactables:', this.interactables.map(i => i.id));
     }
   }
+  
+  private onInteract(targetId: string) {
+    // Play appropriate SFX based on target
+    if (targetId === 'axe') {
+      this.audioSystem?.playSfx(SFX_KEYS.SUCCESS, { volume: 0.5 });
+    } else if (targetId === 'logPile') {
+      this.audioSystem?.playSfx(SFX_KEYS.CHOP, { volume: 0.7 });
+    } else if (targetId === 'campfire') {
+      this.audioSystem?.playSfx(SFX_KEYS.FIRE_IGNITE, { volume: 0.8 });
+    }
+  }
 
   /**
    * Start the game loop
    */
-  start() {
+  async start() {
     if (this.isRunning) return;
     this.isRunning = true;
+    
+    // Initialize audio system
+    this.audioSystem = new AudioSystem();
+    
+    // Load audio assets
+    await this.loadAudioAssets();
 
     // Create the boot world
     const world = createBootWorld(this.scene, this.bus);
     this.worldDispose = world.dispose;
     this.player = world.player;
     this.companion = world.companion;
+    this.campfire = world.campfire;
     this.interactables = world.interactables;
     
     console.log('[GameApp] World loaded:', {
@@ -163,6 +208,14 @@ export class GameApp {
       });
     }
 
+    // Start ambient loop
+    if (this.audioSystem) {
+      this.ambientLoop = this.audioSystem.playLoop(AMBIENT_KEYS.FOREST, { 
+        volume: 0.3, 
+        fadeIn: 2.0 
+      });
+    }
+
     // Start render loop
     this.engine.runRenderLoop(() => {
       if (this.isRunning) {
@@ -175,6 +228,23 @@ export class GameApp {
     // Emit ready event
     this.bus.emit({ type: 'game/ready' });
   }
+  
+  /**
+   * Load all audio assets
+   */
+  private async loadAudioAssets(): Promise<void> {
+    if (!this.audioSystem) return;
+    
+    const audioPromises: Promise<void>[] = [];
+    
+    // Load all audio files from manifest
+    Object.entries(AUDIO).forEach(([key, path]) => {
+      audioPromises.push(this.audioSystem!.loadAudio(key, path));
+    });
+    
+    await Promise.all(audioPromises);
+    console.log('[GameApp] Audio assets loaded');
+  }
 
   /**
    * Per-frame update
@@ -186,6 +256,11 @@ export class GameApp {
     // Update companion AI
     if (this.companion && this.player) {
       this.companion.update(dt, this.player.position);
+    }
+    
+    // Update campfire VFX
+    if (this.campfire) {
+      this.campfire.update(dt);
     }
 
     // Update interaction system
@@ -226,6 +301,9 @@ export class GameApp {
     // Clean up companion
     this.companion?.dispose();
     this.companion = null;
+    
+    // Clean up campfire
+    this.campfire = null;
 
     // Clean up task system
     this.taskSystem?.dispose();
@@ -244,6 +322,14 @@ export class GameApp {
     // Clean up debug overlay
     this.debugOverlay?.dispose();
     this.debugOverlay = null;
+    
+    // Stop ambient loop
+    this.ambientLoop?.stop(1.0);
+    this.ambientLoop = null;
+    
+    // Clean up audio system
+    this.audioSystem?.dispose();
+    this.audioSystem = null;
 
     // Clean up world
     this.worldDispose?.();
