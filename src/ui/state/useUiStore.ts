@@ -1,15 +1,32 @@
 import { create } from 'zustand';
+import type { PromptIcon, CompanionState } from '@game/shared/events';
+
+interface ActivePrompt {
+  id: string;
+  icon: PromptIcon;
+  worldPos?: { x: number; y: number; z: number };
+  dwellProgress?: number; // 0..1 dwell progress
+}
 
 interface UiState {
   isPaused: boolean;
   showHUD: boolean;
   currentHint: string | null;
   inventoryItems: string[];
+  activePrompts: Map<string, ActivePrompt>;
+  companionState: CompanionState | null;
+  showCompletionModal: boolean;
   setPaused: (paused: boolean) => void;
   setShowHUD: (show: boolean) => void;
   setHint: (hint: string | null) => void;
   addInventoryItem: (item: string) => void;
   removeInventoryItem: (item: string) => void;
+  addPrompt: (prompt: ActivePrompt) => void;
+  removePrompt: (id: string) => void;
+  setCompanionState: (state: CompanionState) => void;
+  setDwellProgress: (id: string, progress: number) => void;
+  clearDwell: (id: string) => void;
+  setShowCompletionModal: (show: boolean) => void;
 }
 
 export const useUiStore = create<UiState>((set) => ({
@@ -17,6 +34,9 @@ export const useUiStore = create<UiState>((set) => ({
   showHUD: true,
   currentHint: null,
   inventoryItems: [],
+  activePrompts: new Map(),
+  companionState: null,
+  showCompletionModal: false,
   setPaused: (paused) => set({ isPaused: paused }),
   setShowHUD: (show) => set({ showHUD: show }),
   setHint: (hint) => set({ currentHint: hint }),
@@ -26,4 +46,41 @@ export const useUiStore = create<UiState>((set) => ({
     set((state) => ({
       inventoryItems: state.inventoryItems.filter((i) => i !== item),
     })),
+  addPrompt: (prompt) =>
+    set((state) => {
+      const newPrompts = new Map(state.activePrompts);
+      newPrompts.set(prompt.id, prompt);
+      // Keep only last 3 prompts to avoid clutter
+      if (newPrompts.size > 3) {
+        const firstKey = newPrompts.keys().next().value;
+        if (firstKey !== undefined) {
+          newPrompts.delete(firstKey);
+        }
+      }
+      return { activePrompts: newPrompts };
+    }),
+  removePrompt: (id) =>
+    set((state) => {
+      const newPrompts = new Map(state.activePrompts);
+      newPrompts.delete(id);
+      return { activePrompts: newPrompts };
+    }),
+  setCompanionState: (companionState) => set({ companionState }),
+  setDwellProgress: (id, progress) =>
+    set((state) => {
+      const prompt = state.activePrompts.get(id);
+      if (!prompt) return state;
+      const newPrompts = new Map(state.activePrompts);
+      newPrompts.set(id, { ...prompt, dwellProgress: progress });
+      return { activePrompts: newPrompts };
+    }),
+  clearDwell: (id) =>
+    set((state) => {
+      const prompt = state.activePrompts.get(id);
+      if (!prompt) return state;
+      const newPrompts = new Map(state.activePrompts);
+      newPrompts.set(id, { ...prompt, dwellProgress: 0 });
+      return { activePrompts: newPrompts };
+    }),
+  setShowCompletionModal: (show) => set({ showCompletionModal: show }),
 }));

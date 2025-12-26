@@ -1,6 +1,7 @@
 import { useEffect, useRef } from 'react';
 import { GameApp } from './GameApp';
 import { eventBus } from './shared/events';
+import HUD from '@ui/hud/HUD';
 
 interface GameHostProps {
   running: boolean;
@@ -41,7 +42,12 @@ export default function GameHost({ running, onReady }: GameHostProps) {
         ref={canvasRef} 
         id="lw-canvas"
         style={{ width: '100%', height: '100%', display: 'block', touchAction: 'none' }}
+        onPointerDown={() => {
+          // Ensure audio unlocks on first interaction
+          eventBus.emit({ type: 'ui/audio/unlock' });
+        }}
       />
+      {running && <HUD />}
     </div>
   );
 }

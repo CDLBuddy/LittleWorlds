@@ -1,29 +1,17 @@
 /**
- * SFX - one-shots + randomization
+ * SFX key constants for all game sounds
  */
 
-export interface SfxOptions {
-  volume?: number;
-  pitch?: number;
-  pitchVariation?: number;
-}
+// Audio keys matching manifest
+export const SFX_KEYS = {
+  STEP: 'sfx-step-01',
+  SUCCESS: 'sfx-success',
+  CHOP: 'sfx-chop-01',
+  FIRE_IGNITE: 'sfx-fire-ignite',
+  COMPANION_CALL: 'sfx-companion-call',
+  COMPANION_LEAD: 'sfx-companion-lead',
+} as const;
 
-export class SfxPlayer {
-  playOneShot(soundKey: string, options: SfxOptions = {}): void {
-    const volume = options.volume ?? 1;
-    const pitch = options.pitch ?? 1;
-    const pitchVar = options.pitchVariation ?? 0;
-    
-    const finalPitch = pitch + (Math.random() - 0.5) * pitchVar;
-    
-    console.log(`Playing SFX: ${soundKey} (vol: ${volume}, pitch: ${finalPitch})`);
-    // TODO: Actual audio playback
-  }
-
-  playRandomVariation(soundKeys: string[], options: SfxOptions = {}): void {
-    const randomKey = soundKeys[Math.floor(Math.random() * soundKeys.length)];
-    this.playOneShot(randomKey, options);
-  }
-}
-
-export const sfxPlayer = new SfxPlayer();
+export const AMBIENT_KEYS = {
+  FOREST: 'amb-forest',
+} as const;

@@ -2,46 +2,47 @@
  * Task definitions - icon-first task chains
  */
 
-export interface TaskDef {
+export interface TaskStep {
   id: string;
-  name: string;
-  description: string;
-  icon: string;
-  celebrationMessage: string;
-  dependencies: string[];
+  targetId: string; // ID of the interactable to interact with
+  promptIcon: 'hand' | 'axe' | 'log' | 'fire' | 'tent' | 'fish' | 'paw';
+  requiresItem?: string; // Optional inventory requirement
 }
 
-export const TASKS: Record<string, TaskDef> = {
-  find_stick: {
-    id: 'find_stick',
-    name: 'Find a Stick',
-    description: 'Look for a stick on the ground',
-    icon: 'ui/task_stick.png',
-    celebrationMessage: 'Great job! You found a stick!',
-    dependencies: [],
-  },
-  find_axe: {
-    id: 'find_axe',
-    name: 'Find the Axe',
-    description: 'Search for the axe',
-    icon: 'ui/task_axe.png',
-    celebrationMessage: 'Awesome! You found the axe!',
-    dependencies: ['find_stick'],
-  },
-  chop_wood: {
-    id: 'chop_wood',
-    name: 'Chop Wood',
-    description: 'Use the axe to chop some logs',
-    icon: 'ui/task_chop.png',
-    celebrationMessage: 'Nice work! You chopped some wood!',
-    dependencies: ['find_axe'],
-  },
-  make_fire: {
-    id: 'make_fire',
-    name: 'Make a Fire',
-    description: 'Light the campfire with the wood',
-    icon: 'ui/task_fire.png',
-    celebrationMessage: 'Amazing! The fire is burning bright!',
-    dependencies: ['chop_wood'],
-  },
+export interface Task {
+  id: string;
+  name: string;
+  steps: TaskStep[];
+}
+
+/**
+ * Campfire v1: Simple 3-step task chain
+ * 1. Pick up axe (hand icon)
+ * 2. Use axe on log pile (axe icon, requires axe)
+ * 3. Light campfire (fire icon, requires log)
+ */
+export const campfire_v1: Task = {
+  id: 'campfire_v1',
+  name: 'Build a Campfire',
+  steps: [
+    {
+      id: 'pickup_axe',
+      targetId: 'axe_001',
+      promptIcon: 'hand',
+    },
+    {
+      id: 'chop_log',
+      targetId: 'logpile_001',
+      promptIcon: 'axe',
+      requiresItem: 'axe',
+    },
+    {
+      id: 'light_fire',
+      targetId: 'campfire',
+      promptIcon: 'fire',
+      requiresItem: 'log',
+    },
+  ],
 };
+
+export const allTasks: Task[] = [campfire_v1];

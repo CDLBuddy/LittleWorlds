@@ -2,49 +2,97 @@
  * Task System - toddler-friendly task chains
  */
 
-export interface Task {
-  id: string;
-  name: string;
-  description: string;
-  icon: string;
-  completed: boolean;
-  dependencies: string[];
+import type { Task } from '@game/content/tasks';
+import type { GameToUi } from '@game/shared/events';
+
+interface EventBus {
+  emit(event: GameToUi): void;
 }
 
 export class TaskSystem {
-  private tasks = new Map<string, Task>();
-  private completedTasks = new Set<string>();
+  private currentTask: Task | null = null;
+  private currentStepIndex = 0;
+  private inventory = new Set<string>();
 
-  registerTask(task: Task): void {
-    this.tasks.set(task.id, task);
+  constructor(private eventBus: EventBus) {}
+
+  startTask(task: Task): void {
+    this.currentTask = task;
+    this.currentStepIndex = 0;
+    this.emitTaskEvent();
   }
 
-  completeTask(taskId: string): void {
-    const task = this.tasks.get(taskId);
-    if (!task) return;
+  getCurrentTargetId(): string | null {
+    if (!this.currentTask || this.currentStepIndex >= this.currentTask.steps.length) {
+      return null;
+    }
+    return this.currentTask.steps[this.currentStepIndex].targetId;
+  }
 
-    task.completed = true;
-    this.completedTasks.add(taskId);
+  getCurrentStep() {
+    if (!this.currentTask || this.currentStepIndex >= this.currentTask.steps.length) {
+      return null;
+    }
+    return this.currentTask.steps[this.currentStepIndex];
+  }
+
+  canInteract(targetId: string): boolean {
+    if (!this.currentTask) return false;
     
-    console.log(`Task completed: ${task.name}`);
-    // TODO: Trigger celebration, UI update
+    const step = this.currentTask.steps[this.currentStepIndex];
+    if (step.targetId !== targetId) return false;
+    
+    // Check inventory requirement
+    if (step.requiresItem && !this.inventory.has(step.requiresItem)) {
+      return false;
+    }
+    
+    return true;
   }
 
-  isTaskAvailable(taskId: string): boolean {
-    const task = this.tasks.get(taskId);
-    if (!task) return false;
-
-    // Check if all dependencies are completed
-    return task.dependencies.every((depId) => this.completedTasks.has(depId));
+  completeCurrentStep(): void {
+    if (!this.currentTask) return;
+    
+    const step = this.currentTask.steps[this.currentStepIndex];
+    
+    // Grant item based on step (simple mapping)
+    if (step.id === 'pickup_axe') {
+      this.inventory.add('axe');
+    } else if (step.id === 'chop_log') {
+      this.inventory.add('log');
+    }
+    
+    this.currentStepIndex++;
+    
+    // Check if task complete
+    if (this.currentStepIndex >= this.currentTask.steps.length) {
+      this.eventBus.emit({
+        type: 'game/task',
+        taskId: this.currentTask.id,
+        stepIndex: this.currentStepIndex,
+        complete: true,
+      });
+      // Reset to beginning for testing (in production, would load next task)
+      this.currentStepIndex = 0;
+      this.inventory.clear();
+      console.log('[TaskSystem] Task complete - reset to step 0');
+    } else {
+      this.emitTaskEvent();
+    }
   }
 
-  getAvailableTasks(): Task[] {
-    return Array.from(this.tasks.values()).filter(
-      (task) => !task.completed && this.isTaskAvailable(task.id)
-    );
+  private emitTaskEvent(): void {
+    if (!this.currentTask) return;
+    
+    this.eventBus.emit({
+      type: 'game/task',
+      taskId: this.currentTask.id,
+      stepIndex: this.currentStepIndex,
+    });
   }
 
-  getCompletedTasks(): Task[] {
-    return Array.from(this.tasks.values()).filter((task) => task.completed);
+  dispose(): void {
+    this.currentTask = null;
+    this.inventory.clear();
   }
 }

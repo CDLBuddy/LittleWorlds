@@ -2,33 +2,40 @@
  * Log pile interactable
  */
 
-import { Vector3 } from '@babylonjs/core';
-import { BaseInteractable } from './Interactable';
+import { Scene, Vector3, MeshBuilder, StandardMaterial, Color3, AbstractMesh } from '@babylonjs/core';
 
-export class LogPile extends BaseInteractable {
-  private logsRemaining = 5;
+export class LogPile {
+  id: string;
+  mesh: AbstractMesh;
+  private onInteractCallback: (() => void) | null = null;
 
-  constructor(id: string, position: Vector3) {
-    super(id, 'logs', position);
+  constructor(scene: Scene, position: Vector3, id: string) {
+    this.id = id;
+    
+    // Create log pile mesh (cylinder stack)
+    this.mesh = MeshBuilder.CreateCylinder(
+      id, // Use id as mesh name
+      { height: 0.8, diameter: 1.5 },
+      scene
+    );
+    this.mesh.position = position.clone();
+    this.mesh.position.y = 0.4;
+    
+    const mat = new StandardMaterial('logpileMat', scene);
+    mat.diffuseColor = new Color3(0.5, 0.3, 0.1); // Dark wood
+    mat.emissiveColor = new Color3(0.15, 0.1, 0.05);
+    this.mesh.material = mat;
+  }
+
+  onInteract(callback: () => void): void {
+    this.onInteractCallback = callback;
   }
 
   interact(): void {
-    if (this.logsRemaining > 0) {
-      this.logsRemaining--;
-      console.log(`Collected log. ${this.logsRemaining} remaining.`);
-      // TODO: Add log to inventory
-      
-      if (this.logsRemaining === 0) {
-        this.enabled = false;
-      }
-    }
+    this.onInteractCallback?.();
   }
 
-  getPromptText(): string {
-    return `Collect Log (${this.logsRemaining})`;
-  }
-
-  canInteract(): boolean {
-    return this.enabled && this.logsRemaining > 0;
+  dispose(): void {
+    this.mesh.dispose();
   }
 }

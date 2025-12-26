@@ -1,7 +1,13 @@
 import { useNavigate } from 'react-router-dom';
+import { eventBus } from '@game/shared/events';
 
 export default function TitleScreen() {
   const navigate = useNavigate();
+
+  const handlePlay = () => {
+    eventBus.emit({ type: 'ui/audio/unlock' });
+    navigate('/game');
+  };
 
   return (
     <div className="title-screen" style={{ 
@@ -17,7 +23,7 @@ export default function TitleScreen() {
       <h1 style={{ fontSize: '3rem', marginBottom: '2rem' }}>Little Worlds</h1>
       <div className="menu-buttons" style={{ display: 'flex', flexDirection: 'column', gap: '1rem' }}>
         <button 
-          onClick={() => navigate('/game')} 
+          onClick={handlePlay}
           style={{
             padding: '1rem 2rem',
             fontSize: '1.5rem',

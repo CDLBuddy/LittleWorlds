@@ -1,21 +1,38 @@
 /**
  * Touch-to-move player controller
- * Raycast to ground, smooth movement to target position
+ * Velocity-based movement with acceleration, deceleration, and smooth turning
  */
 
-import { Scene, AbstractMesh, Vector3, Observer, PointerInfo, PointerEventTypes } from '@babylonjs/core';
+import { Scene, Vector3, Observer, PointerInfo, PointerEventTypes, TransformNode } from '@babylonjs/core';
+import { lerpAngle } from '@game/shared/math';
+import { Player } from './Player';
 
 export class PlayerController {
+  private playerEntity: Player | null = null;
   private targetPosition: Vector3 | null = null;
-  private moveSpeed = 3.5;
-  private stopDistance = 0.1;
+  private velocity = Vector3.Zero();
+  private currentYaw = 0;
+  
+  // Movement parameters
+  private maxSpeed = 6.0;
+  private acceleration = 18.0;
+  private deceleration = 22.0;
+  private stopDistance = 0.25;
+  private arriveRadius = 2.0; // Start slowing down when within this distance
+  private turnSmoothness = 12.0; // Higher = faster turning
+  
   private pointerObserver: Observer<PointerInfo> | null = null;
 
   constructor(
     private scene: Scene,
-    private player: AbstractMesh
+    private player: TransformNode
   ) {
+    this.currentYaw = this.player.rotation.y;
     this.setupPointerObserver();
+  }
+
+  public setPlayerEntity(player: Player): void {
+    this.playerEntity = player;
   }
 
   private setupPointerObserver() {
@@ -47,37 +64,68 @@ export class PlayerController {
   }
 
   update(dt: number) {
-    if (!this.targetPosition) return;
-
     const playerPos = this.player.position;
-    const direction = this.targetPosition.subtract(playerPos);
     
-    // Keep Y locked to ground level (player height)
-    direction.y = 0;
+    if (this.targetPosition) {
+      // Calculate direction to target (2D only)
+      const toTarget = this.targetPosition.subtract(playerPos);
+      toTarget.y = 0;
+      const distance = toTarget.length();
+
+      if (distance < this.stopDistance) {
+        // Reached target - stop
+        this.targetPosition = null;
+        this.velocity.scaleInPlace(0);
+      } else {
+        // Calculate desired velocity with arrive behavior
+        const direction = toTarget.normalize();
+        let desiredSpeed = this.maxSpeed;
+        
+        // Arrive behavior: slow down as we approach
+        if (distance < this.arriveRadius) {
+          desiredSpeed *= (distance / this.arriveRadius);
+        }
+        
+        const desiredVelocity = direction.scale(desiredSpeed);
+        
+        // Accelerate toward desired velocity
+        const velocityDiff = desiredVelocity.subtract(this.velocity);
+        const accelRate = this.acceleration * dt;
+        
+        if (velocityDiff.length() > accelRate) {
+          this.velocity.addInPlace(velocityDiff.normalize().scale(accelRate));
+        } else {
+          this.velocity = desiredVelocity;
+        }
+      }
+    } else {
+      // No target - decelerate to stop
+      const speed = this.velocity.length();
+      if (speed > 0.01) {
+        const decelAmount = this.deceleration * dt;
+        if (speed < decelAmount) {
+          this.velocity.scaleInPlace(0);
+        } else {
+          this.velocity.addInPlace(this.velocity.normalize().scale(-decelAmount));
+        }
+      }
+    }
     
-    const distance = direction.length();
-
-    if (distance < this.stopDistance) {
-      // Reached target
-      this.targetPosition = null;
-      return;
+    // Apply velocity to position
+    playerPos.addInPlace(this.velocity.scale(dt));
+    playerPos.y = 0.5; // Keep at ground level (player height)
+    
+    // Smooth rotation to face movement direction
+    const speed = this.velocity.length();
+    if (speed > 0.5) {
+      const targetYaw = Math.atan2(this.velocity.x, this.velocity.z);
+      this.currentYaw = lerpAngle(this.currentYaw, targetYaw, 1 - Math.exp(-this.turnSmoothness * dt));
+      this.player.rotation.y = this.currentYaw;
     }
-
-    // Move toward target with smooth interpolation
-    const moveDistance = Math.min(this.moveSpeed * dt, distance);
-    direction.normalize();
-    playerPos.addInPlace(direction.scale(moveDistance));
-
-    // Rotate player to face movement direction
-    if (distance > 0.01) {
-      const angle = Math.atan2(direction.x, direction.z);
-      this.player.rotation.y = angle;
-    }
-
-    // Update camera target (if camera reference exists)
-    const camera = (this.player as any)._camera;
-    if (camera) {
-      camera.target = playerPos.clone();
+    
+    // Trigger animations based on speed
+    if (this.playerEntity) {
+      this.playerEntity.isMoving(speed);
     }
   }
 

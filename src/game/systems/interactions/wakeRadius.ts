@@ -1,10 +1,12 @@
 /**
  * Wake Radius System - Hysteresis-based proximity detection
  * R_IN = 6, R_OUT = 8
+ * Task-aware: keeps current task target awake at larger radius
  */
 
 import { Scene, AbstractMesh, Vector3, Animation } from '@babylonjs/core';
 import type { AppEvent } from '@game/shared/events';
+import type { TaskSystem } from '../tasks/TaskSystem';
 
 export interface Wakeable {
   id: string;
@@ -21,9 +23,15 @@ interface EventBus {
 export class WakeRadiusSystem {
   private readonly R_IN = 6;
   private readonly R_OUT = 8;
+  private readonly TASK_R_IN = 14; // Larger radius for task targets
   private wakeables: Wakeable[] = [];
+  private taskSystem: TaskSystem | null = null;
 
-  constructor(private scene: Scene, private eventBus: EventBus) {}
+  constructor(private scene: Scene, _eventBus: EventBus) {}
+
+  setTaskSystem(taskSystem: TaskSystem) {
+    this.taskSystem = taskSystem;
+  }
 
   addWakeable(wakeable: Wakeable) {
     this.wakeables.push(wakeable);
@@ -34,20 +42,20 @@ export class WakeRadiusSystem {
   }
 
   update(playerPosition: Vector3) {
+    const taskTargetId = this.taskSystem?.getCurrentTargetId();
+    
     for (const wakeable of this.wakeables) {
       const distance = Vector3.Distance(playerPosition, wakeable.mesh.position);
+      const isTaskTarget = taskTargetId === wakeable.id;
+      const rIn = isTaskTarget ? this.TASK_R_IN : this.R_IN;
+      const rOut = isTaskTarget ? this.TASK_R_IN + 2 : this.R_OUT;
 
-      if (wakeable.asleep && distance < this.R_IN) {
+      if (wakeable.asleep && distance < rIn) {
         // Wake up
         wakeable.wake();
         this.animateWake(wakeable.mesh);
-        this.eventBus.emit({
-          type: 'game/prompt',
-          id: wakeable.id,
-          icon: 'hand',
-        });
-      } else if (!wakeable.asleep && distance > this.R_OUT) {
-        // Go to sleep
+      } else if (!wakeable.asleep && distance > rOut && !isTaskTarget) {
+        // Go to sleep (but never sleep current task target)
         wakeable.sleep();
       }
     }

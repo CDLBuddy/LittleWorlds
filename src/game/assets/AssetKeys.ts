@@ -2,6 +2,12 @@
  * Canonical asset keys - no string soup!
  */
 
+// Model keys that match manifest
+export const MODEL_KEYS = {
+  BOY: 'boy',
+  DOG: 'dog'
+} as const;
+
 export const AssetKeys = {
   Models: {
     PLAYER_TWIN: 'models/player_twin.glb',

@@ -29,3 +29,14 @@ export function randomInt(min: number, max: number): number {
 export function easeInOut(t: number): number {
   return t < 0.5 ? 2 * t * t : -1 + (4 - 2 * t) * t;
 }
+
+export function dampedLerp(current: number, target: number, smoothing: number, dt: number): number {
+  return lerp(current, target, 1 - Math.exp(-smoothing * dt));
+}
+
+export function lerpAngle(from: number, to: number, t: number): number {
+  let diff = to - from;
+  while (diff > Math.PI) diff -= Math.PI * 2;
+  while (diff < -Math.PI) diff += Math.PI * 2;
+  return from + diff * t;
+}
