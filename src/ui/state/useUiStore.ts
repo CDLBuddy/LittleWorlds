@@ -15,6 +15,7 @@ interface UiState {
   inventoryItems: string[];
   activePrompts: Map<string, ActivePrompt>;
   companionState: CompanionState | null;
+  showCompletionModal: boolean;
   setPaused: (paused: boolean) => void;
   setShowHUD: (show: boolean) => void;
   setHint: (hint: string | null) => void;
@@ -25,6 +26,7 @@ interface UiState {
   setCompanionState: (state: CompanionState) => void;
   setDwellProgress: (id: string, progress: number) => void;
   clearDwell: (id: string) => void;
+  setShowCompletionModal: (show: boolean) => void;
 }
 
 export const useUiStore = create<UiState>((set) => ({
@@ -34,6 +36,7 @@ export const useUiStore = create<UiState>((set) => ({
   inventoryItems: [],
   activePrompts: new Map(),
   companionState: null,
+  showCompletionModal: false,
   setPaused: (paused) => set({ isPaused: paused }),
   setShowHUD: (show) => set({ showHUD: show }),
   setHint: (hint) => set({ currentHint: hint }),
@@ -79,4 +82,5 @@ export const useUiStore = create<UiState>((set) => ({
       newPrompts.set(id, { ...prompt, dwellProgress: 0 });
       return { activePrompts: newPrompts };
     }),
+  setShowCompletionModal: (show) => set({ showCompletionModal: show }),
 }));

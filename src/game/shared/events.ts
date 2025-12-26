@@ -8,6 +8,9 @@ export type PromptIcon = 'hand' | 'axe' | 'log' | 'fire' | 'tent' | 'fish' | 'pa
 // Companion FSM states
 export type CompanionState = 'FollowPlayer' | 'LeadToTarget' | 'InvestigateTarget' | 'Celebrate';
 
+// Camera modes for dynamic framing
+export type CameraMode = 'FOLLOW' | 'LEAD' | 'CELEBRATE';
+
 // UI → Game events
 export type UiToGame =
   | { type: 'ui/play' }
@@ -17,7 +20,8 @@ export type UiToGame =
   | { type: 'ui/callCompanion' }
   | { type: 'ui/toggleHelp' }
   | { type: 'ui/audio/unlock' }
-  | { type: 'ui/audio/volume'; bus: 'master' | 'music' | 'sfx'; value: number };
+  | { type: 'ui/audio/volume'; bus: 'master' | 'music' | 'sfx'; value: number }
+  | { type: 'ui/restart' };
 
 // Game → UI events
 export type GameToUi =
@@ -26,6 +30,7 @@ export type GameToUi =
   | { type: 'game/prompt'; id: string; icon: PromptIcon; worldPos?: { x: number; y: number; z: number } }
   | { type: 'game/promptClear'; id?: string }
   | { type: 'game/task'; taskId: string; stepIndex: number; complete?: boolean }
+  | { type: 'game/taskComplete'; taskId: string; position: { x: number; y: number; z: number } }
   | { type: 'game/companion/state'; state: CompanionState; targetId?: string }
   | { type: 'game/audio/locked'; locked: boolean }
   | { type: 'game/interact'; targetId: string }

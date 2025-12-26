@@ -12,9 +12,10 @@ import {
   Vector3,
   MeshBuilder,
   StandardMaterial,
-  ArcRotateCamera,
   AbstractMesh,
+  TransformNode,
 } from '@babylonjs/core';
+import { Player } from '@game/entities/player/Player';
 import { Companion } from '@game/entities/companion/Companion';
 import { Axe } from '@game/entities/props/Axe';
 import { LogPile } from '@game/entities/props/LogPile';
@@ -28,7 +29,8 @@ interface Interactable {
 }
 
 export function createBootWorld(scene: Scene, eventBus: any): {
-  player: AbstractMesh;
+  player: TransformNode;
+  playerEntity: Player;
   companion: Companion;
   interactables: Interactable[];
   campfire: Campfire;
@@ -61,38 +63,10 @@ export function createBootWorld(scene: Scene, eventBus: any): {
   ground.material = groundMat;
   ground.receiveShadows = true;
 
-  // Player capsule
-  const player = MeshBuilder.CreateCapsule(
-    'player',
-    { height: 1.8, radius: 0.4, tessellation: 16 },
-    scene
-  );
-  player.position = new Vector3(0, 0.9, 0);
-  
-  const playerMat = new StandardMaterial('playerMat', scene);
-  playerMat.diffuseColor = new Color3(0.2, 0.5, 0.9);
-  playerMat.specularColor = new Color3(0.3, 0.3, 0.3);
-  player.material = playerMat;
+  // Player entity (loads Boy.fbx asynchronously)
+  const player = new Player(scene, new Vector3(0, 0.9, 0));
 
-  // Camera - third person follow
-  const camera = new ArcRotateCamera(
-    'camera',
-    -Math.PI / 2, // alpha (horizontal rotation)
-    Math.PI / 3,  // beta (vertical angle)
-    8,            // radius (distance from target)
-    player.position.clone(),
-    scene
-  );
-  
-  camera.lowerBetaLimit = Math.PI / 6;
-  camera.upperBetaLimit = Math.PI / 2.5;
-  camera.lowerRadiusLimit = 4;
-  camera.upperRadiusLimit = 12;
-  camera.wheelPrecision = 100; // Disable wheel zoom for touch
-  camera.attachControl(scene.getEngine().getRenderingCanvas(), false);
-
-  // Store camera reference for later updates
-  (player as any)._camera = camera;
+  // Note: Camera is now created by GameApp's CameraRig
 
   // Create task interactables in triangle layout
   // Axe at (8, 0, 0)
@@ -114,18 +88,17 @@ export function createBootWorld(scene: Scene, eventBus: any): {
     ground.dispose();
     player.dispose();
     groundMat.dispose();
-    playerMat.dispose();
     axe.dispose();
     logPile.dispose();
     campfire.dispose();
     companion.dispose();
     hemiLight.dispose();
     dirLight.dispose();
-    camera.dispose();
   };
 
   return {
-    player,
+    player: player.mesh,
+    playerEntity: player,
     companion,
     interactables,
     campfire,

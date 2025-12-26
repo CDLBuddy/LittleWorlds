@@ -4,9 +4,19 @@ import { useUiStore } from '@ui/state/useUiStore';
 import HintPulse from './widgets/HintPulse';
 import InventoryBubbles from './widgets/InventoryBubbles';
 import CompanionCallButton from './widgets/CompanionCallButton';
+import CompletionModal from '@ui/screens/CompletionModal';
 
 export default function HUD() {
-  const { addPrompt, removePrompt, setCompanionState, setDwellProgress, clearDwell, activePrompts } = useUiStore();
+  const { 
+    addPrompt, 
+    removePrompt, 
+    setCompanionState, 
+    setDwellProgress, 
+    clearDwell, 
+    activePrompts,
+    showCompletionModal,
+    setShowCompletionModal,
+  } = useUiStore();
 
   useEffect(() => {
     // Subscribe to game events
@@ -27,11 +37,13 @@ export default function HUD() {
         setDwellProgress(event.id, event.progress);
       } else if (event.type === 'game/dwellClear') {
         clearDwell(event.id);
+      } else if (event.type === 'game/taskComplete') {
+        // Show completion modal\n        setShowCompletionModal(true);
       }
     });
 
     return unsub;
-  }, [addPrompt, removePrompt, setCompanionState, setDwellProgress, clearDwell]);
+  }, [addPrompt, removePrompt, setCompanionState, setDwellProgress, clearDwell, setShowCompletionModal]);
 
   return (
     <div className="hud" style={{ position: 'fixed', width: '100%', height: '100%', pointerEvents: 'none' }}>
@@ -55,6 +67,12 @@ export default function HUD() {
         <InventoryBubbles />
         <CompanionCallButton />
       </div>
+      
+      {/* Completion Modal */}
+      <CompletionModal 
+        isOpen={showCompletionModal} 
+        onClose={() => setShowCompletionModal(false)} 
+      />
     </div>
   );
 }

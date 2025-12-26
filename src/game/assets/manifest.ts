@@ -12,7 +12,10 @@ export interface AssetManifest {
 }
 
 export const assetManifest: AssetManifest = {
-  "models": [],
+  "models": [
+    "assets/models/Boy.glb",
+    "assets/models/Dog.glb"
+  ],
   "textures": [],
   "audio": [
     "assets/audio/amb-forest.ogg",
@@ -25,6 +28,12 @@ export const assetManifest: AssetManifest = {
   ],
   "ui": [],
   "data": []
+};
+
+// Keyed model paths for easy loading
+export const MODELS: Record<string, string> = {
+  'boy': 'assets/models/Boy.glb',
+  'dog': 'assets/models/Dog.glb'
 };
 
 // Keyed audio paths for easy loading

@@ -1,6 +1,7 @@
-import { Engine, Scene, AbstractMesh } from '@babylonjs/core';
+import { Engine, Scene, AbstractMesh, TransformNode } from '@babylonjs/core';
 import { eventBus } from './shared/events';
 import { createBootWorld } from './worlds/BootWorld';
+import { Player } from './entities/player/Player';
 import { PlayerController } from './entities/player/controller';
 import { WakeRadiusSystem, type Wakeable } from './systems/interactions/wakeRadius';
 import { DebugOverlay } from './debug/DebugOverlay';
@@ -11,6 +12,10 @@ import { campfire_v1 } from './content/tasks';
 import { AudioSystem, type LoopHandle } from './systems/audio/AudioSystem';
 import { AMBIENT_KEYS, SFX_KEYS } from './systems/audio/sfx';
 import { AUDIO } from './assets/manifest';
+import { CameraRig } from './systems/camera/CameraRig';
+import { FxSystem } from './systems/fx/FxSystem';
+import { CompanionDebugHelper } from './debug/CompanionDebugHelper';
+import { PlayerDebugHelper } from './debug/PlayerDebugHelper';
 
 /**
  * GameApp - Main orchestrator for the Babylon.js game
@@ -26,7 +31,7 @@ export class GameApp {
   private wakeRadiusSystem: WakeRadiusSystem | null = null;
   private taskSystem: TaskSystem | null = null;
   private interactionSystem: InteractionSystem | null = null;
-  private player: AbstractMesh | null = null;
+  private player: TransformNode | null = null;
   private companion: Companion | null = null;
   private campfire: typeof import('@game/entities/props/Campfire').Campfire.prototype | null = null;
   private debugOverlay: DebugOverlay | null = null;
@@ -35,6 +40,11 @@ export class GameApp {
   private audioSystem: AudioSystem | null = null;
   private ambientLoop: LoopHandle | null = null;
   private lastLeadSfxTime = 0; // Throttle companion lead SFX
+  private cameraRig: CameraRig | null = null;
+  private fxSystem: FxSystem | null = null;
+  private companionDebugHelper: CompanionDebugHelper | null = null;
+  private playerDebugHelper: PlayerDebugHelper | null = null;
+  private playerEntity: Player | null = null;
 
   constructor(canvas: HTMLCanvasElement, private bus: typeof eventBus) {
     // Initialize Babylon engine with iPad-friendly settings
@@ -61,6 +71,8 @@ export class GameApp {
         this.audioSystem?.unlock();
       } else if (event.type === 'ui/audio/volume') {
         this.audioSystem?.setVolume(event.bus, event.value);
+      } else if (event.type === 'ui/restart') {
+        this.onRestart();
       } else if (event.type === 'game/companion/state') {
         // Play SFX based on companion state
         if (event.state === 'LeadToTarget') {
@@ -70,6 +82,34 @@ export class GameApp {
             this.audioSystem?.playSfx(SFX_KEYS.COMPANION_LEAD, { volume: 0.6 });
             this.lastLeadSfxTime = now;
           }
+          // Switch camera to LEAD mode for better view
+          this.cameraRig?.setMode('LEAD');
+        } else if (event.state === 'FollowPlayer') {
+          // Back to normal follow
+          this.cameraRig?.setMode('FOLLOW');
+        } else if (event.state === 'Celebrate') {
+          // Celebration camera
+          this.cameraRig?.setMode('CELEBRATE');
+        }
+      } else if (event.type === 'game/task') {
+        // Check for task completion
+        if (event.complete && this.player) {
+          // Spawn confetti at player position
+          this.fxSystem?.spawnConfetti(this.player.position.clone());
+          // Play success sound
+          this.audioSystem?.playSfx(SFX_KEYS.SUCCESS, { volume: 0.8 });
+          // Trigger celebrate camera briefly
+          this.cameraRig?.setMode('CELEBRATE');
+          // Emit task complete event with position
+          this.bus.emit({
+            type: 'game/taskComplete',
+            taskId: event.taskId,
+            position: {
+              x: this.player.position.x,
+              y: this.player.position.y,
+              z: this.player.position.z,
+            },
+          });
         }
       } else if (event.type === 'game/interact') {
         // Play SFX based on what was interacted with
@@ -128,7 +168,11 @@ export class GameApp {
    * Start the game loop
    */
   async start() {
-    if (this.isRunning) return;
+    if (this.isRunning) {
+      console.warn('[GameApp] Already running, ignoring start() call');
+      return;
+    }
+    console.log('[GameApp] Starting...');
     this.isRunning = true;
     
     // Initialize audio system
@@ -141,9 +185,19 @@ export class GameApp {
     const world = createBootWorld(this.scene, this.bus);
     this.worldDispose = world.dispose;
     this.player = world.player;
+    this.playerEntity = world.playerEntity;
     this.companion = world.companion;
     this.campfire = world.campfire;
     this.interactables = world.interactables;
+    
+    // Create camera rig
+    const canvas = this.engine.getRenderingCanvas();
+    if (canvas) {
+      this.cameraRig = new CameraRig(this.scene, canvas);
+    }
+    
+    // Create FX system
+    this.fxSystem = new FxSystem(this.scene);
     
     console.log('[GameApp] World loaded:', {
       companion: this.companion.mesh.position,
@@ -152,6 +206,9 @@ export class GameApp {
 
     // Create player controller
     this.playerController = new PlayerController(this.scene, world.player);
+    if (this.playerEntity) {
+      this.playerController.setPlayerEntity(this.playerEntity);
+    }
 
     // Create task system
     this.taskSystem = new TaskSystem(this.bus);
@@ -181,6 +238,14 @@ export class GameApp {
     // Create debug overlay (dev only)
     if (import.meta.env.DEV) {
       this.debugOverlay = new DebugOverlay();
+      this.companionDebugHelper = new CompanionDebugHelper();
+      if (this.companion) {
+        this.companionDebugHelper.setCompanion(this.companion);
+      }
+      this.playerDebugHelper = new PlayerDebugHelper(this.scene);
+      if (this.playerEntity) {
+        this.playerDebugHelper.setPlayer(this.playerEntity);
+      }
     }
 
     // Add interactables as wakeables
@@ -258,6 +323,13 @@ export class GameApp {
       this.companion.update(dt, this.player.position);
     }
     
+    // Update camera rig
+    if (this.cameraRig && this.player) {
+      // Optionally pass companion position as interest point when leading
+      const interestPos = (this.companion && this.cameraRig) ? undefined : undefined;
+      this.cameraRig.update(this.player.position, interestPos, dt);
+    }
+    
     // Update campfire VFX
     if (this.campfire) {
       this.campfire.update(dt);
@@ -284,6 +356,34 @@ export class GameApp {
     }
   }
 
+  
+  private onRestart() {
+    console.log('[GameApp] Restarting game');
+    
+    // Reset task system
+    if (this.taskSystem) {
+      this.taskSystem.dispose();
+      this.taskSystem = new TaskSystem(this.bus);
+      this.taskSystem.startTask(campfire_v1);
+    }
+    
+    // Reset player position
+    if (this.player) {
+      this.player.position.set(0, 0.9, 0);
+    }
+    
+    // Reset companion to follow
+    if (this.companion) {
+      this.companion.mesh.position.set(3, 0.4, 2);
+      this.companion.transitionTo('FollowPlayer');
+    }
+    
+    // Reset camera
+    this.cameraRig?.setMode('FOLLOW');
+    
+    console.log('[GameApp] Game restarted');
+  }
+
   /**
    * Stop the game loop
    */
@@ -297,6 +397,14 @@ export class GameApp {
     // Clean up player controller
     this.playerController?.dispose();
     this.playerController = null;
+
+    // Clean up camera rig
+    this.cameraRig?.dispose();
+    this.cameraRig = null;
+    
+    // Clean up FX system
+    this.fxSystem?.dispose();
+    this.fxSystem = null;
 
     // Clean up companion
     this.companion?.dispose();
@@ -322,6 +430,14 @@ export class GameApp {
     // Clean up debug overlay
     this.debugOverlay?.dispose();
     this.debugOverlay = null;
+    
+    // Clean up companion debug helper
+    this.companionDebugHelper?.dispose();
+    this.companionDebugHelper = null;
+    
+    // Clean up player debug helper
+    this.playerDebugHelper?.dispose();
+    this.playerDebugHelper = null;
     
     // Stop ambient loop
     this.ambientLoop?.stop(1.0);

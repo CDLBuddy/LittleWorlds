@@ -1,35 +1,35 @@
 /**
- * GLTF/GLB loading utilities with AssetContainer support
+ * FBX loading utilities with AssetContainer support
  */
 
 import { 
   Scene, 
-  AssetContainer, 
   SceneLoader, 
   TransformNode, 
   AbstractMesh, 
   AnimationGroup 
 } from '@babylonjs/core';
-import '@babylonjs/loaders/glTF';
+// Import loaders - FBX support should be auto-detected
+import '@babylonjs/loaders';
 
-export type GltfLoadResult = {
+export type FbxLoadResult = {
   root: TransformNode;
   meshes: AbstractMesh[];
   animationGroups: AnimationGroup[];
 };
 
 /**
- * Load a GLB file and return a unified root with all meshes and animations
+ * Load an FBX file and return a unified root with all meshes and animations
  * @param scene Babylon scene
- * @param url Full URL to GLB file
+ * @param url Full URL to FBX file
  * @param opts Optional configuration
  * @returns Root transform node with all imported content
  */
-export async function loadGlb(
+export async function loadFbx(
   scene: Scene,
   url: string,
   opts?: { name?: string; isPickable?: boolean; receiveShadows?: boolean }
-): Promise<GltfLoadResult> {
+): Promise<FbxLoadResult> {
   const name = opts?.name || 'imported';
   const isPickable = opts?.isPickable ?? false;
   const receiveShadows = opts?.receiveShadows ?? true;
@@ -57,7 +57,7 @@ export async function loadGlb(
     // Collect animation groups
     const animationGroups = result.animationGroups || [];
     
-    console.log(`[GLB Loader] Loaded ${url}:`, {
+    console.log(`[FBX Loader] Loaded ${url}:`, {
       meshes: meshes.length,
       animations: animationGroups.length,
       animationNames: animationGroups.map(g => g.name)
@@ -69,35 +69,7 @@ export async function loadGlb(
       animationGroups
     };
   } catch (error) {
-    console.error(`Failed to load GLB: ${url}`, error);
+    console.error(`Failed to load FBX: ${url}`, error);
     throw error;
   }
-}
-
-export async function loadGltf(
-  scene: Scene,
-  path: string,
-  filename: string
-): Promise<AssetContainer> {
-  try {
-    const container = await SceneLoader.LoadAssetContainerAsync(
-      path,
-      filename,
-      scene
-    );
-    return container;
-  } catch (error) {
-    console.error(`Failed to load GLTF: ${path}${filename}`, error);
-    throw error;
-  }
-}
-
-export async function loadGltfFromUrl(
-  scene: Scene,
-  url: string
-): Promise<AssetContainer> {
-  const lastSlash = url.lastIndexOf('/');
-  const path = url.substring(0, lastSlash + 1);
-  const filename = url.substring(lastSlash + 1);
-  return loadGltf(scene, path, filename);
 }
