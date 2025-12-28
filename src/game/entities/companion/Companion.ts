@@ -64,6 +64,7 @@ export class Companion {
       { diameter: 1.2, segments: 16 },
       scene
     );
+    this.placeholder.position.y = 0.6; // Raise sphere so bottom sits on ground
     this.placeholder.parent = this.mesh;
     
     const mat = new StandardMaterial('companionMat', scene);
@@ -91,7 +92,7 @@ export class Companion {
       }
       
       const result = await loadGlb(scene, MODELS.dog, {
-        name: 'companion',
+        name: `companion_${Date.now()}`,
         isPickable: false,
         receiveShadows: true
       });
@@ -106,9 +107,12 @@ export class Companion {
       this.modelRoot = result.root;
       this.modelRoot.parent = this.mesh;
       
-      // Apply scale and rotation fixes
-      // Start with scale 1, adjust based on model size
-      this.modelRoot.scaling.setAll(1.0);
+      // Apply scale first
+      this.modelRoot.scaling.setAll(2.0);
+      
+      // Offset model vertically - dog model pivot may be at center, so offset down
+      // Adjust this value based on the dog model's actual pivot point
+      this.modelRoot.position.y = -0.4;
       
       // If model is sideways, fix rotation
       this.modelRoot.rotationQuaternion = null;
@@ -281,7 +285,7 @@ export class Companion {
       
       this.mesh.position.x = x;
       this.mesh.position.z = z;
-      this.mesh.position.y = 0.4;
+      this.mesh.position.y = 0.2;
     } else if (this.stateTime >= 2.5) {
       // Done investigating
       this.circleCenter = null;
@@ -293,7 +297,7 @@ export class Companion {
     // Two hops with lateral wiggle
     const hopDuration = 0.25; // Each hop lasts 0.25s
     const hop1Start = 0;
-    const hop2Start = 0.4;
+    const hop2Start = 0.2;
     
     let bounceHeight = 0;
     
@@ -308,10 +312,10 @@ export class Companion {
       bounceHeight = Math.sin(t * Math.PI) * 0.5;
     }
     
-    this.mesh.position.y = 0.4 + Math.max(0, bounceHeight);
+    this.mesh.position.y = 0.2 + Math.max(0, bounceHeight);
     
     if (this.stateTime >= 1.0) {
-      this.mesh.position.y = 0.4;
+      this.mesh.position.y = 0.2;
       this.transitionTo('FollowPlayer');
     }
   }

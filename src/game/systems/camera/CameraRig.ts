@@ -25,17 +25,17 @@ export class CameraRig {
   
   // Mode presets
   private readonly presets: Record<CameraMode, CameraSettings> = {
-    FOLLOW: { radius: 11, beta: Math.PI / 3, alpha: Math.PI / 2 },
-    LEAD: { radius: 17, beta: Math.PI / 2.5, alpha: Math.PI / 2 }, // Higher angle, farther back
-    CELEBRATE: { radius: 9, beta: Math.PI / 3.2, alpha: Math.PI / 2 },
+    FOLLOW: { radius: 11, beta: Math.PI / 3, alpha: 0 },
+    LEAD: { radius: 17, beta: Math.PI / 2.5, alpha: 0 }, // Higher angle, farther back
+    CELEBRATE: { radius: 9, beta: Math.PI / 3.2, alpha: 0 },
   };
 
   constructor(scene: Scene, canvas: HTMLCanvasElement) {
     this.camera = new ArcRotateCamera(
       'camera',
-      Math.PI / 2,
-      Math.PI / 3,
-      11,
+      0, // Horizontal angle: 0 = camera behind character looking forward
+      Math.PI / 3, // Vertical angle (comfortable 3rd person view)
+      11, // Distance
       Vector3.Zero(),
       scene
     );
@@ -45,6 +45,10 @@ export class CameraRig {
     this.camera.upperRadiusLimit = 20;
     this.camera.wheelPrecision = 50;
     this.camera.panningSensibility = 0; // Disable panning for now
+    
+    // Vertical rotation limits (beta: 0 = straight down, PI/2 = horizontal, PI = straight up from below)
+    this.camera.lowerBetaLimit = 0.5; // Prevent looking too far down
+    this.camera.upperBetaLimit = Math.PI / 2 + 0.4; // Allow looking up above horizontal
     
     // Initialize current settings
     const follow = this.presets.FOLLOW;
@@ -70,14 +74,14 @@ export class CameraRig {
     this.targetPosition = Vector3.Lerp(this.targetPosition, targetPos, 0.1);
     this.camera.setTarget(this.targetPosition);
     
-    // Smooth camera settings transitions
+    // Smooth camera settings transitions (only radius, let user control beta/alpha)
     const smoothing = 0.05; // Lower = smoother
     this.currentSettings.radius += (this.targetSettings.radius - this.currentSettings.radius) * smoothing;
-    this.currentSettings.beta += (this.targetSettings.beta - this.currentSettings.beta) * smoothing;
     
-    // Apply settings
+    // Apply radius
     this.camera.radius = this.currentSettings.radius;
-    this.camera.beta = this.currentSettings.beta;
+    
+    // User can freely control beta (vertical) and alpha (horizontal) with mouse
     
     // Celebrate mode: gentle orbit
     if (this.currentMode === 'CELEBRATE' && dt) {

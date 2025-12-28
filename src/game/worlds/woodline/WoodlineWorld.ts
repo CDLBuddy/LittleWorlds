@@ -110,11 +110,11 @@ export function createWoodlineWorld(scene: Scene, eventBus: any, roleId: RoleId 
     trees.push(foliage);
   });
 
-  // Player spawn (front-center of clearing)
-  const player = new Player(scene, new Vector3(0, 0.9, 15), roleId);
+  // Player spawn (front-center of clearing) - y=0 keeps feet on ground
+  const player = new Player(scene, new Vector3(0, 0, 15), roleId);
 
   // Companion spawn (front-left of player)
-  const companion = new Companion(scene, new Vector3(3, 0.4, 17), eventBus);
+  const companion = new Companion(scene, new Vector3(3, 0, 17), eventBus);
 
   // === INTERACTABLES ===
 

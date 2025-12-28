@@ -3,7 +3,7 @@
  * Velocity-based movement with acceleration, deceleration, and smooth turning
  */
 
-import { Scene, Vector3, Observer, PointerInfo, PointerEventTypes, TransformNode } from '@babylonjs/core';
+import { Scene, Vector3, Observer, PointerInfo, PointerEventTypes, TransformNode, Ray } from '@babylonjs/core';
 import { lerpAngle } from '@game/shared/math';
 import { Player } from './Player';
 
@@ -63,6 +63,31 @@ export class PlayerController {
     });
   }
 
+  private checkCollision(from: Vector3, to: Vector3, radius: number): boolean {
+    // Check collision using raycasting in movement direction
+    const direction = to.subtract(from);
+    const distance = direction.length();
+    
+    if (distance < 0.001) return false;
+    
+    const ray = new Ray(from, direction.normalize(), distance);
+    
+    // Check for any mesh with checkCollisions enabled
+    const hit = this.scene.pickWithRay(ray, (mesh) => {
+      return mesh.checkCollisions === true && mesh.name !== 'ground';
+    });
+    
+    if (hit?.hit && hit.pickedPoint) {
+      // Check if collision is within player radius
+      const distanceToHit = Vector3.Distance(from, hit.pickedPoint);
+      if (distanceToHit < radius) {
+        return true;
+      }
+    }
+    
+    return false;
+  }
+
   update(dt: number) {
     const playerPos = this.player.position;
     
@@ -111,9 +136,22 @@ export class PlayerController {
       }
     }
     
-    // Apply velocity to position
-    playerPos.addInPlace(this.velocity.scale(dt));
-    playerPos.y = 0.5; // Keep at ground level (player height)
+    // Apply velocity to position with collision detection
+    const movement = this.velocity.scale(dt);
+    const newPos = playerPos.add(movement);
+    newPos.y = 0.5; // Keep at ground level (player height)
+    
+    // Check for collisions using raycasting
+    const collisionRadius = 0.4; // Player collision radius
+    const collided = this.checkCollision(playerPos, newPos, collisionRadius);
+    
+    if (!collided) {
+      playerPos.copyFrom(newPos);
+    } else {
+      // Stop movement if collided
+      this.velocity.scaleInPlace(0);
+      this.targetPosition = null;
+    }
     
     // Smooth rotation to face movement direction
     const speed = this.velocity.length();

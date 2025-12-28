@@ -38,6 +38,7 @@ export class Player {
       { height: 1.8, radius: 0.4, tessellation: 16 },
       scene
     );
+    placeholder.position.y = 0.9; // Raise capsule so bottom sits on ground
     placeholder.parent = this.mesh;
     
     const mat = new StandardMaterial('playerPlaceholderMat', scene);
@@ -75,7 +76,7 @@ export class Player {
       console.log(`[Player] Loading ${this.roleId} model:`, modelUrl);
       
       const result = await loadGlb(this.scene, modelUrl, {
-        name: this.roleId,
+        name: `${this.roleId}_${Date.now()}`,
         isPickable: false,
         receiveShadows: true,
       });
@@ -89,6 +90,9 @@ export class Player {
       
       // Parent model to our root
       result.root.parent = this.mesh;
+      
+      // Offset model vertically so feet sit on ground (adjust based on model's pivot point)
+      result.root.position.y = 0.45;
       
       // Set default scale and rotation
       result.root.scaling.set(1.0, 1.0, 1.0);
