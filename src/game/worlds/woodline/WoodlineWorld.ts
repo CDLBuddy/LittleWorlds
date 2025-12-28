@@ -40,29 +40,29 @@ export function createWoodlineWorld(scene: Scene, eventBus: any, roleId: RoleId 
   campfire: CampfireInteractable;
   dispose: () => void;
 } {
-  // Dusk/twilight sky
-  scene.clearColor = new Color4(0.4, 0.5, 0.7, 1.0);
+  // Late morning sky - bright and clear
+  scene.clearColor = new Color4(0.7, 0.85, 1.0, 1.0);
 
-  // Cozy fog
+  // Light fog for depth
   scene.fogMode = Scene.FOGMODE_EXP2;
-  scene.fogColor = new Color3(0.4, 0.5, 0.7);
-  scene.fogDensity = 0.025;
+  scene.fogColor = new Color3(0.75, 0.85, 0.95);
+  scene.fogDensity = 0.012;
 
-  // Dimmer hemispheric light (twilight)
+  // Bright hemispheric light (late morning sun high in sky)
   const hemiLight = new HemisphericLight('hemiLight', new Vector3(0, 1, 0), scene);
-  hemiLight.intensity = 0.4;
-  hemiLight.diffuse = new Color3(0.6, 0.7, 0.9);
-  hemiLight.groundColor = new Color3(0.3, 0.4, 0.5);
+  hemiLight.intensity = 0.8;
+  hemiLight.diffuse = new Color3(1.0, 0.98, 0.92);
+  hemiLight.groundColor = new Color3(0.5, 0.6, 0.5);
 
-  // Soft directional light (fading sun)
-  const dirLight = new DirectionalLight('dirLight', new Vector3(-1, -2, -1), scene);
-  dirLight.intensity = 0.5;
-  dirLight.diffuse = new Color3(0.9, 0.8, 0.7);
+  // Strong directional sunlight
+  const dirLight = new DirectionalLight('dirLight', new Vector3(-0.3, -2, -0.8), scene);
+  dirLight.intensity = 1.0;
+  dirLight.diffuse = new Color3(1.0, 0.95, 0.88);
 
   // Forest floor ground
   const ground = MeshBuilder.CreateGround('ground', { width: 70, height: 70 }, scene);
   const groundMat = new StandardMaterial('groundMat', scene);
-  groundMat.diffuseColor = new Color3(0.3, 0.4, 0.25); // Darker forest floor
+  groundMat.diffuseColor = new Color3(0.4, 0.55, 0.3); // Brighter forest floor for daytime
   groundMat.specularColor = new Color3(0.1, 0.1, 0.1);
   ground.material = groundMat;
   ground.receiveShadows = true;
@@ -72,7 +72,7 @@ export function createWoodlineWorld(scene: Scene, eventBus: any, roleId: RoleId 
   clearing.position.y = 0.01; // Slightly above ground to avoid z-fighting
   clearing.rotation.x = Math.PI / 2;
   const clearingMat = new StandardMaterial('clearingMat', scene);
-  clearingMat.diffuseColor = new Color3(0.5, 0.6, 0.4); // Lighter grass
+  clearingMat.diffuseColor = new Color3(0.6, 0.75, 0.45); // Brighter grass for late morning
   clearing.material = clearingMat;
 
   // Simple primitive trees for depth (cylinders + cones)

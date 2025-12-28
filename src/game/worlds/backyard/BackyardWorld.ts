@@ -25,6 +25,7 @@ interface Interactable {
   mesh: AbstractMesh;
   interact: () => void;
   dispose: () => void;
+  alwaysActive?: boolean; // If true, can be interacted with even without an active task
 }
 
 export function createBackyardWorld(scene: Scene, eventBus: any, roleId: RoleId = 'boy'): {
@@ -322,6 +323,7 @@ function createGateInteractable(
   return {
     id,
     mesh,
+    alwaysActive: true, // Gates are always interactable, not tied to tasks
     interact: () => {
       // Emit area request - GameApp will handle gating
       eventBus.emit({ type: 'game/areaRequest', areaId: 'woodline' });

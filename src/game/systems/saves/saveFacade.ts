@@ -101,6 +101,14 @@ class SaveFacade {
     this.writeMain(save);
     return save;
   }
+
+  /**
+   * Get inventory for a role
+   */
+  getInventory(roleId: 'boy' | 'girl'): string[] {
+    const save = this.loadMain();
+    return save.roles[roleId].inventory;
+  }
 }
 
 // Export singleton instance

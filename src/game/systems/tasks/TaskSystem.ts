@@ -16,6 +16,10 @@ export class TaskSystem {
 
   constructor(private eventBus: EventBus) {}
 
+  addItem(itemId: string): void {
+    this.inventory.add(itemId);
+  }
+
   startTask(task: Task): void {
     this.currentTask = task;
     this.currentStepIndex = 0;
@@ -83,8 +87,7 @@ export class TaskSystem {
         stepIndex: this.currentStepIndex,
         complete: true,
       });
-      // Set currentTask to null to stop prompts
-      this.currentTask = null;
+      // Don't set currentTask to null - ProgressionSystem will start next task
       console.log('[TaskSystem] Task complete - inventory preserved');
     } else {
       this.emitTaskEvent();

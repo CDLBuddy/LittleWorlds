@@ -271,6 +271,10 @@ export class GameApp {
     // Create task system
     this.taskSystem = new TaskSystem(this.bus);
     
+    // Load saved inventory for this role
+    const savedInventory = saveFacade.getInventory(this.startParams.roleId);
+    savedInventory.forEach(item => this.taskSystem!.addItem(item));
+    
     // Create interaction system
     this.interactionSystem = new InteractionSystem(this.taskSystem, this.bus);
     
@@ -279,10 +283,12 @@ export class GameApp {
       this.interactionSystem!.registerInteractable(interactable);
     });
     
-    // Wire interactable callbacks to task system
+    // Store original interact functions and wrap them with logging
     world.interactables.forEach((interactable) => {
+      const originalInteract = interactable.interact;
       interactable.interact = () => {
         console.log(`Interacted with ${interactable.id}`);
+        originalInteract();
       };
     });
 
@@ -396,8 +402,8 @@ export class GameApp {
       this.cameraRig.update(this.player.position, interestPos, dt);
     }
     
-    // Update campfire VFX
-    if (this.campfire) {
+    // Update campfire VFX (if it has an update method)
+    if (this.campfire && typeof this.campfire.update === 'function') {
       this.campfire.update(dt);
     }
 
@@ -532,6 +538,9 @@ export class GameApp {
     this.eventUnsubscribe?.();
     this.eventUnsubscribe = null;
 
+    // Stop render loop before disposing engine
+    this.engine.stopRenderLoop();
+    
     // Dispose scene and engine
     this.scene.dispose();
     this.engine.dispose();
