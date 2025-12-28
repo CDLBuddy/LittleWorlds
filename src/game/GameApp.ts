@@ -1,6 +1,8 @@
 import { Engine, Scene, AbstractMesh, TransformNode } from '@babylonjs/core';
 import { eventBus } from './shared/events';
 import { createBootWorld } from './worlds/BootWorld';
+import { createBackyardWorld } from './worlds/backyard/BackyardWorld';
+import { createWoodlineWorld } from './worlds/woodline/WoodlineWorld';
 import { Player } from './entities/player/Player';
 import { PlayerController } from './entities/player/controller';
 import { WakeRadiusSystem, type Wakeable } from './systems/interactions/wakeRadius';
@@ -17,6 +19,8 @@ import { CompanionDebugHelper } from './debug/CompanionDebugHelper';
 import { PlayerDebugHelper } from './debug/PlayerDebugHelper';
 import type { RoleId, AreaId } from './content/areas';
 import { ProgressionSystem } from './systems/progression/ProgressionSystem';
+import { saveFacade } from './systems/saves/saveFacade';
+import * as sessionFacade from './session/sessionFacade';
 
 /**
  * GameApp - Main orchestrator for the Babylon.js game
@@ -77,6 +81,9 @@ export class GameApp {
         this.audioSystem?.setVolume(event.bus, event.value);
       } else if (event.type === 'ui/restart') {
         this.onRestart();
+      } else if (event.type === 'game/areaRequest') {
+        // Handle gate area request
+        this.onAreaRequest(event.areaId);
       } else if (event.type === 'game/companion/state') {
         // Play SFX based on companion state
         if (event.state === 'LeadToTarget') {
@@ -161,6 +168,29 @@ export class GameApp {
     }
   }
   
+  private onAreaRequest(areaId: string) {
+    console.log('[GameApp] Area request:', areaId);
+    
+    // Check if area is unlocked for current role
+    const unlockedAreas = saveFacade.getUnlockedAreas(this.startParams.roleId);
+    console.log('[GameApp] Unlocked areas for role:', this.startParams.roleId, unlockedAreas);
+    
+    if (unlockedAreas.includes(areaId as AreaId)) {
+      // Area unlocked - transition
+      console.log('[GameApp] Area unlocked, transitioning to:', areaId);
+      sessionFacade.setArea(areaId as AreaId);
+      // GameHost will remount automatically
+    } else {
+      // Area locked - show soft block
+      console.log('[GameApp] Area locked, showing toast');
+      this.bus.emit({ 
+        type: 'ui/toast', 
+        level: 'info', 
+        message: 'Keep exploring to go deeper.' 
+      });
+    }
+  }
+  
   private onInteract(targetId: string) {
     // Play appropriate SFX based on target
     if (targetId === 'axe') {
@@ -189,13 +219,33 @@ export class GameApp {
     // Load audio assets
     await this.loadAudioAssets();
 
-    // Create the boot world with role-specific player
-    const world = createBootWorld(this.scene, this.bus, this.startParams.roleId);
+    // Create world based on areaId
+    let world: {
+      player: TransformNode;
+      playerEntity: Player;
+      companion: Companion;
+      interactables: Array<{ id: string; mesh: AbstractMesh; interact: () => void; dispose: () => void }>;
+      campfire?: any;
+      dispose: () => void;
+    };
+    
+    if (this.startParams.areaId === 'backyard') {
+      console.log('[GameApp] Loading BackyardWorld');
+      world = createBackyardWorld(this.scene, this.bus, this.startParams.roleId);
+    } else if (this.startParams.areaId === 'woodline') {
+      console.log('[GameApp] Loading WoodlineWorld');
+      world = createWoodlineWorld(this.scene, this.bus, this.startParams.roleId);
+    } else {
+      // Fallback to BootWorld for debug/dev only
+      console.log('[GameApp] Loading BootWorld (debug fallback)');
+      world = createBootWorld(this.scene, this.bus, this.startParams.roleId);
+    }
+    
     this.worldDispose = world.dispose;
     this.player = world.player;
     this.playerEntity = world.playerEntity;
     this.companion = world.companion;
-    this.campfire = world.campfire;
+    this.campfire = world.campfire || null;
     this.interactables = world.interactables;
     
     // Create camera rig
@@ -237,11 +287,13 @@ export class GameApp {
     });
 
     // Create progression system and start
+    const useDevBootFallback = import.meta.env.DEV && !['backyard', 'woodline'].includes(this.startParams.areaId);
+    console.log('[GameApp] ProgressionSystem devBootFallback:', useDevBootFallback);
     this.progressionSystem = new ProgressionSystem(
       this.taskSystem,
       this.startParams.roleId,
       this.startParams.areaId,
-      { devBootFallback: true }
+      { devBootFallback: useDevBootFallback }
     );
     this.progressionSystem.start();
 

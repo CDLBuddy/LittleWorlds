@@ -14,26 +14,31 @@ interface GameHostProps {
 export default function GameHost({ running, onReady }: GameHostProps) {
   const canvasRef = useRef<HTMLCanvasElement>(null);
   const gameRef = useRef<GameApp | null>(null);
+  
+  // Subscribe to session changes to trigger remount
+  const roleId = useGameSession(state => state.roleId);
+  const areaId = useGameSession(state => state.areaId);
+  const slotId = useGameSession(state => state.slotId);
 
   useEffect(() => {
     if (!running || !canvasRef.current) return;
 
     // Get session params
     const session = useGameSession.getState();
-    let roleId: RoleId = session.roleId || 'boy';
-    const areaId: AreaId = session.areaId || 'backyard';
+    let actualRoleId: RoleId = session.roleId || 'boy';
+    const actualAreaId: AreaId = session.areaId || 'backyard';
 
     // Fallback: use save data if session is empty
     if (!session.roleId) {
       const save = saveFacade.loadMain();
-      roleId = save.lastSelectedRole || 'boy';
-      console.log('[GameHost] Using fallback role from save:', roleId);
+      actualRoleId = save.lastSelectedRole || 'boy';
+      console.log('[GameHost] Using fallback role from save:', actualRoleId);
     }
 
-    console.log('[GameHost] Starting game with:', { roleId, areaId });
+    console.log('[GameHost] Starting game with:', { roleId: actualRoleId, areaId: actualAreaId });
 
     // Initialize game with start params
-    const game = new GameApp(canvasRef.current, eventBus, { roleId, areaId });
+    const game = new GameApp(canvasRef.current, eventBus, { roleId: actualRoleId, areaId: actualAreaId });
     gameRef.current = game;
     
     // Listen for ready event
@@ -45,13 +50,13 @@ export default function GameHost({ running, onReady }: GameHostProps) {
 
     game.start();
 
-    // Cleanup on unmount or when running becomes false
+    // Cleanup on unmount or when session changes
     return () => {
       unsub();
       game.stop();
       gameRef.current = null;
     };
-  }, [running, onReady]);
+  }, [running, onReady, roleId, areaId, slotId]);
 
   return (
     <div className="game-host" style={{ width: '100%', height: '100%', position: 'relative' }}>

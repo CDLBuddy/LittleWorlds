@@ -21,7 +21,8 @@ export type UiToGame =
   | { type: 'ui/toggleHelp' }
   | { type: 'ui/audio/unlock' }
   | { type: 'ui/audio/volume'; bus: 'master' | 'music' | 'sfx'; value: number }
-  | { type: 'ui/restart' };
+  | { type: 'ui/restart' }
+  | { type: 'ui/toast'; level: 'info' | 'warning' | 'error'; message: string };
 
 // Game → UI events
 export type GameToUi =
@@ -35,7 +36,8 @@ export type GameToUi =
   | { type: 'game/audio/locked'; locked: boolean }
   | { type: 'game/interact'; targetId: string }
   | { type: 'game/dwell'; id: string; progress: number } // Dwell progress 0..1
-  | { type: 'game/dwellClear'; id: string }; // Clear dwell for specific id
+  | { type: 'game/dwellClear'; id: string } // Clear dwell for specific id
+  | { type: 'game/areaRequest'; areaId: string }; // Request area transition (from gate)
 
 export type AppEvent = UiToGame | GameToUi;
 
