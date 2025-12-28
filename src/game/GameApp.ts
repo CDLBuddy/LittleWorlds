@@ -283,6 +283,14 @@ export class GameApp {
       this.interactionSystem!.registerInteractable(interactable);
     });
     
+    // Enable dynamic registration for late-loading assets
+    if ('registerDynamic' in world && typeof world.registerDynamic === 'function') {
+      world.registerDynamic((interactable: { id: string; mesh: AbstractMesh; interact: () => void; dispose: () => void }) => {
+        this.interactionSystem!.registerInteractable(interactable);
+        console.log(`[GameApp] Dynamically registered interactable: ${interactable.id}`);
+      });
+    }
+    
     // Store original interact functions and wrap them with logging
     world.interactables.forEach((interactable) => {
       const originalInteract = interactable.interact;

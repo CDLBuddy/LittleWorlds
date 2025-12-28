@@ -17,7 +17,6 @@ import {
   AbstractMesh,
   TransformNode,
   SceneLoader,
-  Node,
 } from '@babylonjs/core';
 import '@babylonjs/loaders/glTF';
 import { Player } from '@game/entities/player/Player';
@@ -42,6 +41,7 @@ export function createWoodlineWorld(scene: Scene, eventBus: any, roleId: RoleId 
   interactables: Interactable[];
   campfire: CampfireInteractable;
   dispose: () => void;
+  registerDynamic?: (register: (interactable: Interactable) => void) => void;
 } {
   // Late morning sky - bright and clear
   scene.clearColor = new Color4(0.7, 0.85, 1.0, 1.0);
@@ -116,25 +116,30 @@ export function createWoodlineWorld(scene: Scene, eventBus: any, roleId: RoleId 
           // Randomly pick a tree parent for variety
           const randomRoot = treeRoots[Math.floor(Math.random() * treeRoots.length)];
           
-          // Clone the node and its children
-          const instance = randomRoot.clone(`tree_${idx}`, null, true);
+          // Create a new parent node at our desired position
+          const newParent = new TransformNode(`tree_parent_${idx}`, scene);
+          newParent.position = pos.clone();
+          newParent.rotation.y = Math.random() * Math.PI * 2; // Random rotation
+          newParent.scaling = new Vector3(1.5, 1.5, 1.5);
           
-          if (instance) {
-            // Reset transform to avoid inheriting Blender position
-            instance.position = pos.clone();
-            instance.rotation = Vector3.Zero();
-            instance.scaling = new Vector3(1.5, 1.5, 1.5);
-            // Random Y rotation for natural placement (0-360 degrees)
-            instance.rotation.y = Math.random() * Math.PI * 2;
-            instance.setEnabled(true);
-            // Enable all descendants
-            instance.getDescendants().forEach((desc: Node) => {
-              if ('setEnabled' in desc && typeof desc.setEnabled === 'function') {
-                desc.setEnabled(true);
-              }
-            });
-            trees.push(instance);
-          }
+          // Clone all children of the selected tree/bush into our new parent
+          randomRoot.getChildMeshes(false).forEach((child: AbstractMesh, childIdx) => {
+            const childClone = child.clone(`tree_${idx}_child_${childIdx}`, newParent);
+            if (childClone) {
+              // Store the child's local transform relative to its original parent
+              const localPos = child.position.clone();
+              const localRot = child.rotation.clone();
+              const localScale = child.scaling.clone();
+              
+              // Apply those local transforms to the clone
+              childClone.position = localPos;
+              childClone.rotation = localRot;
+              childClone.scaling = localScale;
+              childClone.setEnabled(true);
+            }
+          });
+          
+          newParent.setEnabled(true);
         });
       }
     }

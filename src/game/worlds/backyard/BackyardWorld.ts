@@ -15,7 +15,6 @@ import {
   AbstractMesh,
   TransformNode,
   SceneLoader,
-  Node,
 } from '@babylonjs/core';
 import '@babylonjs/loaders/glTF';
 import { SkyMaterial } from '@babylonjs/materials';
@@ -38,6 +37,7 @@ export function createBackyardWorld(scene: Scene, eventBus: { emit: (event: AppE
   companion: Companion;
   interactables: Interactable[];
   dispose: () => void;
+  registerDynamic?: (register: (interactable: Interactable) => void) => void;
 } {
   // Clear color for sky
   scene.clearColor = new Color3(0.5, 0.7, 0.9).toColor4();
@@ -147,6 +147,7 @@ export function createBackyardWorld(scene: Scene, eventBus: { emit: (event: AppE
             const instance = grassMesh.clone(`grass_${x}_${z}`, grassParent);
             if (instance) {
               instance.position = new Vector3(posX, 0, posZ);
+              instance.scaling.y = 0.6; // Reduce grass height to 60%
               instance.receiveShadows = true;
               instance.setEnabled(true);
             }
@@ -211,24 +212,30 @@ export function createBackyardWorld(scene: Scene, eventBus: { emit: (event: AppE
           // Randomly pick a tree parent for variety
           const randomRoot = treeRoots[Math.floor(Math.random() * treeRoots.length)];
           
-          // Clone the node and its children
-          const instance = randomRoot.clone(`tree_${idx}`, null, true);
+          // Create a new parent node at our desired position
+          const newParent = new TransformNode(`tree_parent_${idx}`, scene);
+          newParent.position = tree.pos.clone();
+          newParent.rotation.y = Math.random() * Math.PI * 2; // Random rotation
+          newParent.scaling = new Vector3(tree.scale, tree.scale, tree.scale);
           
-          if (instance) {
-            // Reset transform to avoid inheriting Blender position
-            instance.position = tree.pos.clone();
-            instance.rotation = Vector3.Zero();
-            instance.scaling = new Vector3(tree.scale, tree.scale, tree.scale);
-            // Random Y rotation for natural placement (0-360 degrees)
-            instance.rotation.y = Math.random() * Math.PI * 2;
-            instance.setEnabled(true);
-            // Enable all descendants
-            instance.getDescendants().forEach((desc: Node) => {
-              if ('setEnabled' in desc && typeof desc.setEnabled === 'function') {
-                desc.setEnabled(true);
-              }
-            });
-          }
+          // Clone all children of the selected tree/bush into our new parent
+          randomRoot.getChildMeshes(false).forEach((child, childIdx) => {
+            const childClone = child.clone(`tree_${idx}_child_${childIdx}`, newParent);
+            if (childClone) {
+              // Store the child's local transform relative to its original parent
+              const localPos = child.position.clone();
+              const localRot = child.rotation.clone();
+              const localScale = child.scaling.clone();
+              
+              // Apply those local transforms to the clone
+              childClone.position = localPos;
+              childClone.rotation = localRot;
+              childClone.scaling = localScale;
+              childClone.setEnabled(true);
+            }
+          });
+          
+          newParent.setEnabled(true);
         });
       }
     }
@@ -418,15 +425,42 @@ export function createBackyardWorld(scene: Scene, eventBus: { emit: (event: AppE
   const companion = new Companion(scene, new Vector3(3, 0, 22), eventBus);
 
   // === INTERACTABLES ===
+  const interactables: Interactable[] = [];
+  
+  // Reference to interaction system for dynamic registration
+  let dynamicRegister: ((interactable: Interactable) => void) | null = null;
 
-  // 1. Slingshot pickup (boy task)
-  const slingshotPickup = createPickupInteractable(
-    scene,
-    'slingshot_pickup',
-    new Vector3(-10, 0, 10),
-    new Color3(0.6, 0.4, 0.2), // Brown
-    eventBus
-  );
+  // 1. Slingshot pickup (boy task) - Load GLB model
+  SceneLoader.ImportMesh('', 'assets/models/', 'Slingshot.glb', scene, (meshes) => {
+    if (meshes.length > 0) {
+      const slingshotMesh = meshes[0];
+      slingshotMesh.id = 'slingshot_pickup'; // Set mesh id for companion targeting
+      slingshotMesh.position = new Vector3(-10, 0.5, 10);
+      slingshotMesh.scaling = new Vector3(1.5, 1.5, 1.5); // Increase to full size
+      
+      const slingshotPickup: Interactable = {
+        id: 'slingshot_pickup',
+        mesh: slingshotMesh,
+        interact: () => {
+          slingshotMesh.setEnabled(false);
+          console.log('[Backyard] Picked up slingshot');
+        },
+        dispose: () => {
+          meshes.forEach(m => m.dispose());
+        },
+      };
+      
+      // Add to interactables array after loading
+      interactables.push(slingshotPickup);
+      
+      // If world is already active, register with interaction system
+      if (dynamicRegister) {
+        dynamicRegister(slingshotPickup);
+      }
+    }
+  }, null, (_scene, message, exception) => {
+    console.error('[Backyard] Failed to load slingshot model:', message, exception);
+  });
 
   // 2. Backyard target (boy task)
   const backyardTarget = createTargetInteractable(
@@ -464,13 +498,13 @@ export function createBackyardWorld(scene: Scene, eventBus: { emit: (event: AppE
     eventBus
   );
 
-  const interactables: Interactable[] = [
-    slingshotPickup,
+  // Add remaining interactables
+  interactables.push(
     backyardTarget,
     multitoolPickup,
     carveStation,
-    backyardGate,
-  ];
+    backyardGate
+  );
 
   // Dispose function
   const dispose = () => {
@@ -497,6 +531,10 @@ export function createBackyardWorld(scene: Scene, eventBus: { emit: (event: AppE
     companion,
     interactables,
     dispose,
+    // Method to register late-loading interactables
+    registerDynamic: (register: (interactable: Interactable) => void) => {
+      dynamicRegister = register;
+    },
   };
 }
 
