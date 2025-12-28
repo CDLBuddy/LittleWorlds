@@ -20,6 +20,7 @@ import { Companion } from '@game/entities/companion/Companion';
 import { Axe } from '@game/entities/props/Axe';
 import { LogPile } from '@game/entities/props/LogPile';
 import { Campfire } from '@game/entities/props/Campfire';
+import type { RoleId } from '@game/content/areas';
 
 interface Interactable {
   id: string;
@@ -28,7 +29,7 @@ interface Interactable {
   dispose: () => void;
 }
 
-export function createBootWorld(scene: Scene, eventBus: any): {
+export function createBootWorld(scene: Scene, eventBus: any, roleId: RoleId = 'boy'): {
   player: TransformNode;
   playerEntity: Player;
   companion: Companion;
@@ -63,8 +64,8 @@ export function createBootWorld(scene: Scene, eventBus: any): {
   ground.material = groundMat;
   ground.receiveShadows = true;
 
-  // Player entity (loads Boy.fbx asynchronously)
-  const player = new Player(scene, new Vector3(0, 0.9, 0));
+  // Player entity (loads role-specific model asynchronously)
+  const player = new Player(scene, new Vector3(0, 0.9, 0), roleId);
 
   // Note: Camera is now created by GameApp's CameraRig
 

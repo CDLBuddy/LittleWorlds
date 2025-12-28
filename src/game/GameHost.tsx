@@ -2,6 +2,9 @@ import { useEffect, useRef } from 'react';
 import { GameApp } from './GameApp';
 import { eventBus } from './shared/events';
 import HUD from '@ui/hud/HUD';
+import { useGameSession } from './session/useGameSession';
+import { saveFacade } from './systems/saves/saveFacade';
+import type { RoleId, AreaId } from './content/areas';
 
 interface GameHostProps {
   running: boolean;
@@ -15,8 +18,22 @@ export default function GameHost({ running, onReady }: GameHostProps) {
   useEffect(() => {
     if (!running || !canvasRef.current) return;
 
-    // Initialize game
-    const game = new GameApp(canvasRef.current, eventBus);
+    // Get session params
+    const session = useGameSession.getState();
+    let roleId: RoleId = session.roleId || 'boy';
+    const areaId: AreaId = session.areaId || 'backyard';
+
+    // Fallback: use save data if session is empty
+    if (!session.roleId) {
+      const save = saveFacade.loadMain();
+      roleId = save.lastSelectedRole || 'boy';
+      console.log('[GameHost] Using fallback role from save:', roleId);
+    }
+
+    console.log('[GameHost] Starting game with:', { roleId, areaId });
+
+    // Initialize game with start params
+    const game = new GameApp(canvasRef.current, eventBus, { roleId, areaId });
     gameRef.current = game;
     
     // Listen for ready event

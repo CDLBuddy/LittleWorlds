@@ -6,7 +6,7 @@ export default function TitleScreen() {
 
   const handlePlay = () => {
     eventBus.emit({ type: 'ui/audio/unlock' });
-    navigate('/game');
+    navigate('/profiles');
   };
 
   return (

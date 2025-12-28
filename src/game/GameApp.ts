@@ -8,7 +8,6 @@ import { DebugOverlay } from './debug/DebugOverlay';
 import type { Companion } from './entities/companion/Companion';
 import { TaskSystem } from './systems/tasks/TaskSystem';
 import { InteractionSystem } from './systems/interactions/InteractionSystem';
-import { campfire_v1 } from './content/tasks';
 import { AudioSystem, type LoopHandle } from './systems/audio/AudioSystem';
 import { AMBIENT_KEYS, SFX_KEYS } from './systems/audio/sfx';
 import { AUDIO } from './assets/manifest';
@@ -16,6 +15,8 @@ import { CameraRig } from './systems/camera/CameraRig';
 import { FxSystem } from './systems/fx/FxSystem';
 import { CompanionDebugHelper } from './debug/CompanionDebugHelper';
 import { PlayerDebugHelper } from './debug/PlayerDebugHelper';
+import type { RoleId, AreaId } from './content/areas';
+import { ProgressionSystem } from './systems/progression/ProgressionSystem';
 
 /**
  * GameApp - Main orchestrator for the Babylon.js game
@@ -45,8 +46,11 @@ export class GameApp {
   private companionDebugHelper: CompanionDebugHelper | null = null;
   private playerDebugHelper: PlayerDebugHelper | null = null;
   private playerEntity: Player | null = null;
+  private progressionSystem: ProgressionSystem | null = null;
+  private startParams: { roleId: RoleId; areaId: AreaId };
 
-  constructor(canvas: HTMLCanvasElement, private bus: typeof eventBus) {
+  constructor(canvas: HTMLCanvasElement, private bus: typeof eventBus, startParams: { roleId: RoleId; areaId: AreaId }) {
+    this.startParams = startParams;
     // Initialize Babylon engine with iPad-friendly settings
     this.engine = new Engine(canvas, true, {
       preserveDrawingBuffer: false,
@@ -94,6 +98,10 @@ export class GameApp {
       } else if (event.type === 'game/task') {
         // Check for task completion
         if (event.complete && this.player) {
+          // Notify progression system
+          if (this.progressionSystem) {
+            this.progressionSystem.handleTaskEvent(event.taskId, true);
+          }
           // Spawn confetti at player position
           this.fxSystem?.spawnConfetti(this.player.position.clone());
           // Play success sound
@@ -181,8 +189,8 @@ export class GameApp {
     // Load audio assets
     await this.loadAudioAssets();
 
-    // Create the boot world
-    const world = createBootWorld(this.scene, this.bus);
+    // Create the boot world with role-specific player
+    const world = createBootWorld(this.scene, this.bus, this.startParams.roleId);
     this.worldDispose = world.dispose;
     this.player = world.player;
     this.playerEntity = world.playerEntity;
@@ -228,8 +236,14 @@ export class GameApp {
       };
     });
 
-    // Start the first task
-    this.taskSystem.startTask(campfire_v1);
+    // Create progression system and start
+    this.progressionSystem = new ProgressionSystem(
+      this.taskSystem,
+      this.startParams.roleId,
+      this.startParams.areaId,
+      { devBootFallback: true }
+    );
+    this.progressionSystem.start();
 
     // Create wake radius system
     this.wakeRadiusSystem = new WakeRadiusSystem(this.scene, this.bus);
@@ -360,11 +374,19 @@ export class GameApp {
   private onRestart() {
     console.log('[GameApp] Restarting game');
     
-    // Reset task system
+    // Reset task system and progression
     if (this.taskSystem) {
       this.taskSystem.dispose();
       this.taskSystem = new TaskSystem(this.bus);
-      this.taskSystem.startTask(campfire_v1);
+      
+      // Recreate progression system
+      this.progressionSystem = new ProgressionSystem(
+        this.taskSystem,
+        this.startParams.roleId,
+        this.startParams.areaId,
+        { devBootFallback: true }
+      );
+      this.progressionSystem.start();
     }
     
     // Reset player position

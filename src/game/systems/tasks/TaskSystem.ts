@@ -42,9 +42,13 @@ export class TaskSystem {
     const step = this.currentTask.steps[this.currentStepIndex];
     if (step.targetId !== targetId) return false;
     
-    // Check inventory requirement
-    if (step.requiresItem && !this.inventory.has(step.requiresItem)) {
-      return false;
+    // Check all required items are in inventory
+    if (step.requiresItems) {
+      for (const itemId of step.requiresItems) {
+        if (!this.inventory.has(itemId)) {
+          return false;
+        }
+      }
     }
     
     return true;
@@ -55,11 +59,18 @@ export class TaskSystem {
     
     const step = this.currentTask.steps[this.currentStepIndex];
     
-    // Grant item based on step (simple mapping)
-    if (step.id === 'pickup_axe') {
-      this.inventory.add('axe');
-    } else if (step.id === 'chop_log') {
-      this.inventory.add('log');
+    // Grant items (data-driven)
+    if (step.grantsItems) {
+      for (const itemId of step.grantsItems) {
+        this.inventory.add(itemId);
+      }
+    }
+    
+    // Consume items (data-driven)
+    if (step.consumesItems) {
+      for (const itemId of step.consumesItems) {
+        this.inventory.delete(itemId); // Safe if item doesn't exist
+      }
     }
     
     this.currentStepIndex++;
@@ -72,13 +83,19 @@ export class TaskSystem {
         stepIndex: this.currentStepIndex,
         complete: true,
       });
-      // Reset to beginning for testing (in production, would load next task)
-      this.currentStepIndex = 0;
-      this.inventory.clear();
-      console.log('[TaskSystem] Task complete - reset to step 0');
+      // Set currentTask to null to stop prompts
+      this.currentTask = null;
+      console.log('[TaskSystem] Task complete - inventory preserved');
     } else {
       this.emitTaskEvent();
     }
+  }
+
+  /**
+   * Get current inventory as array
+   */
+  getInventory(): string[] {
+    return Array.from(this.inventory);
   }
 
   private emitTaskEvent(): void {

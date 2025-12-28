@@ -3,7 +3,7 @@
  */
 
 // Icon types for kid-friendly prompts (no text)
-export type PromptIcon = 'hand' | 'axe' | 'log' | 'fire' | 'tent' | 'fish' | 'paw';
+export type PromptIcon = 'hand' | 'axe' | 'log' | 'fire' | 'tent' | 'fish' | 'paw' | 'book' | 'knife' | 'spark' | 'knot' | 'target';
 
 // Companion FSM states
 export type CompanionState = 'FollowPlayer' | 'LeadToTarget' | 'InvestigateTarget' | 'Celebrate';

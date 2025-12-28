@@ -14,7 +14,7 @@ import {
 } from '@babylonjs/core';
 import { loadGlb } from '@game/assets/loaders/gltf';
 import { MODELS } from '@game/assets/manifest';
-import { MODEL_KEYS } from '@game/assets/AssetKeys';
+import type { RoleId } from '@game/content/areas';
 
 export class Player {
   public mesh: TransformNode;
@@ -22,9 +22,11 @@ export class Player {
   private currentAnimation: AnimationGroup | null = null;
   private modelLoaded = false;
   private scene: Scene;
+  private roleId: RoleId;
 
-  constructor(scene: Scene, position: Vector3) {
+  constructor(scene: Scene, position: Vector3, roleId: RoleId = 'boy') {
     this.scene = scene;
+    this.roleId = roleId;
     
     // Create root transform immediately
     this.mesh = new TransformNode('player', scene);
@@ -39,15 +41,20 @@ export class Player {
     placeholder.parent = this.mesh;
     
     const mat = new StandardMaterial('playerPlaceholderMat', scene);
-    mat.diffuseColor = new Color3(0.2, 0.5, 0.9);
+    // Role-specific colors: Boy = blue, Girl = pink
+    if (roleId === 'girl') {
+      mat.diffuseColor = new Color3(1.0, 0.4, 0.7); // Pink
+    } else {
+      mat.diffuseColor = new Color3(0.2, 0.5, 0.9); // Blue
+    }
     mat.specularColor = new Color3(0.3, 0.3, 0.3);
     placeholder.material = mat;
     
-    // Load boy model asynchronously
-    void this.loadBoyModel(placeholder, mat);
+    // Load role-specific model asynchronously
+    void this.loadPlayerModel(placeholder, mat);
   }
 
-  private async loadBoyModel(placeholder: Mesh, placeholderMat: StandardMaterial): Promise<void> {
+  private async loadPlayerModel(placeholder: Mesh, placeholderMat: StandardMaterial): Promise<void> {
     try {
       // Check if scene is still valid
       if (this.scene.isDisposed) {
@@ -55,11 +62,20 @@ export class Player {
         return;
       }
       
-      const boyUrl = MODELS[MODEL_KEYS.BOY];
-      console.log('[Player] Loading boy model:', boyUrl);
+      // Get model key based on role
+      const modelKey = this.roleId === 'girl' ? 'girl' : 'boy';
+      const modelUrl = MODELS[modelKey];
       
-      const result = await loadGlb(this.scene, boyUrl, {
-        name: 'boy',
+      // If girl model doesn't exist yet, keep placeholder
+      if (!modelUrl) {
+        console.warn(`[Player] No model found for role '${this.roleId}', keeping placeholder`);
+        return;
+      }
+      
+      console.log(`[Player] Loading ${this.roleId} model:`, modelUrl);
+      
+      const result = await loadGlb(this.scene, modelUrl, {
+        name: this.roleId,
         isPickable: false,
         receiveShadows: true,
       });
@@ -86,9 +102,9 @@ export class Player {
       this.setupAnimations(result.animationGroups);
       
       this.modelLoaded = true;
-      console.log('[Player] Boy model loaded successfully');
+      console.log(`[Player] ${this.roleId} model loaded successfully`);
     } catch (error) {
-      console.error('[Player] Failed to load boy model:', error);
+      console.error(`[Player] Failed to load ${this.roleId} model:`, error);
       // Keep placeholder on error
     }
   }
@@ -97,7 +113,7 @@ export class Player {
     console.log('[Player] Animation groups found:', groups.length);
     
     if (groups.length === 0) {
-      console.warn('[Player] ⚠️ No animations found in Boy.glb');
+      console.warn(`[Player] ⚠️ No animations found in ${this.roleId}.glb`);
       console.warn('[Player] 💡 Tip: When exporting from Blender:');
       console.warn('[Player]   1. Select your armature + mesh');
       console.warn('[Player]   2. File > Export > glTF 2.0');

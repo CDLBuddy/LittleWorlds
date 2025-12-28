@@ -14,6 +14,11 @@ const iconEmoji: Record<PromptIcon, string> = {
   tent: '⛺',
   fish: '🐟',
   paw: '🐾',
+  book: '📖',
+  knife: '🛠️',
+  spark: '✨',
+  knot: '🪢',
+  target: '🎯',
 };
 
 export default function HintPulse({ icon, dwellProgress = 0 }: HintPulseProps) {

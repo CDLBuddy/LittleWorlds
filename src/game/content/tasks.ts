@@ -5,8 +5,10 @@
 export interface TaskStep {
   id: string;
   targetId: string; // ID of the interactable to interact with
-  promptIcon: 'hand' | 'axe' | 'log' | 'fire' | 'tent' | 'fish' | 'paw';
-  requiresItem?: string; // Optional inventory requirement
+  promptIcon: 'hand' | 'axe' | 'log' | 'fire' | 'tent' | 'fish' | 'paw' | 'book' | 'knife' | 'spark' | 'knot' | 'target';
+  requiresItems?: string[]; // Inventory requirements (must have all)
+  grantsItems?: string[]; // Items to grant on step completion
+  consumesItems?: string[]; // Items to remove on step completion
 }
 
 export interface Task {
@@ -29,20 +31,144 @@ export const campfire_v1: Task = {
       id: 'pickup_axe',
       targetId: 'axe_001',
       promptIcon: 'hand',
+      grantsItems: ['axe'],
     },
     {
       id: 'chop_log',
       targetId: 'logpile_001',
       promptIcon: 'axe',
-      requiresItem: 'axe',
+      requiresItems: ['axe'],
+      grantsItems: ['log'],
     },
     {
       id: 'light_fire',
       targetId: 'campfire',
       promptIcon: 'fire',
-      requiresItem: 'log',
+      requiresItems: ['log'],
     },
   ],
 };
 
-export const allTasks: Task[] = [campfire_v1];
+// Backyard tasks - Boy role
+export const boy_backyard_find_slingshot: Task = {
+  id: 'boy_backyard_find_slingshot',
+  name: 'Find Slingshot',
+  steps: [
+    {
+      id: 'pickup_slingshot',
+      targetId: 'slingshot_pickup',
+      promptIcon: 'hand',
+      grantsItems: ['slingshot', 'steel_balls'],
+    },
+  ],
+};
+
+export const boy_backyard_first_shots: Task = {
+  id: 'boy_backyard_first_shots',
+  name: 'First Shots',
+  steps: [
+    {
+      id: 'shoot_target',
+      targetId: 'backyard_target',
+      promptIcon: 'target',
+      requiresItems: ['slingshot'],
+    },
+  ],
+};
+
+// Backyard tasks - Girl role
+export const girl_backyard_find_multitool: Task = {
+  id: 'girl_backyard_find_multitool',
+  name: 'Find Multitool',
+  steps: [
+    {
+      id: 'pickup_multitool',
+      targetId: 'multitool_pickup',
+      promptIcon: 'hand',
+      grantsItems: ['multitool', 'string'],
+    },
+  ],
+};
+
+export const girl_backyard_carve_token: Task = {
+  id: 'girl_backyard_carve_token',
+  name: 'Carve Token',
+  steps: [
+    {
+      id: 'carve',
+      targetId: 'carve_station',
+      promptIcon: 'knife',
+      requiresItems: ['multitool'],
+      grantsItems: ['carved_token'],
+    },
+  ],
+};
+
+// Woodline tasks - Boy role
+export const boy_woodline_find_flint: Task = {
+  id: 'boy_woodline_find_flint',
+  name: 'Find Flint',
+  steps: [
+    {
+      id: 'pickup_flint',
+      targetId: 'flint_pickup',
+      promptIcon: 'hand',
+      grantsItems: ['flint'],
+    },
+  ],
+};
+
+export const boy_woodline_spark_fire: Task = {
+  id: 'boy_woodline_spark_fire',
+  name: 'Spark Fire',
+  steps: [
+    {
+      id: 'spark',
+      targetId: 'campfire',
+      promptIcon: 'spark',
+      requiresItems: ['flint', 'steel_balls'],
+    },
+  ],
+};
+
+// Woodline tasks - Girl role
+export const girl_woodline_find_fieldguide: Task = {
+  id: 'girl_woodline_find_fieldguide',
+  name: 'Find Field Guide',
+  steps: [
+    {
+      id: 'pickup_fieldguide',
+      targetId: 'fieldguide_pickup',
+      promptIcon: 'book',
+      grantsItems: ['field_guide'],
+    },
+  ],
+};
+
+export const girl_woodline_bowdrill_fire: Task = {
+  id: 'girl_woodline_bowdrill_fire',
+  name: 'Bow Drill Fire',
+  steps: [
+    {
+      id: 'bowdrill',
+      targetId: 'bowdrill_station',
+      promptIcon: 'knot',
+      requiresItems: ['multitool', 'string'],
+    },
+  ],
+};
+
+// Task registry
+export const TASKS_BY_ID: Record<string, Task> = {
+  campfire_v1,
+  boy_backyard_find_slingshot,
+  boy_backyard_first_shots,
+  girl_backyard_find_multitool,
+  girl_backyard_carve_token,
+  boy_woodline_find_flint,
+  boy_woodline_spark_fire,
+  girl_woodline_find_fieldguide,
+  girl_woodline_bowdrill_fire,
+};
+
+export const allTasks: Task[] = Object.values(TASKS_BY_ID);
