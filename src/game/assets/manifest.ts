@@ -14,7 +14,11 @@ export interface AssetManifest {
 export const assetManifest: AssetManifest = {
   "models": [
     "assets/models/Boy.glb",
-    "assets/models/Dog.glb"
+    "assets/models/Dog.glb",
+    "assets/models/House.glb",
+    "assets/models/Slingshot.glb",
+    "assets/models/Summergrass.glb",
+    "assets/models/TreesBushes.glb"
   ],
   "textures": [],
   "audio": [
@@ -33,7 +37,11 @@ export const assetManifest: AssetManifest = {
 // Keyed model paths for easy loading
 export const MODELS: Record<string, string> = {
   'boy': 'assets/models/Boy.glb',
-  'dog': 'assets/models/Dog.glb'
+  'dog': 'assets/models/Dog.glb',
+  'house': 'assets/models/House.glb',
+  'slingshot': 'assets/models/Slingshot.glb',
+  'summergrass': 'assets/models/Summergrass.glb',
+  'treesbushes': 'assets/models/TreesBushes.glb'
 };
 
 // Keyed audio paths for easy loading

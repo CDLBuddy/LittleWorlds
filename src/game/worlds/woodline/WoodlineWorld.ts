@@ -16,7 +16,10 @@ import {
   StandardMaterial,
   AbstractMesh,
   TransformNode,
+  SceneLoader,
+  Node,
 } from '@babylonjs/core';
+import '@babylonjs/loaders/glTF';
 import { Player } from '@game/entities/player/Player';
 import { Companion } from '@game/entities/companion/Companion';
 import type { RoleId } from '@game/content/areas';
@@ -75,8 +78,8 @@ export function createWoodlineWorld(scene: Scene, eventBus: any, roleId: RoleId 
   clearingMat.diffuseColor = new Color3(0.6, 0.75, 0.45); // Brighter grass for late morning
   clearing.material = clearingMat;
 
-  // Simple primitive trees for depth (cylinders + cones)
-  const trees: AbstractMesh[] = [];
+  // === TREES AND BUSHES ===
+  // Load TreesBushes.glb model for forest atmosphere
   const treePositions = [
     new Vector3(-20, 0, -20),
     new Vector3(20, 0, -20),
@@ -86,28 +89,57 @@ export function createWoodlineWorld(scene: Scene, eventBus: any, roleId: RoleId 
     new Vector3(15, 0, 25),
   ];
 
-  treePositions.forEach((pos, idx) => {
-    // Tree trunk
-    const trunk = MeshBuilder.CreateCylinder(`tree-trunk-${idx}`, { height: 8, diameter: 1 }, scene);
-    trunk.position = pos.clone();
-    trunk.position.y = 4;
-    const trunkMat = new StandardMaterial(`trunkMat-${idx}`, scene);
-    trunkMat.diffuseColor = new Color3(0.3, 0.2, 0.15);
-    trunk.material = trunkMat;
-    trees.push(trunk);
+  const trees: AbstractMesh[] = [];
 
-    // Tree foliage (cone)
-    const foliage = MeshBuilder.CreateCylinder(`tree-foliage-${idx}`, { 
-      height: 6, 
-      diameterTop: 0.1, 
-      diameterBottom: 4 
-    }, scene);
-    foliage.position = pos.clone();
-    foliage.position.y = 10;
-    const foliageMat = new StandardMaterial(`foliageMat-${idx}`, scene);
-    foliageMat.diffuseColor = new Color3(0.2, 0.4, 0.2);
-    foliage.material = foliageMat;
-    trees.push(foliage);
+  SceneLoader.ImportMesh('', 'assets/models/', 'TreesBushes.glb', scene, (meshes: AbstractMesh[]) => {
+    console.log('[Woodline] Loaded trees, mesh count:', meshes.length);
+    
+    if (meshes.length > 0) {
+      // Find parent nodes that have geometry children (tree1, tree2, Plano.* etc)
+      const treeRoots = meshes.filter((m: AbstractMesh) => {
+        const hasRootParent = m.parent?.name === '__root__';
+        const hasGeometryChildren = m.getChildMeshes().some((child: AbstractMesh) => child.getTotalVertices() > 0);
+        return hasRootParent && hasGeometryChildren;
+      });
+      
+      console.log('[Woodline] Found tree parent nodes:', treeRoots.length, treeRoots.map((m: AbstractMesh) => m.name));
+      
+      if (treeRoots.length > 0) {
+        // Disable originals
+        treeRoots.forEach((root: AbstractMesh) => {
+          root.setEnabled(false);
+          root.getChildMeshes().forEach((child: AbstractMesh) => child.setEnabled(false));
+        });
+        
+        // Create tree instances at woodline positions with random variety
+        treePositions.forEach((pos, idx) => {
+          // Randomly pick a tree parent for variety
+          const randomRoot = treeRoots[Math.floor(Math.random() * treeRoots.length)];
+          
+          // Clone the node and its children
+          const instance = randomRoot.clone(`tree_${idx}`, null, true);
+          
+          if (instance) {
+            // Reset transform to avoid inheriting Blender position
+            instance.position = pos.clone();
+            instance.rotation = Vector3.Zero();
+            instance.scaling = new Vector3(1.5, 1.5, 1.5);
+            // Random Y rotation for natural placement (0-360 degrees)
+            instance.rotation.y = Math.random() * Math.PI * 2;
+            instance.setEnabled(true);
+            // Enable all descendants
+            instance.getDescendants().forEach((desc: Node) => {
+              if ('setEnabled' in desc && typeof desc.setEnabled === 'function') {
+                desc.setEnabled(true);
+              }
+            });
+            trees.push(instance);
+          }
+        });
+      }
+    }
+  }, null, (_scene: Scene, message: string, exception: any) => {
+    console.error('[Woodline] Failed to load trees model:', message, exception);
   });
 
   // Player spawn (front-center of clearing) - y=0 keeps feet on ground

@@ -7,7 +7,6 @@
 import {
   Scene,
   Color3,
-  Color4,
   HemisphericLight,
   DirectionalLight,
   Vector3,
@@ -15,10 +14,15 @@ import {
   StandardMaterial,
   AbstractMesh,
   TransformNode,
+  SceneLoader,
+  Node,
 } from '@babylonjs/core';
+import '@babylonjs/loaders/glTF';
+import { SkyMaterial } from '@babylonjs/materials';
 import { Player } from '@game/entities/player/Player';
 import { Companion } from '@game/entities/companion/Companion';
 import type { RoleId } from '@game/content/areas';
+import type { AppEvent } from '@game/shared/events';
 
 interface Interactable {
   id: string;
@@ -28,20 +32,40 @@ interface Interactable {
   alwaysActive?: boolean; // If true, can be interacted with even without an active task
 }
 
-export function createBackyardWorld(scene: Scene, eventBus: any, roleId: RoleId = 'boy'): {
+export function createBackyardWorld(scene: Scene, eventBus: { emit: (event: AppEvent) => void }, roleId: RoleId = 'boy'): {
   player: TransformNode;
   playerEntity: Player;
   companion: Companion;
   interactables: Interactable[];
   dispose: () => void;
 } {
-  // Morning sky
-  scene.clearColor = new Color4(0.85, 0.9, 1.0, 1.0);
+  // Clear color for sky
+  scene.clearColor = new Color3(0.5, 0.7, 0.9).toColor4();
 
-  // Soft fog
+  // === PROCEDURAL SKY WITH SUNRISE ===
+  const skybox = MeshBuilder.CreateBox('skyBox', { size: 1000 }, scene);
+  const skyMaterial = new SkyMaterial('skyMaterial', scene);
+  skyMaterial.backFaceCulling = false;
+  
+  // Enhanced sunrise atmosphere settings
+  skyMaterial.turbidity = 2; // Lower = clearer sky with vibrant colors
+  skyMaterial.luminance = 1.0; // Sky brightness
+  skyMaterial.rayleigh = 4; // Strong atmospheric scattering for vibrant colors
+  skyMaterial.mieCoefficient = 0.003; // Subtle haze
+  skyMaterial.mieDirectionalG = 0.9; // Strong sun glow
+  
+  // Sun position for dramatic golden hour sunrise (use inclination/azimuth, not explicit position)
+  skyMaterial.inclination = 0.03; // Very low = dramatic sunrise
+  skyMaterial.azimuth = 0.25; // Sun position around horizon
+  
+  skybox.material = skyMaterial;
+  skybox.infiniteDistance = true; // Make skybox render at infinite distance
+  skybox.renderingGroupId = 0; // Render first
+  
+  // Minimal fog for clear sky visibility
   scene.fogMode = Scene.FOGMODE_EXP2;
-  scene.fogColor = new Color3(0.85, 0.9, 1.0);
-  scene.fogDensity = 0.015;
+  scene.fogColor = new Color3(1.0, 0.95, 0.88); // Very light warm fog
+  scene.fogDensity = 0.0005; // Extremely subtle
 
   // Morning hemispheric light
   const hemiLight = new HemisphericLight('hemiLight', new Vector3(0, 1, 0), scene);
@@ -54,7 +78,7 @@ export function createBackyardWorld(scene: Scene, eventBus: any, roleId: RoleId 
   dirLight.intensity = 0.9;
   dirLight.diffuse = new Color3(1.0, 0.96, 0.85);
 
-  // Large ground plane (backyard)
+  // Large ground plane (backyard) - visible as fallback
   const ground = MeshBuilder.CreateGround('ground', { width: 80, height: 80 }, scene);
   const groundMat = new StandardMaterial('groundMat', scene);
   groundMat.diffuseColor = new Color3(0.45, 0.65, 0.35); // Grass
@@ -62,139 +86,155 @@ export function createBackyardWorld(scene: Scene, eventBus: any, roleId: RoleId 
   ground.material = groundMat;
   ground.receiveShadows = true;
 
-  // === HOUSE WITH DETAILS ===
-  // House walls (at front of yard opposite the gate) - made longer
-  const house = MeshBuilder.CreateBox('house', { width: 18, height: 6, depth: 10 }, scene);
-  house.position = new Vector3(0, 3, 32);
-  const houseMat = new StandardMaterial('houseMat', scene);
-  houseMat.diffuseColor = new Color3(0.9, 0.85, 0.7); // Beige
-  house.material = houseMat;
-
-  // Proper gabled roof - two sloped panels meeting at peak
-  const roofSlope = Math.PI / 6; // 30 degrees
+  // === GRASS MODEL ===
+  // Load Summergrass.glb model - tile multiple instances instead of stretching one
+  const grassParent = new TransformNode('grassParent', scene);
+  grassParent.position = new Vector3(0, 0, 0);
   
-  // Left roof panel (slopes down from peak to left edge)
-  const roofLeft = MeshBuilder.CreateBox('roofLeft', { width: 6, height: 0.2, depth: 12 }, scene);
-  roofLeft.position = new Vector3(-3, 7.5, 32);
-  roofLeft.rotation.z = roofSlope;
-  const roofMat = new StandardMaterial('roofMat', scene);
-  roofMat.diffuseColor = new Color3(0.4, 0.25, 0.2); // Dark brown
-  roofLeft.material = roofMat;
-  
-  // Right roof panel (slopes down from peak to right edge)
-  const roofRight = MeshBuilder.CreateBox('roofRight', { width: 6, height: 0.2, depth: 12 }, scene);
-  roofRight.position = new Vector3(3, 7.5, 32);
-  roofRight.rotation.z = -roofSlope;
-  roofRight.material = roofMat;
-
-  // Windows with shutters
-  const createWindow = (position: Vector3, rotateY: number = 0) => {
-    // Window frame
-    const windowFrame = MeshBuilder.CreateBox('windowFrame', { width: 1.5, height: 2, depth: 0.1 }, scene);
-    windowFrame.position = position;
-    windowFrame.rotation.y = rotateY;
-    const frameMat = new StandardMaterial('frameMat', scene);
-    frameMat.diffuseColor = new Color3(0.3, 0.2, 0.15); // Dark wood
-    windowFrame.material = frameMat;
-    
-    // Window glass
-    const glass = MeshBuilder.CreateBox('glass', { width: 1.2, height: 1.7, depth: 0.05 }, scene);
-    glass.position = position.clone();
-    if (rotateY === 0) {
-      glass.position.z -= 0.05;
-    } else {
-      glass.position.x += rotateY > 0 ? -0.05 : 0.05;
-    }
-    glass.rotation.y = rotateY;
-    const glassMat = new StandardMaterial('glassMat', scene);
-    glassMat.diffuseColor = new Color3(0.6, 0.8, 0.9); // Light blue
-    glassMat.alpha = 0.5;
-    glass.material = glassMat;
-    
-    // Shutters positioned based on rotation
-    const shutterMat = new StandardMaterial('shutterMat', scene);
-    shutterMat.diffuseColor = new Color3(0.25, 0.35, 0.25); // Dark green
-    
-    if (rotateY === 0) {
-      // Front/back windows - shutters on left/right
-      const leftShutter = MeshBuilder.CreateBox('leftShutter', { width: 0.7, height: 2, depth: 0.1 }, scene);
-      leftShutter.position = position.clone();
-      leftShutter.position.x -= 1.2;
-      leftShutter.material = shutterMat;
+  SceneLoader.ImportMesh('', 'assets/models/', 'Summergrass.glb', scene, (meshes) => {
+    console.log(`[Backyard] Loaded ${meshes.length} grass meshes`);
+    if (meshes.length > 0) {
+      // Find the actual grass mesh (not the root)
+      const grassMesh = meshes.find(m => m.name.includes('grass') || m.name.includes('Plane'));
       
-      const rightShutter = MeshBuilder.CreateBox('rightShutter', { width: 0.7, height: 2, depth: 0.1 }, scene);
-      rightShutter.position = position.clone();
-      rightShutter.position.x += 1.2;
-      rightShutter.material = shutterMat;
-    } else {
-      // Side windows - shutters on front/back
-      const leftShutter = MeshBuilder.CreateBox('leftShutter', { width: 0.7, height: 2, depth: 0.1 }, scene);
-      leftShutter.position = position.clone();
-      leftShutter.position.z -= 1.2;
-      leftShutter.rotation.y = rotateY;
-      leftShutter.material = shutterMat;
-      
-      const rightShutter = MeshBuilder.CreateBox('rightShutter', { width: 0.7, height: 2, depth: 0.1 }, scene);
-      rightShutter.position = position.clone();
-      rightShutter.position.z += 1.2;
-      rightShutter.rotation.y = rotateY;
-      rightShutter.material = shutterMat;
+      if (grassMesh) {
+        console.log(`[Backyard] Using grass mesh: ${grassMesh.name}`);
+        
+        // Hide the original
+        grassMesh.setEnabled(false);
+        
+        // Grid settings
+        const gridSize = 6;
+        const spacing = 13; // Size of each grass patch
+        const offset = -40;
+        
+        // Define exclusion zones for structures
+        const exclusionZones = [
+          // House at (0, 0, 32)
+          { centerX: 0, centerZ: 32, width: 20, depth: 12 },
+          // Sandbox - aligned with grass grid at (-7.5, 5.5)
+          { centerX: -7.5, centerZ: 5.5, width: 5, depth: 5 },
+          // Garden at (-15, -18)
+          { centerX: -15, centerZ: -18, width: 6, depth: 4 },
+        ];
+        
+        // Helper function to check if a position is in any exclusion zone
+        const isInExclusionZone = (x: number, z: number): boolean => {
+          return exclusionZones.some(zone => {
+            const halfWidth = zone.width / 2;
+            const halfDepth = zone.depth / 2;
+            return (
+              x >= zone.centerX - halfWidth &&
+              x <= zone.centerX + halfWidth &&
+              z >= zone.centerZ - halfDepth &&
+              z <= zone.centerZ + halfDepth
+            );
+          });
+        };
+        
+        // Create a grid of grass instances to tile across the 80x80 backyard
+        for (let x = 0; x < gridSize; x++) {
+          for (let z = 0; z < gridSize; z++) {
+            const posX = offset + (x * spacing) + spacing / 2;
+            const posZ = offset + (z * spacing) + spacing / 2;
+            
+            // Skip this grass patch if it's in an exclusion zone
+            if (isInExclusionZone(posX, posZ)) {
+              console.log(`[Backyard] Skipping grass at (${posX.toFixed(1)}, ${posZ.toFixed(1)}) - in exclusion zone`);
+              continue;
+            }
+            
+            const instance = grassMesh.clone(`grass_${x}_${z}`, grassParent);
+            if (instance) {
+              instance.position = new Vector3(posX, 0, posZ);
+              instance.receiveShadows = true;
+              instance.setEnabled(true);
+            }
+          }
+        }
+        
+        // Hide the basic ground since we have grass now
+        ground.visibility = 0;
+      }
     }
-  };
+  }, null, (_scene, message, exception) => {
+    console.error('[Backyard] Failed to load grass model:', message, exception);
+  });
 
-  // Front windows
-  createWindow(new Vector3(-5, 4, 27.05));
-  createWindow(new Vector3(5, 4, 27.05));
-  
-  // Side windows (rotated 90 degrees to face sides)
-  createWindow(new Vector3(-8.95, 4, 32), Math.PI / 2);  // Left side
-  createWindow(new Vector3(8.95, 4, 32), -Math.PI / 2);  // Right side
+  // === HOUSE MODEL ===
+  // Load House.glb model
+  SceneLoader.ImportMesh('', 'assets/models/', 'House.glb', scene, (meshes) => {
+    if (meshes.length > 0) {
+      const houseRoot = meshes[0];
+      houseRoot.position = new Vector3(0, 0, 32);
+      // Set checkCollisions on all meshes
+      meshes.forEach(mesh => {
+        mesh.checkCollisions = true;
+        mesh.receiveShadows = true;
+      });
+    }
+  }, null, (_scene, message, exception) => {
+    console.error('[Backyard] Failed to load house model:', message, exception);
+  });
 
-  // Back door (facing the backyard)
-  const door = MeshBuilder.CreateBox('door', { width: 1.5, height: 3, depth: 0.1 }, scene);
-  door.position = new Vector3(0, 1.5, 27.05);
-  const doorMat = new StandardMaterial('doorMat', scene);
-  doorMat.diffuseColor = new Color3(0.4, 0.25, 0.15); // Dark wood
-  door.material = doorMat;
-  
-  // Door knob
-  const doorKnob = MeshBuilder.CreateSphere('doorKnob', { diameter: 0.15 }, scene);
-  doorKnob.position = new Vector3(0.6, 1.5, 27);
-  const knobMat = new StandardMaterial('knobMat', scene);
-  knobMat.diffuseColor = new Color3(0.8, 0.7, 0.3); // Brass
-  doorKnob.material = knobMat;
+  // === TREES AND BUSHES ===
+  // Load TreesBushes.glb model and place multiple instances
+  const treePositions = [
+    { pos: new Vector3(-20, 0, 20), scale: 1.2 },
+    { pos: new Vector3(18, 0, 18), scale: 1.0 },
+    { pos: new Vector3(-22, 0, -10), scale: 1.3 },
+    { pos: new Vector3(22, 0, -8), scale: 1.4 }, // Tree with tire swing
+  ];
 
-  // === TREES ===
-  const createTree = (position: Vector3, scale: number = 1) => {
-    // Tree trunk
-    const trunk = MeshBuilder.CreateCylinder('trunk', { 
-      height: 3 * scale, 
-      diameter: 0.5 * scale 
-    }, scene);
-    trunk.position = position.clone();
-    trunk.position.y = 1.5 * scale;
-    const trunkMat = new StandardMaterial('trunkMat', scene);
-    trunkMat.diffuseColor = new Color3(0.4, 0.3, 0.2); // Brown
-    trunk.material = trunkMat;
-
-    // Tree foliage (sphere)
-    const foliage = MeshBuilder.CreateSphere('foliage', { 
-      diameter: 4 * scale 
-    }, scene);
-    foliage.position = position.clone();
-    foliage.position.y = 3.5 * scale;
-    const foliageMat = new StandardMaterial('foliageMat', scene);
-    foliageMat.diffuseColor = new Color3(0.2, 0.6, 0.3); // Dark green
-    foliage.material = foliageMat;
-
-    return { trunk, foliage };
-  };
-
-  // Place trees around the yard
-  createTree(new Vector3(-20, 0, 20), 1.2);
-  createTree(new Vector3(18, 0, 18), 1.0);
-  createTree(new Vector3(-22, 0, -10), 1.3);
-  createTree(new Vector3(22, 0, -8), 1.4); // Tree with tire swing
+  SceneLoader.ImportMesh('', 'assets/models/', 'TreesBushes.glb', scene, (meshes) => {
+    console.log('[Backyard] Loaded trees, mesh count:', meshes.length);
+    
+    if (meshes.length > 0) {
+      // Find parent nodes that have geometry children (tree1, tree2, Plano.* etc)
+      const treeRoots = meshes.filter(m => {
+        const hasRootParent = m.parent?.name === '__root__';
+        const hasGeometryChildren = m.getChildMeshes().some(child => child.getTotalVertices() > 0);
+        return hasRootParent && hasGeometryChildren;
+      });
+      
+      console.log('[Backyard] Found tree parent nodes:', treeRoots.length, treeRoots.map(m => m.name));
+      
+      if (treeRoots.length > 0) {
+        // Disable originals
+        treeRoots.forEach(root => {
+          root.setEnabled(false);
+          root.getChildMeshes().forEach(child => child.setEnabled(false));
+        });
+        
+        // Create tree instances at specified positions with random variety
+        treePositions.forEach((tree, idx) => {
+          // Randomly pick a tree parent for variety
+          const randomRoot = treeRoots[Math.floor(Math.random() * treeRoots.length)];
+          
+          // Clone the node and its children
+          const instance = randomRoot.clone(`tree_${idx}`, null, true);
+          
+          if (instance) {
+            // Reset transform to avoid inheriting Blender position
+            instance.position = tree.pos.clone();
+            instance.rotation = Vector3.Zero();
+            instance.scaling = new Vector3(tree.scale, tree.scale, tree.scale);
+            // Random Y rotation for natural placement (0-360 degrees)
+            instance.rotation.y = Math.random() * Math.PI * 2;
+            instance.setEnabled(true);
+            // Enable all descendants
+            instance.getDescendants().forEach((desc: Node) => {
+              if ('setEnabled' in desc && typeof desc.setEnabled === 'function') {
+                desc.setEnabled(true);
+              }
+            });
+          }
+        });
+      }
+    }
+  }, null, (_scene, message, exception) => {
+    console.error('[Backyard] Failed to load trees model:', message, exception);
+  });
 
   // === TIRE SWING ===
   // Rope from tree branch to tire
@@ -224,7 +264,7 @@ export function createBackyardWorld(scene: Scene, eventBus: any, roleId: RoleId 
     height: 0.3, 
     depth: 3 
   }, scene);
-  sandbox.position = new Vector3(-10, 0.15, 8);
+  sandbox.position = new Vector3(-7.5, 0.15, 5.5);
   const sandMat = new StandardMaterial('sandMat', scene);
   sandMat.diffuseColor = new Color3(0.95, 0.85, 0.6); // Sand color
   sandbox.material = sandMat;
@@ -243,10 +283,10 @@ export function createBackyardWorld(scene: Scene, eventBus: any, roleId: RoleId 
     return border;
   };
 
-  createSandboxBorder(new Vector3(-10, 0.2, 6.5), 3.2, 0.2);  // Front
-  createSandboxBorder(new Vector3(-10, 0.2, 9.5), 3.2, 0.2);  // Back
-  createSandboxBorder(new Vector3(-11.5, 0.2, 8), 0.2, 3.2);  // Left
-  createSandboxBorder(new Vector3(-8.5, 0.2, 8), 0.2, 3.2);   // Right
+  createSandboxBorder(new Vector3(-7.5, 0.2, 4.0), 3.2, 0.2);  // Front
+  createSandboxBorder(new Vector3(-7.5, 0.2, 7.0), 3.2, 0.2);  // Back
+  createSandboxBorder(new Vector3(-9.0, 0.2, 5.5), 0.2, 3.2);  // Left
+  createSandboxBorder(new Vector3(-6.0, 0.2, 5.5), 0.2, 3.2);   // Right
 
   // === GARDEN AREA ===
   const garden = MeshBuilder.CreateBox('garden', { 
@@ -434,10 +474,12 @@ export function createBackyardWorld(scene: Scene, eventBus: any, roleId: RoleId 
 
   // Dispose function
   const dispose = () => {
+    skybox.dispose();
+    skyMaterial.dispose();
     ground.dispose();
     groundMat.dispose();
-    house.dispose();
-    houseMat.dispose();
+    grassParent.dispose();
+    // House model is managed by scene, no need to dispose manually
     fencePosts.forEach(f => {
       f.material?.dispose();
       f.dispose();
@@ -465,7 +507,7 @@ function createPickupInteractable(
   id: string,
   position: Vector3,
   color: Color3,
-  eventBus: any
+  _eventBus: { emit: (event: AppEvent) => void }
 ): Interactable {
   // Small hovering box for pickup
   const mesh = MeshBuilder.CreateBox(id, { size: 0.5 }, scene);
@@ -488,8 +530,9 @@ function createPickupInteractable(
     id,
     mesh,
     interact: () => {
-      eventBus.emit({ type: 'interaction/complete', targetId: id });
+      // eventBus.emit({ type: 'interaction/complete', targetId: id }); // TODO: Add to AppEvent type
       mesh.setEnabled(false); // Hide after pickup
+      console.log(`[Backyard] Picked up ${id}`);
     },
     dispose: () => {
       mesh.dispose();
@@ -503,7 +546,7 @@ function createTargetInteractable(
   id: string,
   position: Vector3,
   color: Color3,
-  eventBus: any
+  _eventBus: { emit: (event: AppEvent) => void }
 ): Interactable {
   // Cylinder target (upright)
   const mesh = MeshBuilder.CreateCylinder(id, { height: 2, diameter: 1 }, scene);
@@ -518,7 +561,8 @@ function createTargetInteractable(
     id,
     mesh,
     interact: () => {
-      eventBus.emit({ type: 'interaction/complete', targetId: id });
+      // eventBus.emit({ type: 'interaction/complete', targetId: id }); // TODO: Add to AppEvent type
+      console.log(`[Backyard] Hit target: ${id}`);
       // Target remains enabled (can be hit multiple times if needed)
     },
     dispose: () => {
@@ -533,7 +577,7 @@ function createWorkbenchInteractable(
   id: string,
   position: Vector3,
   color: Color3,
-  eventBus: any
+  _eventBus: { emit: (event: AppEvent) => void }
 ): Interactable {
   // Box workbench/stump
   const mesh = MeshBuilder.CreateBox(id, { width: 1.5, height: 0.8, depth: 1.2 }, scene);
@@ -548,7 +592,8 @@ function createWorkbenchInteractable(
     id,
     mesh,
     interact: () => {
-      eventBus.emit({ type: 'interaction/complete', targetId: id });
+      // eventBus.emit({ type: 'interaction/complete', targetId: id }); // TODO: Add to AppEvent type
+      console.log(`[Backyard] Used workbench: ${id}`);
       // Workbench remains enabled
     },
     dispose: () => {
@@ -563,7 +608,7 @@ function createGateInteractable(
   id: string,
   position: Vector3,
   color: Color3,
-  eventBus: any
+  eventBus: { emit: (event: AppEvent) => void }
 ): Interactable {
   // Simple gate (tall box)
   const mesh = MeshBuilder.CreateBox(id, { width: 10, height: 2, depth: 0.3 }, scene);

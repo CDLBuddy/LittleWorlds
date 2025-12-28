@@ -45,6 +45,7 @@ export class CameraRig {
     this.camera.upperRadiusLimit = 20;
     this.camera.wheelPrecision = 50;
     this.camera.panningSensibility = 0; // Disable panning for now
+    this.camera.maxZ = 10000; // Increase far clip plane to see skybox
     
     // Vertical rotation limits (beta: 0 = straight down, PI/2 = horizontal, PI = straight up from below)
     this.camera.lowerBetaLimit = 0.5; // Prevent looking too far down
