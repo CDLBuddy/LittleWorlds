@@ -19,6 +19,7 @@ import { CompanionDebugHelper } from './debug/CompanionDebugHelper';
 import { PlayerDebugHelper } from './debug/PlayerDebugHelper';
 import type { RoleId, AreaId } from './content/areas';
 import { ProgressionSystem } from './systems/progression/ProgressionSystem';
+import { AutosaveSystem } from './systems/autosave/AutosaveSystem';
 import { saveFacade } from './systems/saves/saveFacade';
 import * as sessionFacade from './session/sessionFacade';
 
@@ -51,6 +52,7 @@ export class GameApp {
   private playerDebugHelper: PlayerDebugHelper | null = null;
   private playerEntity: Player | null = null;
   private progressionSystem: ProgressionSystem | null = null;
+  private autosaveSystem: AutosaveSystem | null = null;
   private startParams: { roleId: RoleId; areaId: AreaId };
 
   constructor(canvas: HTMLCanvasElement, private bus: typeof eventBus, startParams: { roleId: RoleId; areaId: AreaId }) {
@@ -310,6 +312,16 @@ export class GameApp {
       { devBootFallback: useDevBootFallback }
     );
     this.progressionSystem.start();
+    
+    // Create autosave system (after task system is ready)
+    this.autosaveSystem = new AutosaveSystem(
+      this.bus,
+      this.taskSystem,
+      this.startParams.roleId,
+      this.startParams.areaId
+    );
+    this.autosaveSystem.start();
+    console.log('[GameApp] Autosave system started');
 
     // Create wake radius system
     this.wakeRadiusSystem = new WakeRadiusSystem(this.scene, this.bus);
@@ -509,6 +521,10 @@ export class GameApp {
     this.interactionSystem?.dispose();
     this.interactionSystem = null;
     this.interactables = [];
+    
+    // Clean up autosave system (includes final save)
+    this.autosaveSystem?.dispose();
+    this.autosaveSystem = null;
 
     // Clean up wake radius system
     this.wakeRadiusSystem?.dispose();

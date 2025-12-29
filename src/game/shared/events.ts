@@ -22,6 +22,7 @@ export type UiToGame =
   | { type: 'ui/audio/unlock' }
   | { type: 'ui/audio/volume'; bus: 'master' | 'music' | 'sfx'; value: number }
   | { type: 'ui/restart' }
+  | { type: 'ui/quit' }
   | { type: 'ui/toast'; level: 'info' | 'warning' | 'error'; message: string };
 
 // Game → UI events

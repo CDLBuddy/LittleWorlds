@@ -200,6 +200,11 @@ export function createWoodlineWorld(scene: Scene, eventBus: any, roleId: RoleId 
 
   // Dispose function
   const dispose = () => {
+    // Observer cleanup now handled in individual interactable dispose methods
+    if (import.meta.env.DEV) {
+      console.log('[WoodlineWorld] Disposing world resources');
+    }
+    
     ground.dispose();
     groundMat.dispose();
     clearing.dispose();
@@ -233,7 +238,7 @@ function createPickupInteractable(
   position: Vector3,
   color: Color3,
   eventBus: any
-): Interactable {
+): Interactable & { observer?: any } {
   // Small hovering box for pickup
   const mesh = MeshBuilder.CreateBox(id, { size: 0.5 }, scene);
   mesh.position = position.clone();
@@ -245,7 +250,7 @@ function createPickupInteractable(
   mesh.material = mat;
 
   // Gentle bobbing animation
-  scene.onBeforeRenderObservable.add(() => {
+  const observer = scene.onBeforeRenderObservable.add(() => {
     if (mesh.isEnabled()) {
       mesh.position.y = 0.5 + Math.sin(Date.now() * 0.002) * 0.1;
     }
@@ -254,11 +259,15 @@ function createPickupInteractable(
   return {
     id,
     mesh,
+    observer, // Return observer for cleanup
     interact: () => {
       eventBus.emit({ type: 'interaction/complete', targetId: id });
       mesh.setEnabled(false); // Hide after pickup
     },
     dispose: () => {
+      if (observer) {
+        scene.onBeforeRenderObservable.remove(observer);
+      }
       mesh.dispose();
       mat.dispose();
     },
@@ -312,7 +321,7 @@ function createCampfireInteractable(
   const baseScale = 1.0;
 
   // Gentle flame flicker
-  scene.onBeforeRenderObservable.add(() => {
+  const flameObserver = scene.onBeforeRenderObservable.add(() => {
     if (isLit && flame.isEnabled()) {
       const flicker = 1.0 + Math.sin(Date.now() * 0.005) * 0.1 + Math.cos(Date.now() * 0.003) * 0.05;
       flame.scaling.y = baseScale * flicker;
@@ -338,6 +347,9 @@ function createCampfireInteractable(
     },
     setFireLit,
     dispose: () => {
+      if (flameObserver) {
+        scene.onBeforeRenderObservable.remove(flameObserver);
+      }
       stoneRing.dispose();
       stoneMat.dispose();
       flame.dispose();

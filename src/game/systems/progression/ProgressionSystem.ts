@@ -7,6 +7,7 @@ import type { AreaId, RoleId } from '@game/content/areas';
 import { AREAS } from '@game/content/areas';
 import { TASKS_BY_ID, campfire_v1 } from '@game/content/tasks';
 import { saveFacade } from '../saves/saveFacade';
+import { eventBus } from '@game/shared/events';
 
 interface ProgressionOptions {
   devBootFallback?: boolean;
@@ -116,6 +117,24 @@ export class ProgressionSystem {
     // Save inventory state
     const inventory = this.taskSystem.getInventory();
     saveFacade.setInventory(this.roleId, inventory);
+    
+    // Emit toast for area completion (cast to any as ui/toast is not in GameToUi union)
+    if (nextAreaId) {
+      const nextArea = AREAS[nextAreaId];
+      const areaName = nextArea?.name || nextAreaId;
+      (eventBus as any).emit({
+        type: 'ui/toast',
+        level: 'info',
+        message: `${areaName} unlocked!`,
+      });
+    } else {
+      // Final area completed
+      (eventBus as any).emit({
+        type: 'ui/toast',
+        level: 'info',
+        message: 'Chapter complete!',
+      });
+    }
 
     console.log('[ProgressionSystem] Area progression complete');
   }

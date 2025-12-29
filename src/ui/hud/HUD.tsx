@@ -1,10 +1,11 @@
 import { useEffect } from 'react';
 import { eventBus } from '@game/shared/events';
 import { useUiStore } from '@ui/state/useUiStore';
+import { useToastStore } from '@ui/state/useToastStore';
 import HintPulse from './widgets/HintPulse';
 import InventoryBubbles from './widgets/InventoryBubbles';
 import CompanionCallButton from './widgets/CompanionCallButton';
-import CompletionModal from '@ui/screens/CompletionModal';
+import ToastOverlay from './widgets/ToastOverlay';
 
 export default function HUD() {
   const { 
@@ -14,9 +15,9 @@ export default function HUD() {
     setDwellProgress, 
     clearDwell, 
     activePrompts,
-    showCompletionModal,
-    setShowCompletionModal,
   } = useUiStore();
+  
+  const { pushToast } = useToastStore();
 
   useEffect(() => {
     // Subscribe to game events
@@ -38,12 +39,16 @@ export default function HUD() {
       } else if (event.type === 'game/dwellClear') {
         clearDwell(event.id);
       } else if (event.type === 'game/taskComplete') {
-        // Show completion modal\n        setShowCompletionModal(true);
+        // Show completion toast
+        pushToast('info', '🎉 Task Complete!');
+      } else if (event.type === 'ui/toast') {
+        // Handle toast events
+        pushToast(event.level, event.message);
       }
     });
 
     return unsub;
-  }, [addPrompt, removePrompt, setCompanionState, setDwellProgress, clearDwell, setShowCompletionModal]);
+  }, [addPrompt, removePrompt, setCompanionState, setDwellProgress, clearDwell, pushToast]);
 
   return (
     <div className="hud" style={{ position: 'fixed', width: '100%', height: '100%', pointerEvents: 'none' }}>
@@ -68,11 +73,8 @@ export default function HUD() {
         <CompanionCallButton />
       </div>
       
-      {/* Completion Modal */}
-      <CompletionModal 
-        isOpen={showCompletionModal} 
-        onClose={() => setShowCompletionModal(false)} 
-      />
+      {/* Toast Overlay */}
+      <ToastOverlay />
     </div>
   );
 }

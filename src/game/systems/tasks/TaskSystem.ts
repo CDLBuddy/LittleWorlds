@@ -68,6 +68,21 @@ export class TaskSystem {
       for (const itemId of step.grantsItems) {
         this.inventory.add(itemId);
       }
+      
+      // Emit toast for item gains
+      if (step.grantsItems.length > 0) {
+        const itemNames = step.grantsItems.map(id => this.formatItemName(id));
+        const message = itemNames.length === 1
+          ? `You found: ${itemNames[0]}!`
+          : `You found: ${itemNames.slice(0, 2).join(' + ')}!`; // Show max 2 items
+        
+        // Emit toast notification (cast to any as ui/toast is not in GameToUi union)
+        (this.eventBus as any).emit({
+          type: 'ui/toast',
+          level: 'info',
+          message,
+        });
+      }
     }
     
     // Consume items (data-driven)
@@ -92,6 +107,16 @@ export class TaskSystem {
     } else {
       this.emitTaskEvent();
     }
+  }
+  
+  /**
+   * Format item ID into display name (slingshot -> Slingshot, steel_balls -> Steel Balls)
+   */
+  private formatItemName(itemId: string): string {
+    return itemId
+      .split('_')
+      .map(word => word.charAt(0).toUpperCase() + word.slice(1))
+      .join(' ');
   }
 
   /**

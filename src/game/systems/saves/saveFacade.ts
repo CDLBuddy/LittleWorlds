@@ -109,6 +109,26 @@ class SaveFacade {
     const save = this.loadMain();
     return save.roles[roleId].inventory;
   }
+  
+  /**
+   * Sync inventory without full area completion (for autosave)
+   */
+  syncInventory(roleId: 'boy' | 'girl', inventory: string[]): SaveData {
+    const save = this.loadMain();
+    save.roles[roleId].inventory = inventory;
+    this.writeMain(save);
+    return save;
+  }
+  
+  /**
+   * Sync last area ID for a role (for autosave)
+   */
+  syncLastArea(roleId: 'boy' | 'girl', areaId: AreaId): SaveData {
+    const save = this.loadMain();
+    save.roles[roleId].lastAreaId = areaId;
+    this.writeMain(save);
+    return save;
+  }
 }
 
 // Export singleton instance
