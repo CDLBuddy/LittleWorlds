@@ -1,8 +1,6 @@
 import { Engine, Scene, AbstractMesh, TransformNode } from '@babylonjs/core';
 import { eventBus } from './shared/events';
 import { createBootWorld } from './worlds/BootWorld';
-import { createBackyardWorld } from './worlds/backyard/BackyardWorld';
-import { createWoodlineWorld } from './worlds/woodline/WoodlineWorld';
 import { Player } from './entities/player/Player';
 import { PlayerController } from './entities/player/controller';
 import { WakeRadiusSystem, type Wakeable } from './systems/interactions/wakeRadius';
@@ -17,6 +15,7 @@ import { CameraRig } from './systems/camera/CameraRig';
 import { FxSystem } from './systems/fx/FxSystem';
 import { CompanionDebugHelper } from './debug/CompanionDebugHelper';
 import { PlayerDebugHelper } from './debug/PlayerDebugHelper';
+import { WorldEditor } from './debug/WorldEditor';
 import type { RoleId, AreaId } from './content/areas';
 import { ProgressionSystem } from './systems/progression/ProgressionSystem';
 import { AutosaveSystem } from './systems/autosave/AutosaveSystem';
@@ -50,6 +49,7 @@ export class GameApp {
   private fxSystem: FxSystem | null = null;
   private companionDebugHelper: CompanionDebugHelper | null = null;
   private playerDebugHelper: PlayerDebugHelper | null = null;
+  private worldEditor: WorldEditor | null = null;
   private playerEntity: Player | null = null;
   private progressionSystem: ProgressionSystem | null = null;
   private autosaveSystem: AutosaveSystem | null = null;
@@ -178,6 +178,10 @@ export class GameApp {
     console.log('[GameApp] Unlocked areas for role:', this.startParams.roleId, unlockedAreas);
     
     if (unlockedAreas.includes(areaId as AreaId)) {
+      // Save inventory before transitioning
+      const inventory = this.taskSystem?.getInventory() || [];
+      saveFacade.setInventory(this.startParams.roleId, inventory);
+      
       // Area unlocked - transition
       console.log('[GameApp] Area unlocked, transitioning to:', areaId);
       sessionFacade.setArea(areaId as AreaId);
@@ -221,7 +225,7 @@ export class GameApp {
     // Load audio assets
     await this.loadAudioAssets();
 
-    // Create world based on areaId
+    // Create world based on areaId with lazy loading for performance
     let world: {
       player: TransformNode;
       playerEntity: Player;
@@ -232,13 +236,15 @@ export class GameApp {
     };
     
     if (this.startParams.areaId === 'backyard') {
-      console.log('[GameApp] Loading BackyardWorld');
+      console.log('[GameApp] Loading BackyardWorld (lazy)...');
+      const { createBackyardWorld } = await import('./worlds/backyard/BackyardWorld');
       world = createBackyardWorld(this.scene, this.bus, this.startParams.roleId);
     } else if (this.startParams.areaId === 'woodline') {
-      console.log('[GameApp] Loading WoodlineWorld');
+      console.log('[GameApp] Loading WoodlineWorld (lazy)...');
+      const { createWoodlineWorld } = await import('./worlds/woodline/WoodlineWorld');
       world = createWoodlineWorld(this.scene, this.bus, this.startParams.roleId);
     } else {
-      // Fallback to BootWorld for debug/dev only
+      // Fallback to BootWorld for debug/dev only (not lazy-loaded since it's dev-only)
       console.log('[GameApp] Loading BootWorld (debug fallback)');
       world = createBootWorld(this.scene, this.bus, this.startParams.roleId);
     }
@@ -302,6 +308,19 @@ export class GameApp {
       };
     });
 
+    // DEV-only: Validate world manifest exists for current area
+    if (import.meta.env.DEV) {
+      const { WORLD_MANIFESTS } = await import('./worlds/worldManifest');
+      if (!WORLD_MANIFESTS[this.startParams.areaId]) {
+        console.warn(`[GameApp] ⚠️  Area '${this.startParams.areaId}' has no world manifest`);
+        this.bus.emit({ 
+          type: 'ui/toast', 
+          level: 'warning', 
+          message: `Dev: Area ${this.startParams.areaId} missing manifest` 
+        } as any);
+      }
+    }
+
     // Create progression system and start
     const useDevBootFallback = import.meta.env.DEV && !['backyard', 'woodline'].includes(this.startParams.areaId);
     console.log('[GameApp] ProgressionSystem devBootFallback:', useDevBootFallback);
@@ -329,7 +348,7 @@ export class GameApp {
 
     // Create debug overlay (dev only)
     if (import.meta.env.DEV) {
-      this.debugOverlay = new DebugOverlay();
+      this.debugOverlay = new DebugOverlay(this.scene);
       this.companionDebugHelper = new CompanionDebugHelper();
       if (this.companion) {
         this.companionDebugHelper.setCompanion(this.companion);
@@ -338,6 +357,24 @@ export class GameApp {
       if (this.playerEntity) {
         this.playerDebugHelper.setPlayer(this.playerEntity);
       }
+
+      // Create world editor (disabled by default)
+      this.worldEditor = new WorldEditor(this.scene);
+
+      // Toggle world editor with F2 key
+      window.addEventListener('keydown', (e) => {
+        if (e.key === 'F2') {
+          if (this.worldEditor) {
+            if ((this.worldEditor as any).enabled) {
+              this.worldEditor.disable();
+            } else {
+              this.worldEditor.enable();
+            }
+          }
+        }
+      });
+
+      console.log('[GameApp] Press F2 to toggle World Editor');
     }
 
     // Add interactables as wakeables

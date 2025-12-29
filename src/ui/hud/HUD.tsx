@@ -4,6 +4,7 @@ import { useUiStore } from '@ui/state/useUiStore';
 import { useToastStore } from '@ui/state/useToastStore';
 import HintPulse from './widgets/HintPulse';
 import InventoryBubbles from './widgets/InventoryBubbles';
+import { InventoryDisplay } from './widgets/InventoryDisplay';
 import CompanionCallButton from './widgets/CompanionCallButton';
 import ToastOverlay from './widgets/ToastOverlay';
 
@@ -66,6 +67,9 @@ export default function HUD() {
           <HintPulse key={prompt.id} icon={prompt.icon} dwellProgress={prompt.dwellProgress} />
         ))}
       </div>
+
+      {/* Inventory display - top right */}
+      <InventoryDisplay />
 
       {/* Bottom UI */}
       <div style={{ position: 'absolute', bottom: '20px', width: '100%', pointerEvents: 'auto' }}>

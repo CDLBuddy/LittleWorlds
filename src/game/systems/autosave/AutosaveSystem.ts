@@ -38,10 +38,9 @@ export class AutosaveSystem {
       } else if (event.type === 'ui/pause') {
         // Pause menu opened - save progress
         this.triggerSave('pause');
-      } else if (event.type === 'interaction/complete') {
-        // Interaction completed (item gained) - save progress
-        this.triggerSave('interaction');
       }
+      // Note: Removed 'interaction/complete' trigger to prevent race condition
+      // where autosave happens before items are added to inventory
     });
     
     // Interval autosave every 60 seconds (15s in dev)
@@ -72,7 +71,7 @@ export class AutosaveSystem {
   /**
    * Perform the actual save operation
    */
-  private performSave(reason: string): void {
+  private performSave(_reason: string): void {
     if (this.pendingSave) {
       return; // Already saving
     }
@@ -83,10 +82,6 @@ export class AutosaveSystem {
       const inventory = this.taskSystem.getInventory();
       saveFacade.syncInventory(this.roleId, inventory);
       saveFacade.syncLastArea(this.roleId, this.areaId);
-      
-      if (import.meta.env.DEV) {
-        console.log(`[AutosaveSystem] Saved (${reason}):`, inventory.length, 'items');
-      }
     } catch (error) {
       console.error('[AutosaveSystem] Save failed:', error);
     } finally {
@@ -128,8 +123,8 @@ export class AutosaveSystem {
   }
   
   dispose(): void {
-    // Force one final save before cleanup
-    this.forceSave();
+    // Just stop - don't save on dispose as inventory may be stale
+    // ProgressionSystem handles final save on area complete
     this.stop();
   }
 }

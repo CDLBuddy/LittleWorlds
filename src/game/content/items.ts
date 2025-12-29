@@ -12,6 +12,13 @@ export interface ItemDef {
 }
 
 export const ITEMS: Record<string, ItemDef> = {
+  axe: {
+    id: 'axe',
+    name: 'Axe',
+    icon: 'ui/icon_axe.png',
+    description: 'A sharp axe for chopping',
+    stackable: false,
+  },
   stick: {
     id: 'stick',
     name: 'Stick',
@@ -112,3 +119,6 @@ export const ITEMS: Record<string, ItemDef> = {
     stackable: false,
   },
 };
+
+export type ItemId = keyof typeof ITEMS;
+export const ALL_ITEM_IDS = Object.keys(ITEMS);

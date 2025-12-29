@@ -22,6 +22,15 @@ import '@babylonjs/loaders/glTF';
 import { Player } from '@game/entities/player/Player';
 import { Companion } from '@game/entities/companion/Companion';
 import type { RoleId } from '@game/content/areas';
+import { INTERACTABLE_ID, type InteractableId } from '@game/content/interactableIds';
+import { snapshotPerf, logPerfSnapshot } from '@game/debug/perfSnapshot';
+
+export const WOODLINE_INTERACTABLES = [
+  INTERACTABLE_ID.WOODLINE_CAMPFIRE,
+  INTERACTABLE_ID.FLINT_PICKUP,
+  INTERACTABLE_ID.FIELDGUIDE_PICKUP,
+  INTERACTABLE_ID.BOWDRILL_STATION,
+] as const satisfies readonly InteractableId[];
 
 interface Interactable {
   id: string;
@@ -49,7 +58,7 @@ export function createWoodlineWorld(scene: Scene, eventBus: any, roleId: RoleId 
   // Light fog for depth
   scene.fogMode = Scene.FOGMODE_EXP2;
   scene.fogColor = new Color3(0.75, 0.85, 0.95);
-  scene.fogDensity = 0.012;
+  scene.fogDensity = 0.008; // Reduced for larger map
 
   // Bright hemispheric light (late morning sun high in sky)
   const hemiLight = new HemisphericLight('hemiLight', new Vector3(0, 1, 0), scene);
@@ -62,8 +71,8 @@ export function createWoodlineWorld(scene: Scene, eventBus: any, roleId: RoleId 
   dirLight.intensity = 1.0;
   dirLight.diffuse = new Color3(1.0, 0.95, 0.88);
 
-  // Forest floor ground
-  const ground = MeshBuilder.CreateGround('ground', { width: 70, height: 70 }, scene);
+  // Forest floor ground (larger map)
+  const ground = MeshBuilder.CreateGround('ground', { width: 120, height: 120 }, scene);
   const groundMat = new StandardMaterial('groundMat', scene);
   groundMat.diffuseColor = new Color3(0.4, 0.55, 0.3); // Brighter forest floor for daytime
   groundMat.specularColor = new Color3(0.1, 0.1, 0.1);
@@ -147,6 +156,74 @@ export function createWoodlineWorld(scene: Scene, eventBus: any, roleId: RoleId 
     console.error('[Woodline] Failed to load trees model:', message, exception);
   });
 
+  // === PINE TREES ===
+  // Load Pinetree.glb for denser forest atmosphere around perimeter
+  const pinePositions = [
+    // Back row (north)
+    new Vector3(-28, 0, -28),
+    new Vector3(-18, 0, -30),
+    new Vector3(-8, 0, -28),
+    new Vector3(8, 0, -28),
+    new Vector3(18, 0, -30),
+    new Vector3(28, 0, -28),
+    // Left side (west)
+    new Vector3(-30, 0, -15),
+    new Vector3(-28, 0, 0),
+    new Vector3(-30, 0, 15),
+    // Right side (east)
+    new Vector3(30, 0, -15),
+    new Vector3(28, 0, 0),
+    new Vector3(30, 0, 15),
+  ];
+
+  SceneLoader.ImportMesh('', 'assets/models/', 'Pinetree.glb', scene, (meshes: AbstractMesh[]) => {
+    console.log('[Woodline] Loaded pine trees, mesh count:', meshes.length);
+    
+    if (meshes.length > 0) {
+      // The first mesh is usually the root container
+      const pineRoot = meshes[0];
+      console.log('[Woodline] Pine tree root:', pineRoot.name, 'children:', pineRoot.getChildMeshes().length);
+      
+      // Disable the original loaded mesh
+      meshes.forEach((m: AbstractMesh) => m.setEnabled(false));
+      
+      // Create pine tree instances at each position
+      pinePositions.forEach((pos, idx) => {
+        // Create a new parent node at our desired position
+        const newParent = new TransformNode(`pine_parent_${idx}`, scene);
+        newParent.position = pos.clone();
+        newParent.rotation.y = Math.random() * Math.PI * 2; // Random rotation
+        
+        // Vary scale slightly for natural look
+        const scale = 1.8 + (Math.random() * 0.6); // 1.8 to 2.4
+        newParent.scaling = new Vector3(scale, scale, scale);
+        
+        // Clone the entire tree hierarchy
+        meshes.forEach((mesh: AbstractMesh, meshIdx) => {
+          const meshClone = mesh.clone(`pine_${idx}_mesh_${meshIdx}`, newParent);
+          if (meshClone) {
+            meshClone.position = mesh.position.clone();
+            meshClone.rotation = mesh.rotation.clone();
+            meshClone.scaling = mesh.scaling.clone();
+            meshClone.setEnabled(true);
+            
+            // Always parent to our new parent node
+            meshClone.parent = newParent;
+            
+            trees.push(meshClone);
+          }
+        });
+        
+        newParent.setEnabled(true);
+        console.log(`[Woodline] Created pine tree ${idx} at`, pos);
+      });
+      
+      console.log(`[Woodline] Created ${pinePositions.length} pine trees`);
+    }
+  }, null, (_scene: Scene, message: string, exception: any) => {
+    console.error('[Woodline] Failed to load pine trees model:', message, exception);
+  });
+
   // Player spawn (front-center of clearing) - y=0 keeps feet on ground
   const player = new Player(scene, new Vector3(0, 0, 15), roleId);
 
@@ -158,7 +235,7 @@ export function createWoodlineWorld(scene: Scene, eventBus: any, roleId: RoleId 
   // Campfire (center, both roles interact with it eventually)
   const campfireInteractable = createCampfireInteractable(
     scene,
-    'campfire',
+    INTERACTABLE_ID.WOODLINE_CAMPFIRE,
     new Vector3(0, 0, -5),
     eventBus
   );
@@ -166,7 +243,7 @@ export function createWoodlineWorld(scene: Scene, eventBus: any, roleId: RoleId 
   // 1. Flint pickup (boy task)
   const flintPickup = createPickupInteractable(
     scene,
-    'flint_pickup',
+    INTERACTABLE_ID.FLINT_PICKUP,
     new Vector3(-8, 0, 5),
     new Color3(0.4, 0.4, 0.45), // Gray stone
     eventBus
@@ -175,7 +252,7 @@ export function createWoodlineWorld(scene: Scene, eventBus: any, roleId: RoleId 
   // 2. Field guide pickup (girl task)
   const fieldguidePickup = createPickupInteractable(
     scene,
-    'fieldguide_pickup',
+    INTERACTABLE_ID.FIELDGUIDE_PICKUP,
     new Vector3(8, 0, 5),
     new Color3(0.6, 0.5, 0.3), // Book brown
     eventBus
@@ -184,7 +261,7 @@ export function createWoodlineWorld(scene: Scene, eventBus: any, roleId: RoleId 
   // 3. Bowdrill station (girl task) - also lights campfire when used
   const bowdrillStation = createBowdrillInteractable(
     scene,
-    'bowdrill_station',
+    INTERACTABLE_ID.BOWDRILL_STATION,
     new Vector3(5, 0, -8),
     new Color3(0.5, 0.35, 0.2), // Wood
     eventBus,
@@ -197,6 +274,30 @@ export function createWoodlineWorld(scene: Scene, eventBus: any, roleId: RoleId 
     fieldguidePickup,
     bowdrillStation,
   ];
+
+  // === PERFORMANCE OPTIMIZATIONS ===
+  // Freeze static meshes and materials after world is fully setup
+  if (import.meta.env.DEV) {
+    // Small delay to ensure async mesh loading completes
+    setTimeout(() => {
+      // Freeze static environment meshes
+      ground.freezeWorldMatrix();
+      clearing.freezeWorldMatrix();
+      trees.forEach(t => {
+        if (t instanceof AbstractMesh) {
+          t.freezeWorldMatrix();
+        }
+      });
+      
+      // Freeze materials that never change
+      groundMat.freeze();
+      clearingMat.freeze();
+      
+      // Log performance snapshot after optimization
+      const perfSnapshot = snapshotPerf(scene);
+      logPerfSnapshot('Woodline after setup', perfSnapshot);
+    }, 1000);
+  }
 
   // Dispose function
   const dispose = () => {

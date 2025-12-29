@@ -15,6 +15,7 @@ import {
   AbstractMesh,
   TransformNode,
   SceneLoader,
+  Mesh,
 } from '@babylonjs/core';
 import '@babylonjs/loaders/glTF';
 import { SkyMaterial } from '@babylonjs/materials';
@@ -22,6 +23,16 @@ import { Player } from '@game/entities/player/Player';
 import { Companion } from '@game/entities/companion/Companion';
 import type { RoleId } from '@game/content/areas';
 import type { AppEvent } from '@game/shared/events';
+import { INTERACTABLE_ID, type InteractableId } from '@game/content/interactableIds';
+import { snapshotPerf, logPerfSnapshot } from '@game/debug/perfSnapshot';
+
+export const BACKYARD_INTERACTABLES = [
+  INTERACTABLE_ID.SLINGSHOT_PICKUP,
+  INTERACTABLE_ID.BACKYARD_TARGET,
+  INTERACTABLE_ID.MULTITOOL_PICKUP,
+  INTERACTABLE_ID.CARVE_STATION,
+  INTERACTABLE_ID.BACKYARD_GATE,
+] as const satisfies readonly InteractableId[];
 
 interface Interactable {
   id: string;
@@ -91,6 +102,9 @@ export function createBackyardWorld(scene: Scene, eventBus: { emit: (event: AppE
   const grassParent = new TransformNode('grassParent', scene);
   grassParent.position = new Vector3(0, 0, 0);
   
+  // Track grass instances for disposal
+  const grassInstances: AbstractMesh[] = [];
+  
   SceneLoader.ImportMesh('', 'assets/models/', 'Summergrass.glb', scene, (meshes) => {
     console.log(`[Backyard] Loaded ${meshes.length} grass meshes`);
     if (meshes.length > 0) {
@@ -100,7 +114,7 @@ export function createBackyardWorld(scene: Scene, eventBus: { emit: (event: AppE
       if (grassMesh) {
         console.log(`[Backyard] Using grass mesh: ${grassMesh.name}`);
         
-        // Hide the original
+        // Disable the template (don't render it)
         grassMesh.setEnabled(false);
         
         // Grid settings
@@ -144,18 +158,22 @@ export function createBackyardWorld(scene: Scene, eventBus: { emit: (event: AppE
               continue;
             }
             
-            const instance = grassMesh.clone(`grass_${x}_${z}`, grassParent);
+            // Use createInstance instead of clone for better performance
+            const instance = (grassMesh as Mesh).createInstance(`grass_${x}_${z}`);
             if (instance) {
               instance.position = new Vector3(posX, 0, posZ);
               instance.scaling.y = 0.6; // Reduce grass height to 60%
               instance.receiveShadows = true;
-              instance.setEnabled(true);
+              instance.isPickable = false; // Grass is not interactive
+              instance.parent = grassParent;
+              grassInstances.push(instance);
             }
           }
         }
         
         // Hide the basic ground since we have grass now
         ground.visibility = 0;
+        ground.setEnabled(false); // Also disable it, not just make invisible
       }
     }
   }, null, (_scene, message, exception) => {
@@ -307,16 +325,27 @@ export function createBackyardWorld(scene: Scene, eventBus: { emit: (event: AppE
   garden.material = gardenMat;
 
   // White picket fence boundary (4 sides)
+  // PERFORMANCE: Using instancing for pickets instead of individual meshes
   const fencePosts: AbstractMesh[] = [];
+  const picketInstances: AbstractMesh[] = [];
   const fenceColor = new Color3(0.95, 0.95, 0.95); // White
   const fenceMat = new StandardMaterial('fenceMat', scene);
   fenceMat.diffuseColor = fenceColor;
 
-  // Helper function to create a picket fence section
+  // Create picket template (disabled, used for instancing only)
+  const fenceHeight = 1.5;
+  const picketWidth = 0.08;
+  const picketDepth = 0.05;
+  const picketTemplate = MeshBuilder.CreateBox('picket_template', { 
+    width: picketWidth, 
+    height: fenceHeight, 
+    depth: picketDepth 
+  }, scene);
+  picketTemplate.material = fenceMat;
+  picketTemplate.setEnabled(false); // Template is not rendered
+
+  // Helper function to create a picket fence section with instancing
   const createPicketFence = (name: string, position: Vector3, width: number, depth: number): AbstractMesh => {
-    const fenceHeight = 1.5;
-    const picketWidth = 0.08;
-    const picketDepth = 0.05;
     const picketSpacing = 0.15;
     const railHeight = 0.08;
     
@@ -328,7 +357,7 @@ export function createBackyardWorld(scene: Scene, eventBus: { emit: (event: AppE
     const fenceLength = isHorizontal ? width : depth;
     const numPickets = Math.floor(fenceLength / picketSpacing);
     
-    // Create horizontal rails
+    // Create horizontal rails (visual only, collision handled separately)
     const topRail = MeshBuilder.CreateBox(`${name}_topRail`, { 
       width: width, 
       height: railHeight, 
@@ -337,7 +366,7 @@ export function createBackyardWorld(scene: Scene, eventBus: { emit: (event: AppE
     topRail.position = new Vector3(0, fenceHeight - 0.2, 0);
     topRail.parent = parent;
     topRail.material = fenceMat;
-    topRail.checkCollisions = true;
+    topRail.checkCollisions = false; // Rails are just visual
     
     const bottomRail = MeshBuilder.CreateBox(`${name}_bottomRail`, { 
       width: width, 
@@ -347,28 +376,27 @@ export function createBackyardWorld(scene: Scene, eventBus: { emit: (event: AppE
     bottomRail.position = new Vector3(0, 0.4, 0);
     bottomRail.parent = parent;
     bottomRail.material = fenceMat;
-    bottomRail.checkCollisions = true;
+    bottomRail.checkCollisions = false; // Rails are just visual
     
-    // Create individual pickets
+    // Create picket instances (visual only)
     for (let i = 0; i < numPickets; i++) {
-      const picket = MeshBuilder.CreateBox(`${name}_picket_${i}`, { 
-        width: isHorizontal ? picketWidth : picketDepth, 
-        height: fenceHeight, 
-        depth: isHorizontal ? picketDepth : picketWidth 
-      }, scene);
+      const picket = picketTemplate.createInstance(`${name}_picket_${i}`);
       
       const offset = (i - numPickets / 2) * picketSpacing;
       if (isHorizontal) {
         picket.position = new Vector3(offset, fenceHeight / 2, 0);
       } else {
         picket.position = new Vector3(0, fenceHeight / 2, offset);
+        picket.rotation.y = Math.PI / 2; // Rotate for vertical fence
       }
       picket.parent = parent;
-      picket.material = fenceMat;
-      picket.checkCollisions = true;
+      picket.checkCollisions = false; // Pickets are just visual
+      picket.isPickable = false;
+      picketInstances.push(picket);
     }
     
-    // Create invisible collision box for the entire fence section
+    // Create simplified collision box for the entire fence section
+    // This replaces 200+ individual colliders with just 4 boxes (one per side)
     const collisionBox = MeshBuilder.CreateBox(`${name}_collision`, {
       width: width,
       height: fenceHeight,
@@ -376,7 +404,7 @@ export function createBackyardWorld(scene: Scene, eventBus: { emit: (event: AppE
     }, scene);
     collisionBox.position = new Vector3(0, fenceHeight / 2, 0);
     collisionBox.parent = parent;
-    collisionBox.visibility = 0;
+    collisionBox.setEnabled(false); // Not visible, but still collides
     collisionBox.checkCollisions = true;
     
     return parent as unknown as AbstractMesh;
@@ -434,12 +462,12 @@ export function createBackyardWorld(scene: Scene, eventBus: { emit: (event: AppE
   SceneLoader.ImportMesh('', 'assets/models/', 'Slingshot.glb', scene, (meshes) => {
     if (meshes.length > 0) {
       const slingshotMesh = meshes[0];
-      slingshotMesh.id = 'slingshot_pickup'; // Set mesh id for companion targeting
+      slingshotMesh.id = INTERACTABLE_ID.SLINGSHOT_PICKUP; // Set mesh id for companion targeting
       slingshotMesh.position = new Vector3(-10, 0.5, 10);
       slingshotMesh.scaling = new Vector3(1.5, 1.5, 1.5); // Increase to full size
       
       const slingshotPickup: Interactable = {
-        id: 'slingshot_pickup',
+        id: INTERACTABLE_ID.SLINGSHOT_PICKUP,
         mesh: slingshotMesh,
         interact: () => {
           slingshotMesh.setEnabled(false);
@@ -465,7 +493,7 @@ export function createBackyardWorld(scene: Scene, eventBus: { emit: (event: AppE
   // 2. Backyard target (boy task)
   const backyardTarget = createTargetInteractable(
     scene,
-    'backyard_target',
+    INTERACTABLE_ID.BACKYARD_TARGET,
     new Vector3(-15, 0, -5),
     new Color3(0.9, 0.2, 0.2), // Red target
     eventBus
@@ -474,7 +502,7 @@ export function createBackyardWorld(scene: Scene, eventBus: { emit: (event: AppE
   // 3. Multitool pickup (girl task)
   const multitoolPickup = createPickupInteractable(
     scene,
-    'multitool_pickup',
+    INTERACTABLE_ID.MULTITOOL_PICKUP,
     new Vector3(10, 0, 10),
     new Color3(0.5, 0.5, 0.6), // Metallic gray
     eventBus
@@ -483,7 +511,7 @@ export function createBackyardWorld(scene: Scene, eventBus: { emit: (event: AppE
   // 4. Carve station (girl task)
   const carveStation = createWorkbenchInteractable(
     scene,
-    'carve_station',
+    INTERACTABLE_ID.CARVE_STATION,
     new Vector3(15, 0, -5),
     new Color3(0.55, 0.35, 0.2), // Wood stump
     eventBus
@@ -492,7 +520,7 @@ export function createBackyardWorld(scene: Scene, eventBus: { emit: (event: AppE
   // 5. Backyard gate (transition to woodline)
   const backyardGate = createGateInteractable(
     scene,
-    'backyard_gate',
+    INTERACTABLE_ID.BACKYARD_GATE,
     new Vector3(0, 0, -30),
     new Color3(0.8, 0.6, 0.3), // Wood gate
     eventBus
@@ -506,6 +534,31 @@ export function createBackyardWorld(scene: Scene, eventBus: { emit: (event: AppE
     backyardGate
   );
 
+  // === PERFORMANCE OPTIMIZATIONS ===
+  // Freeze static meshes and materials after world is fully setup
+  if (import.meta.env.DEV) {
+    // Small delay to ensure async mesh loading completes
+    setTimeout(() => {
+      // Freeze static environment meshes
+      skybox.freezeWorldMatrix();
+      ground.freezeWorldMatrix();
+      fencePosts.forEach(f => {
+        if (f instanceof AbstractMesh) {
+          f.freezeWorldMatrix();
+        }
+      });
+      
+      // Freeze materials that never change
+      fenceMat.freeze();
+      groundMat.freeze();
+      skyMaterial.freeze();
+      
+      // Log performance snapshot after optimization
+      const perfSnapshot = snapshotPerf(scene);
+      logPerfSnapshot('Backyard after setup', perfSnapshot);
+    }, 1000);
+  }
+
   // Dispose function
   const dispose = () => {
     skybox.dispose();
@@ -513,6 +566,10 @@ export function createBackyardWorld(scene: Scene, eventBus: { emit: (event: AppE
     ground.dispose();
     groundMat.dispose();
     grassParent.dispose();
+    // Dispose instanced meshes
+    grassInstances.forEach(inst => inst.dispose());
+    picketInstances.forEach(inst => inst.dispose());
+    picketTemplate.dispose();
     // House model is managed by scene, no need to dispose manually
     fencePosts.forEach(f => {
       f.material?.dispose();

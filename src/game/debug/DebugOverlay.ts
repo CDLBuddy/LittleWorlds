@@ -1,18 +1,24 @@
 /**
- * Debug Overlay - FPS counter, wake state, player position (dev only)
+ * Debug Overlay - FPS counter, wake state, player position, perf metrics (dev only)
  */
 
-import { Vector3 } from '@babylonjs/core';
+import { Vector3, Scene } from '@babylonjs/core';
+import { snapshotPerf } from './perfSnapshot';
 
 export class DebugOverlay {
   private container: HTMLDivElement;
   private fpsElement: HTMLDivElement;
   private positionElement: HTMLDivElement;
   private wakeStateElement: HTMLDivElement;
+  private perfElement: HTMLDivElement;
   private fpsHistory: number[] = [];
   private readonly FPS_SAMPLE_SIZE = 30;
+  private scene: Scene | null = null;
+  private perfUpdateTimer: ReturnType<typeof setInterval> | null = null;
 
-  constructor() {
+  constructor(scene?: Scene) {
+    this.scene = scene || null;
+    
     // Create container
     this.container = document.createElement('div');
     this.container.style.cssText = `
@@ -44,7 +50,20 @@ export class DebugOverlay {
     this.wakeStateElement.textContent = 'Wake: none';
     this.container.appendChild(this.wakeStateElement);
 
+    // Performance metrics display
+    this.perfElement = document.createElement('div');
+    this.perfElement.style.marginTop = '8px';
+    this.perfElement.style.borderTop = '1px solid #0f0';
+    this.perfElement.style.paddingTop = '8px';
+    this.perfElement.innerHTML = '<div>Perf: --</div>';
+    this.container.appendChild(this.perfElement);
+
     document.body.appendChild(this.container);
+
+    // Start performance snapshot updates (every 1 second)
+    if (this.scene) {
+      this.perfUpdateTimer = setInterval(() => this.updatePerfMetrics(), 1000);
+    }
   }
 
   updateFPS(fps: number) {
@@ -71,7 +90,24 @@ export class DebugOverlay {
     }
   }
 
+  private updatePerfMetrics() {
+    if (!this.scene) return;
+
+    const perf = snapshotPerf(this.scene);
+    const meshColor = perf.meshesActive > 100 ? '#f00' : perf.meshesActive > 50 ? '#ff0' : '#0f0';
+    
+    this.perfElement.innerHTML = `
+      <div>Meshes: <span style="color: ${meshColor}">${perf.meshesActive}</span>/${perf.meshesTotal}</div>
+      <div>Materials: ${perf.materials}</div>
+      <div>Textures: ${perf.textures}</div>
+    `;
+  }
+
   dispose() {
+    if (this.perfUpdateTimer) {
+      clearInterval(this.perfUpdateTimer);
+      this.perfUpdateTimer = null;
+    }
     this.container.remove();
   }
 }

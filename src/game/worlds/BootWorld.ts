@@ -21,6 +21,13 @@ import { Axe } from '@game/entities/props/Axe';
 import { LogPile } from '@game/entities/props/LogPile';
 import { Campfire } from '@game/entities/props/Campfire';
 import type { RoleId } from '@game/content/areas';
+import { INTERACTABLE_ID, type InteractableId } from '@game/content/interactableIds';
+
+export const BOOT_INTERACTABLES = [
+  INTERACTABLE_ID.AXE,
+  INTERACTABLE_ID.LOGPILE,
+  INTERACTABLE_ID.CAMPFIRE,
+] as const satisfies readonly InteractableId[];
 
 interface Interactable {
   id: string;
@@ -71,13 +78,13 @@ export function createBootWorld(scene: Scene, eventBus: any, roleId: RoleId = 'b
 
   // Create task interactables in triangle layout
   // Axe at (8, 0, 0)
-  const axe = new Axe(scene, new Vector3(8, 0, 0), 'axe_001');
+  const axe = new Axe(scene, new Vector3(8, 0, 0), INTERACTABLE_ID.AXE);
   
   // LogPile at (16, 0, 6)
-  const logPile = new LogPile(scene, new Vector3(16, 0, 6), 'logpile_001');
+  const logPile = new LogPile(scene, new Vector3(16, 0, 6), INTERACTABLE_ID.LOGPILE);
   
   // Campfire at (24, 0, -4) - reuse or create
-  const campfire = new Campfire(scene, new Vector3(24, 0, -4), 'campfire');
+  const campfire = new Campfire(scene, new Vector3(24, 0, -4), INTERACTABLE_ID.CAMPFIRE);
   
   const interactables: Interactable[] = [axe, logPile, campfire];
 

@@ -23,6 +23,7 @@ export type UiToGame =
   | { type: 'ui/audio/volume'; bus: 'master' | 'music' | 'sfx'; value: number }
   | { type: 'ui/restart' }
   | { type: 'ui/quit' }
+  | { type: 'ui/getInventory' } // Request current inventory
   | { type: 'ui/toast'; level: 'info' | 'warning' | 'error'; message: string };
 
 // Game → UI events
@@ -38,7 +39,8 @@ export type GameToUi =
   | { type: 'game/interact'; targetId: string }
   | { type: 'game/dwell'; id: string; progress: number } // Dwell progress 0..1
   | { type: 'game/dwellClear'; id: string } // Clear dwell for specific id
-  | { type: 'game/areaRequest'; areaId: string }; // Request area transition (from gate)
+  | { type: 'game/areaRequest'; areaId: string } // Request area transition (from gate)
+  | { type: 'game/inventoryUpdate'; items: string[] }; // Send current inventory to UI
 
 export type AppEvent = UiToGame | GameToUi;
 

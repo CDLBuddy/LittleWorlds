@@ -3,21 +3,31 @@
  */
 
 import type { Task } from '@game/content/tasks';
-import type { GameToUi } from '@game/shared/events';
+import type { AppEvent } from '@game/shared/events';
 
 interface EventBus {
-  emit(event: GameToUi): void;
+  emit(event: AppEvent): void;
+  on(handler: (event: AppEvent) => void): () => void;
 }
 
 export class TaskSystem {
   private currentTask: Task | null = null;
   private currentStepIndex = 0;
   private inventory = new Set<string>();
+  private eventBusSub: (() => void) | null = null;
 
-  constructor(private eventBus: EventBus) {}
+  constructor(private eventBus: EventBus) {
+    // Listen for inventory requests from UI
+    this.eventBusSub = this.eventBus.on((evt) => {
+      if (evt.type === 'ui/getInventory') {
+        this.broadcastInventory();
+      }
+    });
+  }
 
   addItem(itemId: string): void {
     this.inventory.add(itemId);
+    this.broadcastInventory();
   }
 
   startTask(task: Task): void {
@@ -66,7 +76,7 @@ export class TaskSystem {
     // Grant items (data-driven)
     if (step.grantsItems) {
       for (const itemId of step.grantsItems) {
-        this.inventory.add(itemId);
+        this.addItem(itemId);
       }
       
       // Emit toast for item gains
@@ -88,8 +98,9 @@ export class TaskSystem {
     // Consume items (data-driven)
     if (step.consumesItems) {
       for (const itemId of step.consumesItems) {
-        this.inventory.delete(itemId); // Safe if item doesn't exist
+        this.inventory.delete(itemId);
       }
+      this.broadcastInventory(); // Update UI after consuming items
     }
     
     this.currentStepIndex++;
@@ -126,6 +137,11 @@ export class TaskSystem {
     return Array.from(this.inventory);
   }
 
+  private broadcastInventory(): void {
+    const items = Array.from(this.inventory);
+    this.eventBus.emit({ type: 'game/inventoryUpdate', items });
+  }
+
   private emitTaskEvent(): void {
     if (!this.currentTask) return;
     
@@ -139,5 +155,9 @@ export class TaskSystem {
   dispose(): void {
     this.currentTask = null;
     this.inventory.clear();
+    if (this.eventBusSub) {
+      this.eventBusSub();
+      this.eventBusSub = null;
+    }
   }
 }
