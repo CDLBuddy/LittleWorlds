@@ -17,20 +17,28 @@ import { Scene, Vector3, MeshBuilder, StandardMaterial, Color3, AbstractMesh, Po
 interface PositionMarker {
   mesh: AbstractMesh;
   position: Vector3;
+  rotation: number;
+  label: string;
+  category: 'tree' | 'interactable' | 'prop' | 'general';
+}
+
+interface MarkerSnapshot {
+  position: [number, number, number];
+  rotation: number;
   label: string;
   category: 'tree' | 'interactable' | 'prop' | 'general';
 }
 
 interface HistoryEntry {
-  type: 'place' | 'delete' | 'move';
-  marker?: PositionMarker;
-  oldPosition?: Vector3;
-  newPosition?: Vector3;
+  type: 'place' | 'delete' | 'move' | 'rotate';
+  snapshot: MarkerSnapshot;
+  oldSnapshot?: MarkerSnapshot;
 }
 
 export class WorldEditor {
   private scene: Scene;
   private enabled = false;
+  private areaId: string;
   private markers: PositionMarker[] = [];
   private selectedMesh: AbstractMesh | null = null;
   private selectedMarker: PositionMarker | null = null;
@@ -50,8 +58,28 @@ export class WorldEditor {
   private distanceLine: LinesMesh | null = null;
   private commandsVisible = true;
 
-  constructor(scene: Scene) {
+  constructor(scene: Scene, areaId = 'default') {
     this.scene = scene;
+    this.areaId = areaId;
+  }
+
+  /** Public API: Check if editor is enabled */
+  isEnabled(): boolean {
+    return this.enabled;
+  }
+
+  /** Public API: Toggle editor on/off */
+  toggle(): void {
+    if (this.enabled) {
+      this.disable();
+    } else {
+      this.enable();
+    }
+  }
+
+  /** Set the current area ID for session storage */
+  setAreaId(areaId: string): void {
+    this.areaId = areaId;
   }
 
   enable() {
@@ -131,10 +159,14 @@ export class WorldEditor {
         // Snap to ground (T)
         if (key === 't' && (this.selectedMesh || this.selectedMarker)) {
           if (this.selectedMarker) {
-            const oldPos = this.selectedMarker.position.clone();
+            const oldSnapshot = this.createSnapshot(this.selectedMarker);
             this.selectedMarker.position.y = 0;
             this.selectedMarker.mesh.position.y = 0;
-            this.addToHistory({ type: 'move', marker: this.selectedMarker, oldPosition: oldPos, newPosition: this.selectedMarker.position });
+            this.addToHistory({ 
+              type: 'move', 
+              snapshot: this.createSnapshot(this.selectedMarker),
+              oldSnapshot
+            });
             this.updateStatus(`Snapped ${this.selectedMarker.label} to ground`);
           } else if (this.selectedMesh) {
             this.selectedMesh.position.y = 0;
@@ -172,9 +204,19 @@ export class WorldEditor {
           return;
         }
 
-        // Movement/Rotation for selected mesh
+        // Export layout (Ctrl+E)
+        if (kbInfo.event.ctrlKey && key === 'e') {
+          kbInfo.event.preventDefault();
+          this.exportLayout();
+          return;
+        }
+
+        // Movement/Rotation for selected mesh or marker
+        const isShiftPressed = kbInfo.event.shiftKey;
         if (this.selectedMesh) {
-          this.handleKeyboardMove(key);
+          this.handleKeyboardMove(key, isShiftPressed);
+        } else if (this.selectedMarker) {
+          this.handleMarkerTransform(key, isShiftPressed);
         }
 
         // Copy/Clear commands
@@ -288,19 +330,26 @@ export class WorldEditor {
     
     const markerIndex = this.markers.length + 1;
     const label = `${this.currentCategory}_${markerIndex}`;
+    const rotation = 0;
 
     // Create visual marker with category color
     const marker = MeshBuilder.CreateSphere(`marker_${this.markerCount++}`, { diameter: 0.5 }, this.scene);
     marker.position = position;
+    marker.rotation.y = rotation;
 
     const mat = new StandardMaterial(`${label}_mat`, this.scene);
     mat.diffuseColor = this.getCategoryColor(this.currentCategory);
     mat.emissiveColor = this.getCategoryColor(this.currentCategory).scale(0.5);
     marker.material = mat;
 
-    const markerData: PositionMarker = { mesh: marker, position, label, category: this.currentCategory };
+    const markerData: PositionMarker = { mesh: marker, position, rotation, label, category: this.currentCategory };
     this.markers.push(markerData);
-    this.addToHistory({ type: 'place', marker: markerData });
+    
+    // Store serializable snapshot
+    this.addToHistory({ 
+      type: 'place', 
+      snapshot: this.createSnapshot(markerData)
+    });
 
     console.log(`[WorldEditor] Placed ${label} at:`, position);
     console.log(`  new Vector3(${position.x.toFixed(1)}, ${position.y.toFixed(1)}, ${position.z.toFixed(1)}),`);
@@ -312,17 +361,17 @@ export class WorldEditor {
     if (!pickInfo || !pickInfo.hit || !pickInfo.pickedMesh) return;
 
     // Deselect previous
-    if (this.selectedMesh && this.selectedMesh.material) {
-      (this.selectedMesh.material as StandardMaterial).emissiveColor = new Color3(0, 0, 0);
+    if (this.selectedMesh) {
+      this.selectedMesh.renderOutline = false;
     }
 
     this.selectedMesh = pickInfo.pickedMesh;
     this.selectedMarker = null;
 
-    // Highlight selected
-    if (this.selectedMesh.material) {
-      (this.selectedMesh.material as StandardMaterial).emissiveColor = new Color3(0.3, 0.3, 0);
-    }
+    // Highlight selected with outline
+    this.selectedMesh.renderOutline = true;
+    this.selectedMesh.outlineColor = new Color3(1, 1, 0);
+    this.selectedMesh.outlineWidth = 0.05;
 
     console.log(`[WorldEditor] Selected: ${this.selectedMesh.name}`);
     console.log(`  Position: (${this.selectedMesh.position.x.toFixed(1)}, ${this.selectedMesh.position.y.toFixed(1)}, ${this.selectedMesh.position.z.toFixed(1)})`);
@@ -332,11 +381,11 @@ export class WorldEditor {
     this.updateStatus(`Selected: ${this.selectedMesh.name}`);
   }
 
-  private handleKeyboardMove(key: string) {
+  private handleKeyboardMove(key: string, isShift = false) {
     if (!this.selectedMesh) return;
 
-    const moveSpeed = 1.0;
-    const rotateSpeed = 0.1;
+    const moveSpeed = isShift ? 5.0 : 1.0;
+    const rotateSpeed = isShift ? 0.5 : 0.1;
 
     switch (key.toLowerCase()) {
       case 'w':
@@ -376,6 +425,86 @@ export class WorldEditor {
     const rot = this.selectedMesh.rotation;
     console.log(`[WorldEditor] ${this.selectedMesh.name} at: (${pos.x.toFixed(1)}, ${pos.y.toFixed(1)}, ${pos.z.toFixed(1)}) rot: ${rot.y.toFixed(2)}`);
     this.updateStatus(`${this.selectedMesh.name}: (${pos.x.toFixed(1)}, ${pos.y.toFixed(1)}, ${pos.z.toFixed(1)})`);
+  }
+
+  private handleMarkerTransform(key: string, isShift = false) {
+    if (!this.selectedMarker) return;
+
+    const oldSnapshot = this.createSnapshot(this.selectedMarker);
+    const moveSpeed = isShift ? 5.0 : 1.0;
+    const rotateSpeed = isShift ? 0.5 : 0.1;
+    let changed = false;
+
+    switch (key.toLowerCase()) {
+      case 'w':
+      case 'arrowup':
+        this.selectedMarker.position.z -= moveSpeed;
+        changed = true;
+        break;
+      case 's':
+      case 'arrowdown':
+        this.selectedMarker.position.z += moveSpeed;
+        changed = true;
+        break;
+      case 'a':
+      case 'arrowleft':
+        this.selectedMarker.position.x -= moveSpeed;
+        changed = true;
+        break;
+      case 'd':
+      case 'arrowright':
+        this.selectedMarker.position.x += moveSpeed;
+        changed = true;
+        break;
+      case 'r':
+        this.selectedMarker.position.y += moveSpeed;
+        changed = true;
+        break;
+      case 'f':
+        this.selectedMarker.position.y -= moveSpeed;
+        changed = true;
+        break;
+      case 'q':
+        this.selectedMarker.rotation -= rotateSpeed;
+        this.selectedMarker.mesh.rotation.y = this.selectedMarker.rotation;
+        this.addToHistory({
+          type: 'rotate',
+          snapshot: this.createSnapshot(this.selectedMarker),
+          oldSnapshot
+        });
+        this.updateStatus(`Rotation: ${this.selectedMarker.rotation.toFixed(2)}`);
+        return;
+      case 'e':
+        this.selectedMarker.rotation += rotateSpeed;
+        this.selectedMarker.mesh.rotation.y = this.selectedMarker.rotation;
+        this.addToHistory({
+          type: 'rotate',
+          snapshot: this.createSnapshot(this.selectedMarker),
+          oldSnapshot
+        });
+        this.updateStatus(`Rotation: ${this.selectedMarker.rotation.toFixed(2)}`);
+        return;
+    }
+
+    if (changed) {
+      // Apply grid snap if enabled
+      if (this.gridSnap) {
+        this.selectedMarker.position.x = Math.round(this.selectedMarker.position.x / this.gridSize) * this.gridSize;
+        this.selectedMarker.position.z = Math.round(this.selectedMarker.position.z / this.gridSize) * this.gridSize;
+      }
+
+      this.selectedMarker.mesh.position.copyFrom(this.selectedMarker.position);
+      
+      this.addToHistory({
+        type: 'move',
+        snapshot: this.createSnapshot(this.selectedMarker),
+        oldSnapshot
+      });
+
+      const pos = this.selectedMarker.position;
+      console.log(`[WorldEditor] ${this.selectedMarker.label} at: (${pos.x.toFixed(1)}, ${pos.y.toFixed(1)}, ${pos.z.toFixed(1)})`);
+      this.updateStatus(`${this.selectedMarker.label}: (${pos.x.toFixed(1)}, ${pos.y.toFixed(1)}, ${pos.z.toFixed(1)})`);
+    }
   }
 
   private copyPositionsAsCode() {
@@ -423,16 +552,125 @@ export class WorldEditor {
     }
   }
 
+  /** Export markers as a TypeScript layout module */
+  private exportLayout() {
+    if (this.markers.length === 0) {
+      console.log('[WorldEditor] No markers to export');
+      this.updateStatus('No markers to export');
+      return;
+    }
+
+    const areaName = this.areaId.charAt(0).toUpperCase() + this.areaId.slice(1);
+    
+    let output = `/**
+ * ${areaName} World Layout
+ * Generated by WorldEditor
+ * Area: ${this.areaId}
+ * Markers: ${this.markers.length}
+ */
+
+import { Vector3 } from '@babylonjs/core';
+
+export interface LayoutMarker {
+  position: Vector3;
+  rotation: number;
+  category: 'tree' | 'interactable' | 'prop' | 'general';
+  label: string;
+}
+
+`;
+
+    // Group by category
+    const byCategory: Record<string, PositionMarker[]> = {
+      general: [],
+      tree: [],
+      interactable: [],
+      prop: []
+    };
+
+    this.markers.forEach(m => byCategory[m.category].push(m));
+
+    // Export each category
+    Object.keys(byCategory).forEach(category => {
+      const items = byCategory[category];
+      if (items.length > 0) {
+        output += `export const ${category}Markers: LayoutMarker[] = [\n`;
+        items.forEach(m => {
+          output += `  {\n`;
+          output += `    position: new Vector3(${m.position.x.toFixed(1)}, ${m.position.y.toFixed(1)}, ${m.position.z.toFixed(1)}),\n`;
+          output += `    rotation: ${m.rotation.toFixed(2)},\n`;
+          output += `    category: '${m.category}',\n`;
+          output += `    label: '${m.label}'\n`;
+          output += `  },\n`;
+        });
+        output += '];\n\n';
+      }
+    });
+
+    // Add combined export
+    const allCategories = Object.keys(byCategory).filter(c => byCategory[c].length > 0);
+    if (allCategories.length > 0) {
+      output += `export const ${this.areaId}Layout = {\n`;
+      allCategories.forEach(cat => {
+        output += `  ${cat}: ${cat}Markers,\n`;
+      });
+      output += `};\n`;
+    }
+
+    console.log('[WorldEditor] Layout module (save to src/game/worlds/layouts/${this.areaId}.ts):');
+    console.log(output);
+
+    // Copy to clipboard
+    if (navigator.clipboard) {
+      void navigator.clipboard.writeText(output).then(() => {
+        console.log('[WorldEditor] ✓ Layout module copied to clipboard!');
+        this.updateStatus(`✓ Exported ${this.markers.length} markers as layout`);
+      });
+    } else {
+      this.updateStatus(`Layout exported (${this.markers.length} markers)`);
+    }
+  }
+
   private clearMarkers() {
     this.markers.forEach(m => m.mesh.dispose());
     this.markers = [];
     this.markerCount = 0;
-    this.addToHistory({ type: 'delete' });
     console.log('[WorldEditor] Cleared all markers');
     this.updateStatus('Markers cleared');
   }
 
   // === NEW ENHANCED METHODS ===
+
+  /** Create serializable snapshot from marker */
+  private createSnapshot(marker: PositionMarker): MarkerSnapshot {
+    return {
+      position: marker.position.asArray(),
+      rotation: marker.rotation,
+      label: marker.label,
+      category: marker.category
+    };
+  }
+
+  /** Recreate marker from snapshot */
+  private recreateMarker(snapshot: MarkerSnapshot): PositionMarker {
+    const position = new Vector3(snapshot.position[0], snapshot.position[1], snapshot.position[2]);
+    const marker = MeshBuilder.CreateSphere(`marker_${this.markerCount++}`, { diameter: 0.5 }, this.scene);
+    marker.position = position;
+    marker.rotation.y = snapshot.rotation;
+
+    const mat = new StandardMaterial(`${snapshot.label}_mat`, this.scene);
+    mat.diffuseColor = this.getCategoryColor(snapshot.category);
+    mat.emissiveColor = this.getCategoryColor(snapshot.category).scale(0.5);
+    marker.material = mat;
+
+    return { 
+      mesh: marker, 
+      position, 
+      rotation: snapshot.rotation,
+      label: snapshot.label, 
+      category: snapshot.category 
+    };
+  }
 
   private getCategoryColor(category: string): Color3 {
     switch (category) {
@@ -503,18 +741,23 @@ export class WorldEditor {
 
     const markerIndex = this.markers.length + 1;
     const label = `${this.selectedMarker.category}_${markerIndex}`;
+    const rotation = this.selectedMarker.rotation;
 
-    const marker = MeshBuilder.CreateSphere(`marker_${markerIndex}`, { diameter: 0.5 }, this.scene);
+    const marker = MeshBuilder.CreateSphere(`marker_${this.markerCount++}`, { diameter: 0.5 }, this.scene);
     marker.position = newPos;
+    marker.rotation.y = rotation;
 
     const mat = new StandardMaterial(`${label}_mat`, this.scene);
     mat.diffuseColor = this.getCategoryColor(this.selectedMarker.category);
     mat.emissiveColor = this.getCategoryColor(this.selectedMarker.category).scale(0.5);
     marker.material = mat;
 
-    const markerData: PositionMarker = { mesh: marker, position: newPos, label, category: this.selectedMarker.category };
+    const markerData: PositionMarker = { mesh: marker, position: newPos, rotation, label, category: this.selectedMarker.category };
     this.markers.push(markerData);
-    this.addToHistory({ type: 'place', marker: markerData });
+    this.addToHistory({ 
+      type: 'place', 
+      snapshot: this.createSnapshot(markerData)
+    });
 
     this.selectedMarker = markerData;
     this.updateStatus(`Duplicated to ${label}`);
@@ -523,9 +766,10 @@ export class WorldEditor {
   private handleDeleteMarker(marker: PositionMarker) {
     const index = this.markers.indexOf(marker);
     if (index >= 0) {
+      const snapshot = this.createSnapshot(marker);
       this.markers.splice(index, 1);
       marker.mesh.dispose();
-      this.addToHistory({ type: 'delete', marker });
+      this.addToHistory({ type: 'delete', snapshot });
       this.selectedMarker = null;
       this.updateStatus(`Deleted ${marker.label}`);
     }
@@ -582,18 +826,33 @@ export class WorldEditor {
     const entry = this.history[this.historyIndex];
     this.historyIndex--;
 
-    if (entry.type === 'place' && entry.marker) {
-      const index = this.markers.indexOf(entry.marker);
+    if (entry.type === 'place') {
+      // Remove the placed marker
+      const index = this.markers.findIndex(m => m.label === entry.snapshot.label);
       if (index >= 0) {
+        this.markers[index].mesh.dispose();
         this.markers.splice(index, 1);
-        entry.marker.mesh.dispose();
       }
-    } else if (entry.type === 'delete' && entry.marker) {
-      // Re-add marker
-      this.markers.push(entry.marker);
-    } else if (entry.type === 'move' && entry.marker && entry.oldPosition) {
-      entry.marker.position = entry.oldPosition.clone();
-      entry.marker.mesh.position = entry.oldPosition.clone();
+    } else if (entry.type === 'delete') {
+      // Recreate the deleted marker
+      const restored = this.recreateMarker(entry.snapshot);
+      this.markers.push(restored);
+    } else if (entry.type === 'move' && entry.oldSnapshot) {
+      // Restore old position/rotation
+      const marker = this.markers.find(m => m.label === entry.snapshot.label);
+      if (marker) {
+        marker.position.set(entry.oldSnapshot.position[0], entry.oldSnapshot.position[1], entry.oldSnapshot.position[2]);
+        marker.mesh.position.copyFrom(marker.position);
+        marker.rotation = entry.oldSnapshot.rotation;
+        marker.mesh.rotation.y = marker.rotation;
+      }
+    } else if (entry.type === 'rotate' && entry.oldSnapshot) {
+      // Restore old rotation
+      const marker = this.markers.find(m => m.label === entry.snapshot.label);
+      if (marker) {
+        marker.rotation = entry.oldSnapshot.rotation;
+        marker.mesh.rotation.y = marker.rotation;
+      }
     }
 
     this.updateStatus('Undo');
@@ -608,17 +867,33 @@ export class WorldEditor {
     this.historyIndex++;
     const entry = this.history[this.historyIndex];
 
-    if (entry.type === 'place' && entry.marker) {
-      this.markers.push(entry.marker);
-    } else if (entry.type === 'delete' && entry.marker) {
-      const index = this.markers.indexOf(entry.marker);
+    if (entry.type === 'place') {
+      // Recreate the marker
+      const restored = this.recreateMarker(entry.snapshot);
+      this.markers.push(restored);
+    } else if (entry.type === 'delete') {
+      // Remove the marker again
+      const index = this.markers.findIndex(m => m.label === entry.snapshot.label);
       if (index >= 0) {
+        this.markers[index].mesh.dispose();
         this.markers.splice(index, 1);
-        entry.marker.mesh.dispose();
       }
-    } else if (entry.type === 'move' && entry.marker && entry.newPosition) {
-      entry.marker.position = entry.newPosition.clone();
-      entry.marker.mesh.position = entry.newPosition.clone();
+    } else if (entry.type === 'move') {
+      // Apply new position/rotation
+      const marker = this.markers.find(m => m.label === entry.snapshot.label);
+      if (marker) {
+        marker.position.set(entry.snapshot.position[0], entry.snapshot.position[1], entry.snapshot.position[2]);
+        marker.mesh.position.copyFrom(marker.position);
+        marker.rotation = entry.snapshot.rotation;
+        marker.mesh.rotation.y = marker.rotation;
+      }
+    } else if (entry.type === 'rotate') {
+      // Apply new rotation
+      const marker = this.markers.find(m => m.label === entry.snapshot.label);
+      if (marker) {
+        marker.rotation = entry.snapshot.rotation;
+        marker.mesh.rotation.y = marker.rotation;
+      }
     }
 
     this.updateStatus('Redo');
@@ -628,6 +903,7 @@ export class WorldEditor {
     const data = {
       markers: this.markers.map(m => ({
         position: m.position.asArray(),
+        rotation: m.rotation,
         label: m.label,
         category: m.category
       })),
@@ -635,19 +911,22 @@ export class WorldEditor {
       currentCategory: this.currentCategory
     };
 
-    localStorage.setItem('worldEditor_session', JSON.stringify(data));
+    const storageKey = `worldEditor_${this.areaId}`;
+    localStorage.setItem(storageKey, JSON.stringify(data));
     this.updateStatus('Session saved');
-    console.log('[WorldEditor] Session saved');
+    console.log(`[WorldEditor] Session saved for area: ${this.areaId}`);
   }
 
   private loadSession() {
-    const saved = localStorage.getItem('worldEditor_session');
+    const storageKey = `worldEditor_${this.areaId}`;
+    const saved = localStorage.getItem(storageKey);
     if (!saved) return;
 
     try {
       const data = JSON.parse(saved) as {
         markers?: Array<{
           position: [number, number, number];
+          rotation?: number;
           label: string;
           category: 'tree' | 'interactable' | 'prop' | 'general';
         }>;
@@ -659,19 +938,17 @@ export class WorldEditor {
       this.currentCategory = data.currentCategory || 'general';
 
       data.markers?.forEach((m) => {
-        const position = new Vector3(m.position[0], m.position[1], m.position[2]);
-        const marker = MeshBuilder.CreateSphere(m.label, { diameter: 0.5 }, this.scene);
-        marker.position = position;
-
-        const mat = new StandardMaterial(`${m.label}_mat`, this.scene);
-        mat.diffuseColor = this.getCategoryColor(m.category);
-        mat.emissiveColor = this.getCategoryColor(m.category).scale(0.5);
-        marker.material = mat;
-
-        this.markers.push({ mesh: marker, position, label: m.label, category: m.category });
+        const snapshot: MarkerSnapshot = {
+          position: m.position,
+          rotation: m.rotation || 0,
+          label: m.label,
+          category: m.category
+        };
+        const marker = this.recreateMarker(snapshot);
+        this.markers.push(marker);
       });
 
-      console.log(`[WorldEditor] Loaded ${this.markers.length} markers from session`);
+      console.log(`[WorldEditor] Loaded ${this.markers.length} markers for area: ${this.areaId}`);
       this.updateStatus(`Loaded ${this.markers.length} markers`);
     } catch (e) {
       console.warn('[WorldEditor] Failed to load session', e);
@@ -698,7 +975,7 @@ export class WorldEditor {
     `;
 
     this.commandsDiv.innerHTML = `
-      <div style="color: #ff0; font-weight: bold; margin-bottom: 8px;">🛠️ WORLD EDITOR</div>
+      <div style="color: #ff0; font-weight: bold; margin-bottom: 8px;">🛠️ WORLD EDITOR v2.0</div>
       
       <div style="color: #0ff; margin-top: 8px; font-weight: bold;">PLACEMENT</div>
       <div><span style="color: #fff;">Ctrl+Click:</span> Place marker</div>
@@ -711,19 +988,20 @@ export class WorldEditor {
       <div><span style="color: #fff;">Double-Click:</span> Teleport camera to marker</div>
       
       <div style="color: #0ff; margin-top: 8px; font-weight: bold;">MOVEMENT</div>
-      <div><span style="color: #fff;">WASD/Arrows:</span> Move selected</div>
-      <div><span style="color: #fff;">Q/E:</span> Rotate Y-axis</div>
-      <div><span style="color: #fff;">R/F:</span> Move up/down</div>
+      <div><span style="color: #fff;">WASD/Arrows:</span> Move XZ (Shift=faster)</div>
+      <div><span style="color: #fff;">Q/E:</span> Rotate Y (Shift=faster)</div>
+      <div><span style="color: #fff;">R/F:</span> Move up/down (Shift=faster)</div>
       <div><span style="color: #fff;">T:</span> Snap to ground (Y=0)</div>
       
       <div style="color: #0ff; margin-top: 8px; font-weight: bold;">TRANSFORM</div>
-      <div><span style="color: #fff;">Z/X:</span> Scale down/up</div>
+      <div><span style="color: #fff;">Z/X:</span> Scale down/up (mesh only)</div>
       <div><span style="color: #fff;">G:</span> Toggle grid snap (5u)</div>
       
       <div style="color: #0ff; margin-top: 8px; font-weight: bold;">TOOLS</div>
       <div><span style="color: #fff;">Shift+Click 2 markers:</span> Measure distance</div>
       <div><span style="color: #fff;">C:</span> Copy positions as code</div>
       <div><span style="color: #fff;">Ctrl+S:</span> Save session</div>
+      <div><span style="color: #fff;">Ctrl+E:</span> Export layout module</div>
       
       <div style="color: #0ff; margin-top: 8px; font-weight: bold;">HISTORY</div>
       <div><span style="color: #fff;">Ctrl+Z:</span> Undo</div>

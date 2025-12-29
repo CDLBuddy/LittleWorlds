@@ -12,7 +12,7 @@
     "preview": "vite preview",
     "lint": "eslint .",
     "typecheck": "tsc --noEmit",
-    "validate:content": "tsx tools/validate-content.mjs",
+    "validate:content": "node dev-utils/validate-content.mjs",
     "verify": "npm run lint && npm run typecheck && npm run validate:content && npm run build && npm run build:manifest",
     "clean": "node tools/clean.mjs",
     "build:manifest": "node tools/build-manifest.mjs"

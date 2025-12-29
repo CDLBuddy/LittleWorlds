@@ -1,0 +1,387 @@
+# 🌲 Pine Trails World
+
+## Overview
+
+The **Pine Trails** mark the turn toward evening—where the path climbs, the wind speaks through needles, and golden resin teaches patience. This is the world of ascent, preparation, and the first whisper of night. Here, the lantern is earned, not given, and the twins learn that light must be gathered before darkness comes.
+
+---
+
+## 🌄 Atmosphere & Time of Day
+
+**Time:** Late afternoon sliding into early golden hour  
+**Mood:** Climbing confidence, anticipation, gathering before dusk  
+**Color Palette:** Deep forest greens, amber pine needles, golden resin, warm pre-dusk glow  
+**Lighting:** Angled sun through tall pines (god rays), long shadows stretching east, amber-orange gradient in sky
+
+### Audio Landscape
+- **Primary:** Wind through pine needles (constant whisper, higher pitch than broadleaf forest)
+- **Texture:** Pine creak (tall trunks swaying), cone drop (occasional *thunk*), needle scatter underfoot
+- **Wildlife:** Woodpecker (distant percussion), chickadee (higher altitude calls), hawk cry (far above)
+- **Wind Gusts:** Comes in waves, louder at trail bends (dramatic, not threatening)
+- **Vista Echo:** Faint creek babble behind (Creek), cricket chirps ahead (Dusk Firefly meadow)
+
+---
+
+## 🎯 Core Design Philosophy
+
+Pine Trails introduces **preparation and resource gathering**. It teaches:
+- **Sap Collection:** Boy's tool used for gathering (slingshot → knock pinecones, reveal sap)
+- **Lantern Crafting:** Girl's knowledge applied (field guide shows lantern assembly)
+- **Trail Navigation:** Path-finding with subtle markers (cairns, bent branches) Create better lighting by placing the crafted lanterns at certain locations.
+- **Elevation Change:** Gentle uphill terrain (first "climb" without danger)
+- **Time Pressure (Soft):** Light is fading—lantern needed for next area (no timer, just atmosphere)
+
+**Key Principle:** *"Gather before nightfall. The forest rewards the prepared."*
+
+---
+
+## 🗺️ Layout & Points of Interest
+
+### Play Area
+- **Size:** 90×160 units (tall and narrow, emphasizing uphill trail)
+- **Elevation:** 0 at entry (south) → +12 units at exit (north)  
+- **Structure:** Winding switchback trail through dense pine forest
+- **Entry:** Southern trailhead from Creek (rocky gate)
+
+### Key Locations
+
+#### **1. Trailhead Cairn (Entry Point)** *(0, 0, 20)*
+- **Visual:** Stacked stones marking trail entrance, carved initials on nearby tree
+- **Function:** Establishes "trails are marked by those before us" theme
+- **Companion Interaction:** Dog sniffs cairn, marks territory (cute, establishes presence)
+- **Audio:** Creek sounds fading, wind picking up
+
+#### **2. First Sap Tree (Boy Gathering)** *(-8, 2, 10)*
+- **Visual:** Tall pine with golden sap oozing from wound ~6 feet up
+- **Mechanic:**
+  - Slingshot: Knock pinecone cluster above wound → more sap flows
+  - Collect with container (Girl provides jar from Creek filtering)
+  - Requires: 3 hits on pinecone cluster (skill challenge)
+- **Sap Uses:** Waterproof cordage, fire starter, lantern fuel component
+- **Teaching:** Tools gather resources, not just solve puzzles
+
+#### **3. The Overlook (Linger Moment)** *(12, 6, 0)*
+- **Visual:** Rocky outcrop off main trail, view opens west toward sunset
+- **What You See:** Creek valley below, Woodline canopy in distance, golden sky gradient
+- **Interaction:** Stand at edge for 20 seconds
+- **Unlocks:**
+  - Audio vignette: "Wind in Pine" (layered wind, needle whisper, hawk cry)
+  - Memory Book: "The Climb" (illustration of valley below)
+- **Companion:** Dog sits beside you, tail wag, content sigh
+- **Emotional Beat:** "Look how far we've come."
+
+#### **4. Lantern Assembly Station (Girl Crafting)** *(5, 8, -10)*
+- **Visual:** Flat boulder workbench, scattered components (metal frame, glass, wick)
+- **Function:** Convergence point for gathered materials
+- **Requirements:**
+  - Sap (from Boy's pine tree knock)
+  - Wire (found near old trapper's cache)
+  - Glass jar (repurposed from filter station)
+  - Wick material (Girl identifies cattail fluff from Creek)
+- **Mechanic:** Field guide shows assembly diagram → mini-game (place components in order)
+- **Output:** **Lantern** (key item for Dusk Firefly and Night worlds)
+- **Sound:** Metal clink, glass settle, wick thread, satisfying *click* when complete
+
+#### **5. Old Trapper's Cache (Discovery)** *(-10, 10, -15)*
+- **Visual:** Weathered wooden box half-buried under pine needles, rusted lock (open)
+- **Contents:**
+  - Wire (for lantern)
+  - Compass (introduces navigation mechanic)
+  - Worn field notes (lore: someone was here before, safe to follow trail)
+- **Emotional Note:** "Others walked this path. We're part of something older."
+- **Optional:** Toy soldier #11 hidden inside (continues Backyard collection across worlds)
+
+#### **6. Switchback Markers (Trail-Finding Tutorial)** *(Various points)*
+- **Visual Cues:**
+  - Cairns every 30 units (stone stacks)
+  - Bent saplings (indicate turn direction)
+  - Carved arrows on trees (old, mossy, but readable)
+  - Rope guide (frayed but still tied to trees)
+- **Mechanic:** Teach observation without quest markers
+- **Companion Help:** Dog runs ahead to next marker, waits (optional pathfinding)
+
+#### **7. Pine Needle Carpet Rest** *(0, 12, -20)*
+- **Visual:** Thick layer of soft brown needles under ancient pine cluster
+- **Function:** Natural rest spot, last safe zone before dusk transition
+- **Interaction:** Sit/lie down → needles compress with satisfying crunch
+- **Audio Shift:** Muffled world, close needle rustle, heartbeat-paced breathing
+- **Memory:** "Pine Bed" vignette (comfort in wilderness, earned rest)
+
+#### **8. North Vista: Dusk Meadow Glow** *(0, 12, -30)*
+- **What You See:** Trail opens into clearing, golden light intensifies (firefly meadow ahead)
+- **Sky Shift:** Blue overhead → amber horizon → first hint of purple-pink dusk
+- **Audio:** Cricket chirps beginning, wind softening, distant firefly hum (magical)
+- **Visual Tease:** First firefly blink in distance (single spark, not swarm yet)
+- **Gate:** Fallen log bridge over small ravine (natural transition)
+- **Emotion:** "We made it before dark. The lantern is ready."
+
+#### **9. South Vista: Creek Valley Below** *(0, 0, 25)*
+- **What You See:** Creek shimmer through trees, willow canopy, water glint
+- **Audio:** Distant water babble, frog chirps (afternoon), bird farewells
+- **Lighting:** Backlit trees (sun higher in sky behind you, time has passed)
+- **Emotion:** "We've climbed, and the world is wider now."
+
+---
+
+## 🎮 Gameplay Features
+
+### Core Mechanics
+
+#### **🌲 Sap Collection (Boy Resource Gathering)**
+- **Trees:** 3 sap pines scattered along trail
+- **Mechanic:**
+  - Identify trees with golden sap wounds (Girl can help with "Ask Twin" field guide)
+  - Aim at pinecone cluster above wound (glows subtly)
+  - 3 successful hits → cone falls, more sap flows, collection prompt
+- **Container:** Girl provides jar (empty after Creek filtering use)
+- **Uses:** Lantern fuel, fire starter upgrade, waterproof cordage (future)
+- **Skill Growth:** Aiming upward (harder angle) → "High Shot" achievement
+
+#### **🏮 Lantern Crafting (Girl Knowledge + Convergence)**
+- **Components:**
+  1. **Sap** (Boy gathers from pines)
+  2. **Wire** (found in trapper's cache)
+  3. **Glass jar** (repurposed from Creek)
+  4. **Wick** (Girl identifies cattail fluff from Creek knowledge)
+- **Assembly:**
+  - Field guide shows blueprint (Victorian-era hand lantern)
+  - Drag-and-drop components in order (frame → glass → wick → sap fuel)
+  - Success: Lantern item granted, glow particles, warm light test
+- **Importance:** *Required* for Dusk Firefly (see fireflies) and Night (navigate safely)
+- **"Lock" Type:** Story beat (both twins contribute, no bypass)
+
+#### **🧭 Trail Navigation (No Minimap, Observation)**
+- **Markers:**
+  - **Cairns:** Every 30-40 units, indicate main path
+  - **Bent Saplings:** Point toward next turn (Indigenous trail marker method)
+  - **Carved Arrows:** Old trapper marks, mossy but readable
+  - **Rope Guide:** Frayed but follows left side of trail
+- **Companion Help:**
+  - Dog runs to next marker if player lost (press "Ask Twin")
+  - Never forces, just hints (respects player agency)
+- **Teaching:** Observation > UI (builds real navigation skill)
+
+#### **🌿 Plant/Tree ID Expansion (Girl Knowledge)**
+- **New Species:**
+  - **White Pine:** Long needles (5 per cluster), soft bark, tall
+  - **Red Pine:** Reddish bark, paired needles
+  - **Spruce:** Short, sharp needles, hanging cones
+  - **Hemlock:** Tiny cones, drooping branch tips (poisonous note)
+  - **Ferns:** Shade-loving, still present under pine canopy
+- **Field Guide Pages:** 5 new entries
+- **Reward:** "Pine Specialist" achievement, companion learns "Sniff Trail" (finds hidden items)
+
+#### **📦 Discovery & Lore (Trapper's Cache)**
+- **Contents:** Wire, compass, field notes (handwritten, aged)
+- **Notes Content:**
+  - "Trail is safe, follow cairns."
+  - "Sap makes good waterproofing."
+  - "Fireflies dance at dusk beyond the ridge. A sight to see."
+- **Emotional Layer:** Someone cared for this trail—respect for those before
+- **Compass Unlock:** Shows cardinal directions (no GPS, just N/S/E/W)
+
+---
+
+## 🌲 Vista System: Climb & Glow
+
+### Looking South: Creek Valley Memory
+**Where We Climbed From**
+
+- **Geometry:** Creek shimmer, willow tree, broadleaf canopy, lower elevation feel
+- **Lighting:** Brighter afternoon sun (time was earlier down there)
+- **Audio:** Water babble (distant), forest birds (lower altitude species)
+- **Distance:** 60 units, elevation drop visual
+- **Emotion:** "We've come up. The air is cooler here."
+
+### Looking North: Dusk Meadow Promise
+**Where Magic Waits**
+
+- **Geometry:** Trail opens to clearing, meadow grass silhouettes, first firefly spark
+- **Lighting:** Golden hour intensifying, sky gradient (blue → amber → pink edge)
+- **Audio:** Cricket chirps beginning, wind softening, magical firefly hum (subtle)
+- **Distance:** 50 units, glow emanating
+- **Emotion:** "We gathered what we need. Now we see what comes with dusk."
+
+### Technical Implementation
+- **Elevation Change:** Gradual uphill (1 unit per 10 traveled, no steep climbs)
+- **Sky Gradient:** Dynamic shader transition (afternoon blue → golden → pre-dusk amber)
+- **Audio Crossfade:** Creek → wind → crickets over 2 minutes (seamless)
+- **Vista Loading:** <800 tris total (pines are LOD billboards at distance)
+
+---
+
+## 🎵 Audio Design
+
+### Ambient Layers
+1. **Base:** Wind through pine needles (constant, higher pitch than broadleaf)
+2. **Creak:** Tall pine trunks swaying (distant groans, not ominous)
+3. **Underfoot:** Pine needle crunch (soft, satisfying), cone roll (occasional)
+4. **Wildlife:** Woodpecker (rhythmic), chickadee (alpine calls), hawk scream (distant sky)
+5. **Time Shift:** Cricket chirps fade in as you climb (dusk approaching)
+
+### Interactive Sounds
+- **Slingshot on Pinecone:** Thunk, cone fall, needles scatter, sap drip increase
+- **Sap Collection:** Thick liquid pour into jar, viscous gurgle
+- **Lantern Assembly:** Metal frame clink, glass settle, wick thread, *snick* lock
+- **Lantern Test:** Soft ignition, warm flame hum, glass resonance
+- **Cairn Pass:** Stone clink (foot brushes marker)
+- **Compass Open:** Metal clasp, card settle, gentle tick
+
+### Memory Audio Vignettes (Unlockable)
+- **"Wind in Pine"** — Layered wind through needles, distance to close, hawk cry punctuation
+- **"The Climb"** — Breathing rhythm, needle crunch footsteps, elevation satisfaction narration
+- **"Pine Bed"** — Needle compress, close rustle, safe exhaustion, companion breathing
+- **"Lantern Glow"** — Ignition, flame hum, warm glass, "we're ready" whisper
+
+---
+
+## 🏆 Progression & Unlocks
+
+### Completion Criteria
+- **Boy:** Sap collected (3 trees) + Contributed to lantern
+- **Girl:** Lantern crafted (all components assembled) + Pine species identified (3+)
+- **Shared:** Reach dusk meadow vista with lantern lit
+
+### What Carries Forward
+- **Items:** **Lantern** (critical for next 2 worlds), sap (extra uses), compass
+- **Skills:** Uphill navigation, resource gathering, crafting convergence
+- **Knowledge:** 5 new plant entries, trapper lore notes
+- **Companion:** "Sniff Trail" ability (finds hidden items)
+
+### Optional Completionism
+- All 3 sap trees tapped
+- All 5 pine species identified
+- Trapper's cache notes fully read
+- Both linger moments (overlook, pine bed)
+- Toy soldier #11 found (if extending collection)
+- Compass cardinal direction tutorial completed
+
+---
+
+## 🎨 Visual & Aesthetic Goals
+
+### Planned Aesthetic
+- [ ] Tall pine forest (vertical emphasis, cathedral feel)
+- [ ] God rays through canopy (dramatic light shafts)
+- [ ] Golden sap viscous shader (amber glow, thick drip)
+- [ ] Switchback trail (visible path markers, worn earth)
+- [ ] Rocky overlook (elevation drop visible, valley view)
+- [ ] Lantern model (Victorian hand lantern, glass panels, warm glow)
+- [ ] Trapper's cache (weathered wood, rusted details)
+- [ ] Pine needle carpet (thick layer, compression under foot)
+- [ ] Sky gradient shift (afternoon blue → golden hour amber)
+- [ ] Long shadows (angled sun, dramatic tree shadows stretching east)
+
+### Color Palette
+- **Pines:** Deep forest green (needles), reddish-brown (bark), gray-brown (trunks)
+- **Sap:** Golden amber, honey glow, viscous shine
+- **Earth:** Brown (needles), gray (rocks), moss green (shade)
+- **Sky:** Afternoon blue → amber gradient → hint of pink-purple at horizon
+- **Lantern:** Warm orange-yellow glow, metal frame (pewter), clear glass
+
+---
+
+## 🧠 Emotional & Therapeutic Goals
+
+### What Players Should Feel
+- **Preparation:** "I'm gathering what I need for what's ahead."
+- **Confidence:** "I can climb, I can find my way."
+- **Anticipation:** "Something beautiful is coming as light fades."
+- **Partnership:** "We both contributed to making the lantern."
+- **Respect:** "Others were here before—I'm on a path with history."
+- **Calm:** Wind through pines is meditative, not chaotic
+
+### Therapeutic Elements
+- **Rhythm:** Uphill climb mirrors controlled exertion (therapeutic hiking)
+- **Gathering:** Satisfying collection mechanics (dopamine without addiction)
+- **Breath Pacing:** Elevation gain encourages slower pace (natural mindfulness)
+- **Preparation Reduces Anxiety:** "I have what I need" feeling before dusk
+- **Historical Connection:** Trapper's notes = we're not alone in this journey
+
+---
+
+## 🔗 Connections to Other Worlds
+
+### Backward: To Creek
+- **Vista:** See creek valley, willow tree, water glint below
+- **Elevation:** Path switchbacks down (can return, shows distance traveled)
+- **Audio:** Water babble grows as you descend
+
+### Forward: To Dusk Firefly
+- **Vista:** Meadow clearing, golden light intensifies, first firefly spark
+- **Gate:** Fallen log bridge over small ravine (natural transition)
+- **Audio:** Cricket chirps beginning, wind softening, firefly hum
+- **Light Shift:** Sky gradient accelerates (golden hour → dusk border)
+- **Requirement:** Lantern *highly recommended* (can proceed without, but misses magic)
+
+---
+
+## 📝 Content Checklist
+
+### Essential (Phase 1)
+- [ ] Uphill switchback trail (elevation 0 → +12)
+- [ ] 3 sap collection pine trees (Boy mechanic)
+- [ ] Lantern assembly station (Girl crafting convergence)
+- [ ] Trapper's cache (wire, compass, lore notes)
+- [ ] Trail markers (cairns, bent saplings, carved arrows)
+- [ ] Spawn point (southern trailhead)
+- [ ] Boy/Girl task chains
+- [ ] Lantern item (critical unlock)
+
+### Nice to Have (Phase 2)
+- [ ] Overlook linger moment (valley view)
+- [ ] Pine needle carpet rest spot
+- [ ] 5 pine species identification (Girl skill)
+- [ ] "Ask Twin" trail navigation (companion hints)
+- [ ] Creek vista (south, looking back)
+- [ ] Dusk meadow vista (north, looking ahead)
+- [ ] Audio crossfade zones (creek → wind → crickets)
+- [ ] Compass cardinal tutorial
+
+### Polish (Phase 3)
+- [ ] God rays through canopy (volumetric light shafts)
+- [ ] Golden sap shader (viscous drip animation)
+- [ ] Sky gradient shader (smooth afternoon → golden hour transition)
+- [ ] Long shadow system (dramatic angled sun)
+- [ ] Lantern glow (warm light, glass reflection, flame animation)
+- [ ] Wind gust events (periodic stronger wind, tree sway)
+- [ ] Trapper cache detail (aged wood texture, rust on lock, worn notes)
+- [ ] Memory Book illustrations (pine sketches, valley view)
+
+---
+
+## 🌟 Design Mantras
+
+> *"Gather before darkness. The forest provides for the prepared."*  
+> *"Light is earned, not given."*  
+> *"We climb together, even when the trail is steep."*  
+> *"Those before us left markers—we follow and add our own."*
+
+---
+
+## 🔧 Technical Notes
+
+### Elevation System
+- **Gradient:** 1 unit vertical per 10 units horizontal (gentle, no jump mechanics needed)
+- **Switchbacks:** 3 major turns (prevents straight sightlines, feels larger)
+- **Camera:** Slight tilt down when looking south (shows elevation gain)
+
+### Lantern System
+- **Light Source:** Dynamic point light (range 8, intensity 1.2, warm orange)
+- **Item State:** Lit/Unlit toggle (fuel not depleted, just on/off)
+- **Visual:** Glow particles when lit, glass reflection shader
+- **UI:** Lantern icon in inventory (glows when lit)
+
+### Asset References
+- `PineTrees_Tall.glb` - Hero pines (15-20 units tall)
+- `PineTrees_Cluster.glb` - Perimeter forest fill
+- `Pinecones.glb` - Target clusters for slingshot
+- `SapDrip.glb` - Animated amber sap flow
+- `Lantern.glb` - Victorian hand lantern
+- `TrapperCache.glb` - Weathered wooden box
+- `Cairn.glb` - Stacked stones (trail markers)
+- *(Pending: Sky gradient shader, god ray volumes, sap viscosity shader)*
+
+---
+
+*Pine Trails whispers: "Prepare with patience, and the darkness ahead will hold beauty, not fear."*

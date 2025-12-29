@@ -50,6 +50,7 @@ export class GameApp {
   private companionDebugHelper: CompanionDebugHelper | null = null;
   private playerDebugHelper: PlayerDebugHelper | null = null;
   private worldEditor: WorldEditor | null = null;
+  private worldEditorKeyHandler: ((e: KeyboardEvent) => void) | null = null;
   private playerEntity: Player | null = null;
   private progressionSystem: ProgressionSystem | null = null;
   private autosaveSystem: AutosaveSystem | null = null;
@@ -359,20 +360,15 @@ export class GameApp {
       }
 
       // Create world editor (disabled by default)
-      this.worldEditor = new WorldEditor(this.scene);
+      this.worldEditor = new WorldEditor(this.scene, this.startParams.areaId);
 
       // Toggle world editor with F2 key
-      window.addEventListener('keydown', (e) => {
-        if (e.key === 'F2') {
-          if (this.worldEditor) {
-            if ((this.worldEditor as any).enabled) {
-              this.worldEditor.disable();
-            } else {
-              this.worldEditor.enable();
-            }
-          }
+      this.worldEditorKeyHandler = (e: KeyboardEvent) => {
+        if (e.key === 'F2' && this.worldEditor) {
+          this.worldEditor.toggle();
         }
-      });
+      };
+      window.addEventListener('keydown', this.worldEditorKeyHandler);
 
       console.log('[GameApp] Press F2 to toggle World Editor');
     }
@@ -579,6 +575,16 @@ export class GameApp {
     // Clean up player debug helper
     this.playerDebugHelper?.dispose();
     this.playerDebugHelper = null;
+    
+    // Clean up world editor
+    if (this.worldEditor) {
+      this.worldEditor.dispose();
+      this.worldEditor = null;
+    }
+    if (this.worldEditorKeyHandler) {
+      window.removeEventListener('keydown', this.worldEditorKeyHandler);
+      this.worldEditorKeyHandler = null;
+    }
     
     // Stop ambient loop
     this.ambientLoop?.stop(1.0);
