@@ -2,6 +2,10 @@
  * Area definitions - data-driven chapters for LittleWorlds
  */
 
+import { CONTENT_VERSION } from './version';
+
+export { CONTENT_VERSION };
+
 export type RoleId = 'boy' | 'girl';
 export type AreaId = 'backyard' | 'woodline';
 

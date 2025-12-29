@@ -2,6 +2,10 @@
  * Icon mapping for UI elements
  */
 
+import { CONTENT_VERSION } from './version';
+
+export { CONTENT_VERSION };
+
 export const ICONS = {
   // Items
   stick: '/assets/ui/icon_stick.png',

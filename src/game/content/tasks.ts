@@ -5,6 +5,9 @@
 import type { InteractableId } from './interactableIds';
 import type { ItemId } from './items';
 import { INTERACTABLE_ID } from './interactableIds';
+import { CONTENT_VERSION } from './version';
+
+export { CONTENT_VERSION };
 
 export interface TaskStep {
   id: string;

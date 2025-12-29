@@ -53,7 +53,15 @@ async function loadModule(relativePath) {
 function extractExport(content, exportName) {
   const regex = new RegExp(`export const ${exportName}\\s*=\\s*({[\\s\\S]*?});`, 'm');
   const match = content.match(regex);
-  if (!match) return null;
+  if (!match) {
+    // Try simple value export like: export const CONTENT_VERSION = 1;
+    const simpleRegex = new RegExp(`export const ${exportName}\\s*=\\s*([^;]+);`, 'm');
+    const simpleMatch = content.match(simpleRegex);
+    if (simpleMatch) {
+      return simpleMatch[1].trim();
+    }
+    return null;
+  }
   
   try {
     // Very basic parsing - just extract the object literal
@@ -250,12 +258,58 @@ async function validateIcons() {
 }
 
 /**
+ * Validate content version consistency
+ */
+async function validateVersion() {
+  console.log('\n📦 Validating Content Version...');
+  
+  const versionContent = await loadModule('content/version.ts');
+  if (!versionContent) {
+    error('Cannot validate version without version.ts');
+    return;
+  }
+  
+  // Extract version number
+  const versionMatch = versionContent.match(/export const CONTENT_VERSION\s*=\s*(\d+);/);
+  if (!versionMatch) {
+    error('Could not find CONTENT_VERSION export in version.ts');
+    return;
+  }
+  
+  const expectedVersion = parseInt(versionMatch[1], 10);
+  success(`Expected content version: ${expectedVersion}`);
+  
+  // Check each content file exports the version
+  const contentFiles = ['content/tasks.ts', 'content/areas.ts', 'content/icons.ts'];
+  
+  for (const file of contentFiles) {
+    const content = await loadModule(file);
+    if (!content) {
+      error(`Cannot load ${file} for version check`);
+      continue;
+    }
+    
+    // Check for version export
+    if (!content.includes('import { CONTENT_VERSION }')) {
+      error(`${file} does not import CONTENT_VERSION`);
+    }
+    
+    if (!content.includes('export { CONTENT_VERSION }')) {
+      error(`${file} does not re-export CONTENT_VERSION`);
+    }
+  }
+  
+  success('Content version consistency validated');
+}
+
+/**
  * Main validation flow
  */
 async function main() {
   console.log('🔍 Content Validation Starting...\n');
   console.log('═'.repeat(50));
   
+  await validateVersion();
   await validateAreas();
   await validateTasks();
   await validateIcons();
