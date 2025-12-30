@@ -65,6 +65,8 @@ export function createBootWorld(scene: Scene, eventBus: any, roleId: RoleId = 'b
 
   // Ground plane (increased size for companion exploration)
   const ground = MeshBuilder.CreateGround('ground', { width: 60, height: 60 }, scene);
+  ground.isPickable = true;
+  ground.checkCollisions = false; // Controller handles collision
   const groundMat = new StandardMaterial('groundMat', scene);
   groundMat.diffuseColor = new Color3(0.4, 0.6, 0.3);
   groundMat.specularColor = new Color3(0.1, 0.1, 0.1);

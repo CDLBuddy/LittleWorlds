@@ -30,6 +30,7 @@ export interface SaveData {
   slotId: string;
   roles: Record<'boy' | 'girl', RoleProgress>;
   lastSelectedRole: 'boy' | 'girl' | null;
+  worldFlags?: Record<string, Record<string, any>>; // Per-world persistent flags
 }
 
 export class SaveSystem {
@@ -63,6 +64,7 @@ export class SaveSystem {
         girl: this.createDefaultRoleProgress(),
       },
       lastSelectedRole: null,
+      worldFlags: {}, // Empty world flags registry
     };
   }
 

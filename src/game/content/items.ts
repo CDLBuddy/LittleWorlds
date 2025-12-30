@@ -103,6 +103,15 @@ export const ITEMS: Record<string, ItemDef> = {
     description: 'A survival handbook',
     stackable: false,
   },
+  // Creek items
+  clean_water: {
+    id: 'clean_water',
+    name: 'Clean Water',
+    icon: '💧',
+    description: 'Filtered water from the creek',
+    stackable: true,
+    maxStack: 3,
+  },
   // Keepsakes
   carved_token: {
     id: 'carved_token',

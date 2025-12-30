@@ -16,11 +16,17 @@ export function seek(
   dt: number,
   arrivalRadius = 1.0
 ): SteeringResult {
+  // Guard against invalid dt (first frame can be 0)
+  if (dt <= 0.0001) {
+    return { velocity: Vector3.Zero(), arrived: false };
+  }
+  
   const direction = targetPos.subtract(currentPos);
   direction.y = 0; // Keep on ground plane
   const distance = direction.length();
   
-  if (distance < arrivalRadius) {
+  // Check if already at target or distance too small to calculate direction
+  if (distance < arrivalRadius || distance < 0.001) {
     return { velocity: Vector3.Zero(), arrived: true };
   }
   

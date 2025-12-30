@@ -129,6 +129,54 @@ class SaveFacade {
     this.writeMain(save);
     return save;
   }
+
+  /**
+   * Get a world flag value (persistent per-world state)
+   * @param areaId - The area/world ID (e.g., 'woodline')
+   * @param key - The flag key (e.g., 'campfireLit')
+   * @returns The flag value or undefined if not set
+   */
+  getWorldFlag<T = any>(areaId: string, key: string): T | undefined {
+    const save = this.loadMain();
+    // Defensive: ensure worldFlags exists (backward compatibility)
+    if (!save.worldFlags) {
+      save.worldFlags = {};
+      this.writeMain(save); // Persist the structure
+    }
+    return save.worldFlags[areaId]?.[key] as T | undefined;
+  }
+
+  /**
+   * Set a world flag value (persistent per-world state)
+   * @param areaId - The area/world ID (e.g., 'woodline')
+   * @param key - The flag key (e.g., 'campfireLit')
+   * @param value - The value to store
+   */
+  setWorldFlag(areaId: string, key: string, value: any): SaveData {
+    const save = this.loadMain();
+    // Defensive: ensure worldFlags structure exists at all levels
+    if (!save.worldFlags) {
+      save.worldFlags = {};
+    }
+    if (!save.worldFlags[areaId]) {
+      save.worldFlags[areaId] = {};
+    }
+    save.worldFlags[areaId][key] = value;
+    this.writeMain(save); // Atomic write - won't corrupt other save sections
+    return save;
+  }
+
+  /**
+   * Clear all world flags for a specific area
+   */
+  clearWorldFlags(areaId: string): SaveData {
+    const save = this.loadMain();
+    if (save.worldFlags) {
+      delete save.worldFlags[areaId];
+    }
+    this.writeMain(save);
+    return save;
+  }
 }
 
 // Export singleton instance

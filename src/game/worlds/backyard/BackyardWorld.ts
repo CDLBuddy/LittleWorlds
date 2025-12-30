@@ -91,6 +91,8 @@ export function createBackyardWorld(scene: Scene, eventBus: { emit: (event: AppE
 
   // Large ground plane (backyard) - visible as fallback
   const ground = MeshBuilder.CreateGround('ground', { width: 80, height: 80 }, scene);
+  ground.isPickable = true;
+  ground.checkCollisions = false; // Controller handles collision
   const groundMat = new StandardMaterial('groundMat', scene);
   groundMat.diffuseColor = new Color3(0.45, 0.65, 0.35); // Grass
   groundMat.specularColor = new Color3(0.1, 0.1, 0.1);
@@ -163,7 +165,7 @@ export function createBackyardWorld(scene: Scene, eventBus: { emit: (event: AppE
             if (instance) {
               instance.position = new Vector3(posX, 0, posZ);
               instance.scaling.y = 0.6; // Reduce grass height to 60%
-              instance.receiveShadows = true;
+              // Note: receiveShadows doesn't work on instances, shadows inherit from parent
               instance.isPickable = false; // Grass is not interactive
               instance.parent = grassParent;
               grassInstances.push(instance);

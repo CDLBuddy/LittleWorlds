@@ -48,33 +48,6 @@ async function loadModule(relativePath) {
 }
 
 /**
- * Extract exported constant from TS file
- */
-function extractExport(content, exportName) {
-  const regex = new RegExp(`export const ${exportName}\\s*=\\s*({[\\s\\S]*?});`, 'm');
-  const match = content.match(regex);
-  if (!match) {
-    // Try simple value export like: export const CONTENT_VERSION = 1;
-    const simpleRegex = new RegExp(`export const ${exportName}\\s*=\\s*([^;]+);`, 'm');
-    const simpleMatch = content.match(simpleRegex);
-    if (simpleMatch) {
-      return simpleMatch[1].trim();
-    }
-    return null;
-  }
-  
-  try {
-    // Very basic parsing - just extract the object literal
-    const objStr = match[1];
-    // This is a simplified parser; for production use a proper TS parser
-    return objStr;
-  } catch (err) {
-    warning(`Failed to parse ${exportName}: ${err.message}`);
-    return null;
-  }
-}
-
-/**
  * Extract all InteractableId values from enum/type
  */
 function extractInteractableIds(content) {

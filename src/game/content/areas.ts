@@ -7,7 +7,7 @@ import { CONTENT_VERSION } from './version';
 export { CONTENT_VERSION };
 
 export type RoleId = 'boy' | 'girl';
-export type AreaId = 'backyard' | 'woodline';
+export type AreaId = 'backyard' | 'woodline' | 'creek';
 
 export interface AreaDef {
   id: AreaId;
@@ -38,9 +38,19 @@ export const AREAS: Record<AreaId, AreaDef> = {
     id: 'woodline',
     name: 'Woodline',
     worldKey: 'WOODLINE',
+    next: 'creek',
     tasksByRole: {
       boy: ['boy_woodline_find_flint', 'boy_woodline_spark_fire'],
       girl: ['girl_woodline_find_fieldguide', 'girl_woodline_bowdrill_fire'],
+    },
+  },
+  creek: {
+    id: 'creek',
+    name: 'Creek',
+    worldKey: 'CREEK',
+    tasksByRole: {
+      boy: ['boy_creek_cross_shallow', 'boy_creek_slingshot_bridge'],
+      girl: ['girl_creek_cross_shallow', 'girl_creek_filter_water'],
     },
   },
 };

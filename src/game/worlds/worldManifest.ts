@@ -15,6 +15,7 @@ export type WorldManifest = {
 import { BOOT_INTERACTABLES } from './BootWorld';
 import { BACKYARD_INTERACTABLES } from './backyard/BackyardWorld';
 import { WOODLINE_INTERACTABLES } from './woodline/WoodlineWorld';
+import { CREEK_INTERACTABLES } from './creek/CreekWorld';
 
 export const WORLD_MANIFESTS: Record<AreaId, WorldManifest> = {
   backyard: {
@@ -24,6 +25,10 @@ export const WORLD_MANIFESTS: Record<AreaId, WorldManifest> = {
   woodline: {
     areaId: 'woodline',
     interactables: WOODLINE_INTERACTABLES,
+  },
+  creek: {
+    areaId: 'creek',
+    interactables: CREEK_INTERACTABLES,
   },
 };
 

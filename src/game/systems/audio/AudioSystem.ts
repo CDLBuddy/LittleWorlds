@@ -147,6 +147,11 @@ export class AudioSystem {
       this.bufferCache.set(key, audioBuffer);
       console.log(`[AudioSystem] Loaded: ${key}`);
     } catch (error) {
+      // Suppress error traces for placeholder audio files (they're just empty stubs)
+      if (error instanceof DOMException && error.name === 'EncodingError') {
+        // Silent - these are placeholder files
+        return;
+      }
       console.error(`[AudioSystem] Failed to load ${key} from ${url}:`, error);
     }
   }

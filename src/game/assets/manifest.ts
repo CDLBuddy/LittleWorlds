@@ -16,6 +16,7 @@ export const assetManifest: AssetManifest = {
     "assets/models/Boy.glb",
     "assets/models/Dog.glb",
     "assets/models/House.glb",
+    "assets/models/Pinetree.glb",
     "assets/models/Slingshot.glb",
     "assets/models/Summergrass.glb",
     "assets/models/TreesBushes.glb"
@@ -39,6 +40,7 @@ export const MODELS: Record<string, string> = {
   'boy': 'assets/models/Boy.glb',
   'dog': 'assets/models/Dog.glb',
   'house': 'assets/models/House.glb',
+  'pinetree': 'assets/models/Pinetree.glb',
   'slingshot': 'assets/models/Slingshot.glb',
   'summergrass': 'assets/models/Summergrass.glb',
   'treesbushes': 'assets/models/TreesBushes.glb'

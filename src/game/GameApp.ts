@@ -244,6 +244,10 @@ export class GameApp {
       console.log('[GameApp] Loading WoodlineWorld (lazy)...');
       const { createWoodlineWorld } = await import('./worlds/woodline/WoodlineWorld');
       world = createWoodlineWorld(this.scene, this.bus, this.startParams.roleId);
+    } else if (this.startParams.areaId === 'creek') {
+      console.log('[GameApp] Loading CreekWorld (lazy)...');
+      const { createCreekWorld } = await import('./worlds/creek/CreekWorld');
+      world = createCreekWorld(this.scene, this.bus, this.startParams.roleId);
     } else {
       // Fallback to BootWorld for debug/dev only (not lazy-loaded since it's dev-only)
       console.log('[GameApp] Loading BootWorld (debug fallback)');
@@ -407,13 +411,15 @@ export class GameApp {
     }
 
     // Start render loop
-    this.engine.runRenderLoop(() => {
-      if (this.isRunning) {
+    const renderCallback = () => {
+      if (this.isRunning && !this.scene.isDisposed && !this.engine.isDisposed) {
         const dt = this.engine.getDeltaTime() / 1000;
         this.update(dt);
         this.scene.render();
       }
-    });
+    };
+    
+    this.engine.runRenderLoop(renderCallback);
 
     // Emit ready event
     this.bus.emit({ type: 'game/ready' });
@@ -445,14 +451,20 @@ export class GameApp {
 
     // Update companion AI
     if (this.companion && this.player) {
-      this.companion.update(dt, this.player.position);
+      // Validate player position before passing to companion
+      const pos = this.player.position;
+      if (!isNaN(pos.x) && !isNaN(pos.y) && !isNaN(pos.z)) {
+        this.companion.update(dt, pos);
+      }
     }
     
     // Update camera rig
     if (this.cameraRig && this.player) {
+      // Get player yaw delta for keyboard rotation (A/D keys)
+      const yawDelta = this.playerController?.getYawDelta() ?? 0;
       // Optionally pass companion position as interest point when leading
       const interestPos = (this.companion && this.cameraRig) ? undefined : undefined;
-      this.cameraRig.update(this.player.position, interestPos, dt);
+      this.cameraRig.update(this.player.position, interestPos, dt, yawDelta);
     }
     
     // Update campfire VFX (if it has an update method)

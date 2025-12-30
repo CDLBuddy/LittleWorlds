@@ -165,6 +165,59 @@ export const girl_woodline_bowdrill_fire: Task = {
   ],
 };
 
+// Creek tasks - Boy role
+export const boy_creek_cross_shallow: Task = {
+  id: 'boy_creek_cross_shallow',
+  name: 'Cross Shallow Creek',
+  steps: [
+    {
+      id: 'step_on_stones',
+      targetId: INTERACTABLE_ID.CREEK_STONES_ENTRY,
+      promptIcon: 'hand',
+    },
+  ],
+};
+
+export const boy_creek_slingshot_bridge: Task = {
+  id: 'boy_creek_slingshot_bridge',
+  name: 'Slingshot Bridge',
+  steps: [
+    {
+      id: 'hit_branch',
+      targetId: INTERACTABLE_ID.CREEK_SLINGSHOT_BRANCH_TARGET,
+      promptIcon: 'target',
+      requiresItems: ['slingshot'],
+    },
+  ],
+};
+
+// Creek tasks - Girl role
+export const girl_creek_cross_shallow: Task = {
+  id: 'girl_creek_cross_shallow',
+  name: 'Cross Shallow Creek',
+  steps: [
+    {
+      id: 'step_on_stones',
+      targetId: INTERACTABLE_ID.CREEK_STONES_ENTRY,
+      promptIcon: 'hand',
+    },
+  ],
+};
+
+export const girl_creek_filter_water: Task = {
+  id: 'girl_creek_filter_water',
+  name: 'Filter Water',
+  steps: [
+    {
+      id: 'use_filter',
+      targetId: INTERACTABLE_ID.CREEK_FILTER_STATION,
+      promptIcon: 'book',
+      requiresItems: ['field_guide', 'string'],
+      grantsItems: ['clean_water', 'clean_water', 'clean_water'],
+    },
+  ],
+};
+
 // Task registry
 export const TASKS_BY_ID: Record<string, Task> = {
   campfire_v1,
@@ -176,6 +229,10 @@ export const TASKS_BY_ID: Record<string, Task> = {
   boy_woodline_spark_fire,
   girl_woodline_find_fieldguide,
   girl_woodline_bowdrill_fire,
+  boy_creek_cross_shallow,
+  boy_creek_slingshot_bridge,
+  girl_creek_cross_shallow,
+  girl_creek_filter_water,
 };
 
 export type TaskId = keyof typeof TASKS_BY_ID;

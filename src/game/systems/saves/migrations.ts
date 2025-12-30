@@ -65,6 +65,7 @@ export const migrations: Record<number, Migration> = {
         girl: { ...defaultRoleProgress },
       },
       lastSelectedRole: null,
+      worldFlags: {}, // Initialize worldFlags for v2 saves (added in later update)
     };
   },
 };

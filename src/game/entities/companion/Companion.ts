@@ -54,9 +54,16 @@ export class Companion {
   ) {
     this.id = 'companion_001';
     
+    // Validate spawn position
+    const safePosition = new Vector3(
+      isNaN(position.x) ? 3 : position.x,
+      isNaN(position.y) ? 0 : position.y,
+      isNaN(position.z) ? 22 : position.z
+    );
+    
     // Create a visual root that we'll move around
     this.mesh = new TransformNode('companionVisualRoot', scene);
-    this.mesh.position = position.clone();
+    this.mesh.position = safePosition.clone();
     
     // Create placeholder sphere (visible immediately)
     this.placeholder = MeshBuilder.CreateSphere(
@@ -280,12 +287,19 @@ export class Companion {
       // Complete one circle in 2 seconds
       this.circleAngle += dt * Math.PI; // Half circle per second
       
-      const x = this.circleCenter.x + Math.cos(this.circleAngle) * this.circleRadius;
-      const z = this.circleCenter.z + Math.sin(this.circleAngle) * this.circleRadius;
-      
-      this.mesh.position.x = x;
-      this.mesh.position.z = z;
-      this.mesh.position.y = 0.2;
+      // Safety check: ensure circleCenter is valid
+      if (!isNaN(this.circleCenter.x) && !isNaN(this.circleCenter.z)) {
+        const x = this.circleCenter.x + Math.cos(this.circleAngle) * this.circleRadius;
+        const z = this.circleCenter.z + Math.sin(this.circleAngle) * this.circleRadius;
+        
+        this.mesh.position.x = x;
+        this.mesh.position.z = z;
+        this.mesh.position.y = 0.2;
+      } else {
+        // Invalid center, abort investigation
+        this.circleCenter = null;
+        this.transitionTo('FollowPlayer');
+      }
     } else if (this.stateTime >= 2.5) {
       // Done investigating
       this.circleCenter = null;

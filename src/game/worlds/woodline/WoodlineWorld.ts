@@ -1,7 +1,8 @@
 /**
  * WoodlineWorld - Second playable area (deeper into forest)
- * Dusk/twilight lighting, campfire checkpoint, role-specific fire methods
- * Boy: flint → campfire | Girl: fieldguide → bowdrill_station
+ * Late morning/midday lighting, campfire checkpoint, role-specific fire methods
+ * Boy: flint → campfire | Girl: fieldguide → bowdrill → campfire (convergent paths)
+ * Campfire lit state persists via worldFlags; lighting completes area and unlocks Creek
  */
 
 import {
@@ -24,12 +25,14 @@ import { Companion } from '@game/entities/companion/Companion';
 import type { RoleId } from '@game/content/areas';
 import { INTERACTABLE_ID, type InteractableId } from '@game/content/interactableIds';
 import { snapshotPerf, logPerfSnapshot } from '@game/debug/perfSnapshot';
+import { saveFacade } from '@game/systems/saves/saveFacade';
 
 export const WOODLINE_INTERACTABLES = [
   INTERACTABLE_ID.WOODLINE_CAMPFIRE,
   INTERACTABLE_ID.FLINT_PICKUP,
   INTERACTABLE_ID.FIELDGUIDE_PICKUP,
   INTERACTABLE_ID.BOWDRILL_STATION,
+  INTERACTABLE_ID.WOODLINE_CREEK_GATE,
 ] as const satisfies readonly InteractableId[];
 
 interface Interactable {
@@ -37,10 +40,12 @@ interface Interactable {
   mesh: AbstractMesh;
   interact: () => void;
   dispose: () => void;
+  alwaysActive?: boolean; // Gates and always-available interactables
 }
 
 interface CampfireInteractable extends Interactable {
   setFireLit: (lit: boolean) => void;
+  isLit: () => boolean;
 }
 
 export function createWoodlineWorld(scene: Scene, eventBus: any, roleId: RoleId = 'boy'): {
@@ -73,6 +78,8 @@ export function createWoodlineWorld(scene: Scene, eventBus: any, roleId: RoleId 
 
   // Forest floor ground (larger map)
   const ground = MeshBuilder.CreateGround('ground', { width: 120, height: 120 }, scene);
+  ground.isPickable = true;
+  ground.checkCollisions = false; // Controller handles collision
   const groundMat = new StandardMaterial('groundMat', scene);
   groundMat.diffuseColor = new Color3(0.4, 0.55, 0.3); // Brighter forest floor for daytime
   groundMat.specularColor = new Color3(0.1, 0.1, 0.1);
@@ -240,6 +247,13 @@ export function createWoodlineWorld(scene: Scene, eventBus: any, roleId: RoleId 
     eventBus
   );
 
+  // Restore persistent campfire state (if lit before, keep it lit)
+  const campfireLit = saveFacade.getWorldFlag<boolean>('woodline', 'campfireLit');
+  if (campfireLit) {
+    console.log('[WoodlineWorld] Restoring campfire lit state from save');
+    campfireInteractable.setFireLit(true);
+  }
+
   // 1. Flint pickup (boy task)
   const flintPickup = createPickupInteractable(
     scene,
@@ -265,7 +279,18 @@ export function createWoodlineWorld(scene: Scene, eventBus: any, roleId: RoleId 
     new Vector3(5, 0, -8),
     new Color3(0.5, 0.35, 0.2), // Wood
     eventBus,
-    campfireInteractable // Pass reference to light fire
+    campfireInteractable, // Pass reference to light fire
+    INTERACTABLE_ID.WOODLINE_CAMPFIRE // Pass campfire ID for completion event
+  );
+
+  // 4. Creek gate (unlocked by campfire OR area complete) - north clearing between pines
+  const creekGate = createGateInteractable(
+    scene,
+    INTERACTABLE_ID.WOODLINE_CREEK_GATE,
+    new Vector3(0, 0, -25), // North clearing between pine trees
+    new Color3(0.4, 0.8, 0.6), // Brighter forest green
+    eventBus,
+    roleId
   );
 
   const interactables: Interactable[] = [
@@ -273,6 +298,7 @@ export function createWoodlineWorld(scene: Scene, eventBus: any, roleId: RoleId 
     flintPickup,
     fieldguidePickup,
     bowdrillStation,
+    creekGate,
   ];
 
   // === PERFORMANCE OPTIMIZATIONS ===
@@ -434,7 +460,14 @@ function createCampfireInteractable(
     flame.setEnabled(lit);
     fireLight.intensity = lit ? 1.5 : 0;
     console.log('[Campfire] Fire lit:', lit);
+    
+    // Persist campfire state across sessions
+    if (lit) {
+      saveFacade.setWorldFlag('woodline', 'campfireLit', true);
+    }
   };
+
+  const getIsLit = () => isLit;
 
   // Main mesh for interaction target
   const mesh = stoneRing;
@@ -443,10 +476,14 @@ function createCampfireInteractable(
     id,
     mesh,
     interact: () => {
-      eventBus.emit({ type: 'interaction/complete', targetId: id });
-      setFireLit(true); // Boy lights fire directly
+      // Only emit completion if not already lit (prevent duplicate completions)
+      if (!isLit) {
+        eventBus.emit({ type: 'interaction/complete', targetId: id });
+        setFireLit(true); // Boy lights fire directly
+      }
     },
     setFireLit,
+    isLit: getIsLit,
     dispose: () => {
       if (flameObserver) {
         scene.onBeforeRenderObservable.remove(flameObserver);
@@ -466,7 +503,8 @@ function createBowdrillInteractable(
   position: Vector3,
   color: Color3,
   eventBus: any,
-  campfire: CampfireInteractable
+  campfire: CampfireInteractable,
+  campfireId: string
 ): Interactable {
   // Bowdrill station (simple box)
   const mesh = MeshBuilder.CreateBox(id, { width: 1.2, height: 0.6, depth: 0.8 }, scene);
@@ -481,13 +519,72 @@ function createBowdrillInteractable(
     id,
     mesh,
     interact: () => {
-      eventBus.emit({ type: 'interaction/complete', targetId: id });
-      // Girl lights campfire indirectly via bowdrill
-      campfire.setFireLit(true);
+      // Only emit completion if not already lit (prevent duplicate completions)
+      if (!campfire.isLit()) {
+        // Emit completion for bowdrill station itself
+        eventBus.emit({ type: 'interaction/complete', targetId: id });
+        // Girl lights campfire - emit campfire completion for progression symmetry
+        // NOTE: Girl's tasks don't include campfire as a requirement, so this event
+        // ensures UI consistency but doesn't affect progression. Area completes when
+        // both girl_woodline_find_fieldguide + girl_woodline_bowdrill_fire are done.
+        campfire.setFireLit(true);
+        eventBus.emit({ type: 'interaction/complete', targetId: campfireId });
+      }
     },
     dispose: () => {
       mesh.dispose();
       mat.dispose();
+    },
+  };
+}
+
+/**
+ * Create gate interactable to Creek world
+ * Unlocks when campfire is lit OR area is complete
+ */
+function createGateInteractable(
+  scene: Scene,
+  id: string,
+  position: Vector3,
+  color: Color3,
+  eventBus: any,
+  roleId: RoleId
+): Interactable {
+  // Gate marker (prominent arch-like structure)
+  const gateBase = MeshBuilder.CreateBox(`${id}-base`, { width: 6, height: 4, depth: 0.8 }, scene);
+  gateBase.position = position.clone();
+  gateBase.position.y = 2.0;
+  
+  const gateMat = new StandardMaterial(`${id}Mat`, scene);
+  gateMat.diffuseColor = color;
+  gateMat.emissiveColor = color.scale(0.3); // Add glow
+  gateMat.alpha = 0.8; // Slightly more visible
+  gateBase.material = gateMat;
+
+  return {
+    id,
+    mesh: gateBase,
+    alwaysActive: true, // Gate is always interactable (checks unlock internally)
+    interact: () => {
+      // Check unlock conditions: campfire lit OR area complete
+      const campfireLit = saveFacade.getWorldFlag<boolean>('woodline', 'campfireLit') || false;
+      const areaComplete = saveFacade.getUnlockedAreas(roleId).includes('creek');
+      
+      if (campfireLit || areaComplete) {
+        console.log('[WoodlineGate] Unlocked - transitioning to Creek');
+        eventBus.emit({ type: 'game/areaRequest', areaId: 'creek' });
+      } else {
+        console.log('[WoodlineGate] Locked - campfire must be lit first');
+        eventBus.emit({ 
+          type: 'ui/toast', 
+          level: 'info', 
+          message: 'The path deepens once warmth is found.' 
+        });
+      }
+    },
+    dispose: () => {
+      gateBase.dispose();
+      gateMat.dispose();
     },
   };
 }

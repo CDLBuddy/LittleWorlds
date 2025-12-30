@@ -27,6 +27,21 @@ export const INTERACTABLE_ID = {
   // Woodline World - Girl
   FIELDGUIDE_PICKUP: 'fieldguide_pickup',
   BOWDRILL_STATION: 'bowdrill_station',
+  
+  // Woodline World - Shared
+  WOODLINE_CREEK_GATE: 'woodline_creek_gate',
+  
+  // Creek World - Boy
+  CREEK_SLINGSHOT_BRANCH_TARGET: 'creek_slingshot_branch_target',
+  
+  // Creek World - Girl
+  CREEK_FILTER_STATION: 'creek_filter_station',
+  
+  // Creek World - Shared
+  CREEK_WILLOW_REST: 'creek_willow_rest',
+  CREEK_DEEP_POOL_LINGER: 'creek_deep_pool_linger',
+  CREEK_NORTH_VISTA_MARKER: 'creek_north_vista_marker',
+  CREEK_STONES_ENTRY: 'creek_stones_entry',
 } as const;
 
 export type InteractableId = typeof INTERACTABLE_ID[keyof typeof INTERACTABLE_ID];
