@@ -153,13 +153,105 @@ Beach is **not a challenge level**—it's a **reward**. It teaches:
 - **Audio:** Forest whisper behind, ocean ahead (two worlds, threshold)
 - **Emotion:** "I could go back. But I think I'll stay here a little longer."
 
+#### **11. Driftwood Table Workbench (Craft Hub)** *(5, 0, 3)*
+- **Tier 0 (Ground Craft):** Sandy flat stone
+- **Tier 1:** Driftwood Table - weathered coastal workbench
+- **Tier 2 Upgrade:** Hanging net, shell charm rack, tide journal
+- **Signature Craft:** **Shell Wind Chime** (audio lure and wind calming tool)
+
+#### **12. Driftwood Arch + Shells Trail Totem** *(0, 0, -25)*
+- **Style:** Natural driftwood arch adorned with shells
+- **Function:** Marks journey's completion (all charms displayed)
+- **Special:** Final charm placement completes the set (visual achievement)
+
+---
+
+## 🔒 Gated Content & Backtracking
+
+### Locked Areas (Return Later with Tools)
+
+#### **🌊 Tidepool Route (Night/Dawn Exclusive)** *(15, 0, -10)*
+- **Early Tease:** Tidepool path only safe at specific times, hard to see
+- **Visual Block:** Darkness makes navigation dangerous
+- **Unlock Tool:** **Lantern Stakes** (Firefly Dusk)
+- **Rewards:**
+  - Rare shells (hermit crab varieties)
+  - Hermit crab NPC encounter
+  - "Tidepool Night" audio vignette
+- **Gate Type:** `requiredItemIds: ["lantern-stakes"]`
+
+#### **🏖️ Soft Dune Grass** *(−15, 0, 8)*
+- **Early Tease:** Path through dunes, but sand too soft to walk
+- **Visual Block:** Feet sink, movement frustrating
+- **Unlock Tool:** **Step Boards** (Creekside)
+- **Rewards:**
+  - Shell cluster (unique specimens)
+  - Chord fibers for wind chime crafting
+  - "Dune Path" memory entry
+- **Gate Type:** `requiredItemIds: ["step-boards"]`
+
+#### **🪢 Driftwood Arch Shortcut** *(Various connection points)*
+- **Early Tease:** Could connect shoreline sections faster
+- **Visual Block:** Driftwood pieces need securing
+- **Unlock Tool:** **Rope Line Kit** (Woodline)
+- **Benefit:** Fast travel along beach sections
+- **Gate Type:** `requiredItemIds: ["rope-line-kit"]`
+
+#### **🌬️ Wind Pass Overlook** *(−20, 1.5, −15)*
+- **Early Tease:** Windy passage to best ocean overlook
+- **Visual Block:** Wind too loud, disorienting
+- **Unlock Tool:** **Shell Wind Chime** (crafted here) - audio anchor
+- **Benefit:** Calm experience, access scenic overlook
+- **Gate Type:** `requiredItemIds: ["shell-wind-chime"]`
+
+### Secret Linger Spot: Horizon Rock *(−22, 1, −18)*
+- **Early Tease:** Perfect vantage point on coastal rock
+- **Unlock Tools:** **Star Chalk** (mark sacred spot) + **Pocket Press** (final memory)
+- **Rewards:**
+  - Final "Postcard" moment (journey's visual conclusion)
+  - Endgame memory entry: "Where All Paths Meet"
+  - Ultimate peace (180 sec linger = completion feeling)
+- **Boost Items:**
+  - `shell-wind-chime` → ocean bird chorus
+  - `lantern-stakes` → moonlight/sunrise illumination
+  - `rope-line-kit` → comfortable seating platform
+
 ---
 
 ## 🎮 Gameplay Features
 
 ### Core Experiences (Not "Mechanics"—This World Is Reflective)
 
-#### **🗿 Memory Cairn Building (Boy's Ritual)**
+#### **� Shell Wind Chime Crafting (Signature Item)**
+- **Crafted At:** Driftwood Table Workbench (Tier 1)
+- **Materials Needed:**
+  - 5× Special shells (various types found along shore)
+  - 1× Driftwood frame (Y-shaped piece)
+  - 3× Chord lengths (sea grass fiber or found cordage)
+- **Assembly:** Drill shells (multitool), attach to frame, tune by length
+- **Output:** **Shell Wind Chime** (audio lure, wind calming, critter summons)
+- **Uses Across Worlds:**
+  - **Backyard:** Attracts dog to dig spots → toy soldier caches
+  - **Woodline:** Draws bird NPC → feather drop (memory + hint)
+  - **Creekside:** Lures frogs → reveal safe shallow crossing
+  - **Pine Trails:** Calms windy pass → hidden resin tree access
+  - **Firefly Dusk:** Summons fireflies into trail ribbon (10 sec guide)
+  - **Night Stars:** Triggers star shimmer → highlights correct nodes
+  - **Beachfront:** Calls hermit crab NPC → shell trade/charm
+
+#### **📦 Workbench Tier System**
+- **Tier 0 (Ground Craft):** Sandy flat stone
+  - Always available
+  - Recipes: Shell sorting, cordage, simple bundles
+- **Tier 1 (Driftwood Table):** Coastal crafting station
+  - Build materials: Weathered driftwood, flat setup surface
+  - Unlocks: Shell Wind Chime + shell processing
+- **Tier 2 (Enhanced Bench):** Full beachcomber workshop
+  - Upgrade materials: Hanging net, shell charm rack, tide journal
+  - Unlocks: Tuned chimes (different tones), decorative pieces
+  - Visual: Displays shells, pressed sea grass, journey charms
+
+#### **�🗿 Memory Cairn Building (Boy's Ritual)**
 - **Collection:** Find 6 smooth stones along shoreline (appear as you walk, no hunt)
 - **Placement:** Each stone represents one world traveled
 - **Interaction:** Stack atop existing cairn (adds height, permanence)
@@ -224,6 +316,129 @@ Beach is **not a challenge level**—it's a **reward**. It teaches:
 - **No Input Required:** Just stand and watch (game pauses objectives)
 - **Audio:** Wave rhythm + breath sync (therapeutic 12 bpm pacing)
 - **Emotion:** "This is what we came for. Not to conquer, but to witness."
+
+---
+
+## 🔄 Backtrack Loop Blueprint
+
+This structure ensures Beachfront offers meaningful optional exploration beyond the core reflective experience.
+
+### Spawn / Welcome Point
+- **Location:** Driftwood Arch entry (0, 0, 15)
+- **First Visit:** Shell wind chime crafting, cairn building, final reflections
+- **Return Visits:** None required (Beach is journey's end, but optional completionism available)
+
+### Main Trail (Always Passable)
+- **Route:** Shoreline Walk → Memory Cairn → Campfire Circle → Horizon Gaze
+- **Purpose:** Core reflective experience, journey completion
+- **Gate Beyond:** None (this is the final world)
+
+### Optional Exploration (Backtracking For Completionists)
+
+#### Area A: Tidepool Route
+- **Location:** Eastern shore *(15, 0, -10)*
+- **Visual:** Night/dawn exclusive access, hard to see safely
+- **Requires:** `lantern-stakes` (Firefly Dusk)
+- **Rewards:**
+  - Rare shells (hermit crab varieties)
+  - Hermit crab NPC encounter (shell trade)
+  - "Tidepool Night" audio vignette
+- **Gate Type:** `requiredItemIds: ["lantern-stakes"]`
+
+#### Area B: Soft Dune Grass Path
+- **Location:** Western dunes *(−15, 0, 8)*
+- **Visual:** Sand too soft, feet sink frustratingly
+- **Requires:** `step-boards` (Creekside)
+- **Rewards:**
+  - Unique shell cluster
+  - Sea grass chord fibers (wind chime upgrade material)
+  - "Dune Path" memory entry
+- **Gate Type:** `requiredItemIds: ["step-boards"]`
+
+#### Area C: Driftwood Arch Shortcuts
+- **Location:** Various connection points along shore
+- **Visual:** Driftwood pieces could be secured for faster travel
+- **Requires:** `rope-line-kit` (Woodline)
+- **Benefit:** Fast travel between beach sections (reduces walking)
+- **Gate Type:** `requiredItemIds: ["rope-line-kit"]`
+
+#### Area D: Wind Pass Overlook
+- **Location:** Northern coastal rise *(−20, 1.5, −15)*
+- **Visual:** Best ocean overlook, but wind too loud/disorienting
+- **Requires:** `shell-wind-chime` (crafted here)
+- **Benefit:** Calm audio anchor, access to premium vista
+- **Gate Type:** `requiredItemIds: ["shell-wind-chime"]`
+
+### Ultimate Linger Spot: Horizon Rock
+
+#### Location: Coastal vantage *(−22, 1, −18)*
+- **Early Tease:** Perfect rock outcrop, sacred feeling
+- **Requires:** `star-chalk` (mark spot) + `pocket-press` (final memory)
+- **Rewards:**
+  - Final "Postcard" moment (journey's visual conclusion)
+  - Endgame memory entry: "Where All Paths Meet"
+  - Ultimate peace (180 sec linger = completion achievement)
+- **Boost Items (All Optional):**
+  - `shell-wind-chime` → ocean bird chorus intensifies
+  - `lantern-stakes` → perfect moonlight/sunrise illumination
+  - `rope-line-kit` → comfortable seating platform
+  - `step-boards` → stable approach path
+  - `brush-sickle` → clear sea grass view
+  - **Using all 7 tools here unlocks "Master Traveler" ultimate achievement**
+
+### Craft Hub Placements
+
+#### Workbench
+- **Location:** Driftwood Table *(5, 0, 3)*
+- **Tier 1:** Coastal crafting station (craft Shell Wind Chime)
+- **Tier 2:** Add hanging net, shell charm rack, tide journal
+- **Visual Progression:** Displays all journey shells, pressed sea grass, complete charm collection
+- **Special:** When fully upgraded, displays ALL charms from every world (visual journey summary)
+
+#### Trail Totem (Final)
+- **Location:** Driftwood arch *(0, 0, -25)*
+- **Style:** Natural arch adorned with all journey charms
+- **Function:** Completion monument (displays all 7 world achievements)
+- **Final Charm Placement:** Beach shell charm completes the set
+- **Visual:** When all charms placed, totem glows softly, gentle chime plays
+- **Emotion:** "I walked the full circle. Every step mattered."
+
+### Intentional Loop Summary
+
+**First Visit Flow (Journey's End):**
+1. Enter from Night Stars through driftwood arch
+2. Experience first glimpse vista (overwhelming beauty)
+3. Build Tier 1 workbench
+4. Craft Shell Wind Chime (final signature item)
+5. Build Memory Cairn (optional, 6 stones = 6 worlds)
+6. Walk the shoreline (collect shells, observe tide pools)
+7. Light final campfire (skill convergence ritual)
+8. Sit and linger (60-180 sec "Journey's End" vignette)
+9. Witness moonset/sunrise (pure experience)
+10. Choose lantern fate (keep or release)
+11. Notice optional locked areas but feel no pressure
+
+**Optional Completionist Flow (All Tools):**
+1. Return to Beach with all 7 crafted items
+2. Unlock tidepool route (Lantern Stakes) → hermit crab encounter
+3. Cross soft dunes (Step Boards) → unique shell cluster
+4. Secure driftwood shortcuts (Rope Line Kit) → fast travel
+5. Calm wind pass (Shell Wind Chime) → overlook access
+6. Access Horizon Rock with all tools
+7. Use Star Chalk to mark sacred spot
+8. Use Pocket Press for final memory entry
+9. Deploy all boost items for ultimate experience
+10. Achieve "Master Traveler" (7 tools at Horizon Rock)
+11. Complete all tide pool observations
+12. Collect all shells and sea glass
+13. Upgrade workbench to Tier 2 (full display)
+14. Place final charm on trail totem
+15. Achieve 100% Beach completion
+
+**Emotional Arc:**
+- First visit = Arrival, relief, beauty, reflection, peace
+- Return visits = Gratitude, mastery demonstration, celebration of growth
+- Final completion = Pride, closure, readiness to end or continue
 
 ---
 

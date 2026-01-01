@@ -134,11 +134,103 @@ Night Stars teaches **navigation without fear**. It introduces:
 - **Gate:** Driftwood arch (natural, weathered, smooth)
 - **Emotion:** "One more world. Something special waits where water meets sky."
 
+#### **11. Star Chart Table Workbench (Craft Hub)** *(2, 0, 3)*
+- **Tier 0 (Ground Craft):** Flat night stone
+- **Tier 1:** Star Chart Table - displays constellation maps
+- **Tier 2 Upgrade:** Constellation pin board, chalk holder, star journal
+- **Signature Craft:** **Star Chalk** (glow markers for navigation/puzzles)
+
+#### **12. Rune Stone Trail Totem** *(0, 2, -23)*
+- **Style:** Stone with carved star patterns (glows faintly)
+- **Function:** Marks approach to Beach world
+- **Upgrades:** Previous world charms + moon phase symbols
+
+---
+
+## 🔒 Gated Content & Backtracking
+
+### Locked Areas (Return Later with Tools)
+
+#### **💧 Dew-Stone Walk Platform** *(10, 1.5, -12)*
+- **Early Tease:** High platform perfect for stargazing, but path is wet
+- **Visual Block:** Dew-soaked stones too slippery to cross
+- **Unlock Tool:** **Step Boards** (Creekside)
+- **Rewards:**
+  - Elevated star puzzle platform
+  - Best constellation viewing spot
+  - "Starlight Platform" memory entry
+- **Gate Type:** `requiredItemIds: ["step-boards"]`
+
+#### **🌬️ Windy Ridge Passage** *(-15, 1, -15)*
+- **Early Tease:** Path to rare starflower meadow, but wind too loud/disorienting
+- **Visual Block:** Wind makes navigation difficult, unsettling
+- **Unlock Tool:** **Shell Wind Chime** (Beach) - audio anchor calms experience
+- **Rewards:**
+  - Rare starflower node (Pocket Press synergy)
+  - "Wind Calm" audio vignette
+  - Hidden star chalk materials
+- **Gate Type:** `requiredItemIds: ["shell-wind-chime"]`
+
+#### **⭐ Marked Tree Maze Route** *(Various forest sections)*
+- **Early Tease:** Easy to get lost in darkness between clearings
+- **Visual Block:** Navigation challenge in deep night
+- **Unlock Tool:** **Star Chalk** (crafted here) - mark correct trees
+- **Benefit:** Shortcut loop back to entry, confidence in darkness
+- **Gate Type:** `requiredItemIds: ["star-chalk"]`
+
+#### **🪢 Rope Tarp Star Platform** *(5, 2, -18)*
+- **Early Tease:** Could set up better stargazing station
+- **Visual Block:** No comfortable viewing setup
+- **Unlock Tool:** **Rope Line Kit** (Woodline)
+- **Benefit:** Fast climb to constellation platform, comfortable seating
+- **Gate Type:** `requiredItemIds: ["rope-line-kit"]`
+
+### Secret Linger Spot: Moonlit Pond *(-18, 0, -20)*
+- **Early Tease:** Water sounds, silvery glow through trees
+- **Unlock Tools:** **Lantern Stakes** (reveal path) + **Pocket Press** (memory)
+- **Rewards:**
+  - "Owl + Water" audio vignette (best night soundscape)
+  - Perfect reflection photo (stars doubled in water)
+  - Ultimate meditation spot (120 sec = profound peace)
+- **Boost Items:**
+  - `star-chalk` → mark reflection patterns
+  - `rope-line-kit` → comfortable platform
+  - `shell-wind-chime` → owl response interaction
+
 ---
 
 ## 🎮 Gameplay Features
 
 ### Core Mechanics
+
+#### **⭐ Star Chalk Crafting (Signature Item)**
+- **Crafted At:** Star Chart Table Workbench (Tier 1)
+- **Materials Needed:**
+  - 3× Chalk stones (white limestone, found near clearings)
+  - 1× Starflower essence (phosphorescent plant extract)
+  - 1× Binding agent (pine resin or beeswax)
+- **Assembly:** Grind chalk, mix with essence, form into marking sticks
+- **Output:** **Star Chalk** (set of 6 glow markers for navigation/puzzles)
+- **Uses Across Worlds:**
+  - **Backyard:** Chalk hopscotch reveals hidden toy soldier under sandbox
+  - **Woodline:** Mark correct trees → unlock lost trail shortcut loop
+  - **Creekside:** Chalk stones show stable stepping stones (navigation aid)
+  - **Pine Trails:** Chalk north lines on rocks → navigate foggy corridors
+  - **Firefly Dusk:** Chalk + lantern combo reveals firefly ring secret
+  - **Night Stars:** Core use - constellation puzzle overlays, star node connections
+  - **Beachfront:** Chalk on driftwood/rocks reveals tide schedule clue
+
+#### **📦 Workbench Tier System**
+- **Tier 0 (Ground Craft):** Flat night stone
+  - Always available
+  - Recipes: Simple markers, charcoal sticks, twine
+- **Tier 1 (Star Chart Table):** Astronomy workstation
+  - Build materials: Flat stones, star maps (found), chalk materials
+  - Unlocks: Star Chalk + constellation tools
+- **Tier 2 (Enhanced Bench):** Full celestial observatory
+  - Upgrade materials: Constellation pin board, chalk holder, star journal
+  - Unlocks: Craft 2× chalk sets, colored variants (different stars)
+  - Visual: Displays constellation cards, pressed starflowers, moon phases
 
 #### **⭐ Constellation Tracing (Boy Navigation Skill)**
 - **Mechanic:**
@@ -280,6 +372,127 @@ Night Stars teaches **navigation without fear**. It introduces:
 - **"Cosmic Scale"** — Celestial hum, perspective narration (we're stardust)
 - **"Night Whisper"** — Wind through grass, leaf rustle, earth breathing
 - **"Navigator's Star"** — Polaris isolation, direction certainty, confidence
+
+---
+
+## 🔄 Backtrack Loop Blueprint
+
+### Spawn / Welcome Point
+- **Location:** Lantern-Lit Clearing (0, 0, 15)
+- **First Visit:** Star chalk crafting, constellation learning, navigation mastery
+- **Return Visits:** Platform unlocks, meditation spots
+
+### Main Trail (Always Passable)
+- **Route:** Clearing → Stargazing Stone → Constellation Platform
+- **Purpose:** Core night navigation, constellation mastery
+- **Gate to Beachfront:** Unlocks after constellation knowledge demonstrated
+
+### Early Teases (Locked on First Visit)
+
+#### Tease A: Dew-Stone Walk
+- **Location:** Eastern platform *(10, 1.5, -12)*
+- **Visual:** Perfect elevated stargazing spot, but path wet
+- **Audio:** Water drips, slippery stone sounds
+- **Requires:** `step-boards` (Creekside)
+- **Reward Type:** `platform + puzzle-access + memory`
+
+#### Tease B: Windy Ridge
+- **Location:** Western passage *(-15, 1, -15)*
+- **Visual:** Path to starflower meadow, wind howls
+- **Audio:** Disorienting wind, hard to focus
+- **Requires:** `shell-wind-chime` (Beach)
+- **Reward Type:** `material + audio-vignette + rare-plant`
+
+### Mid Unlock (Later Game)
+
+#### Marked Tree Maze
+- **Location:** Forest sections between clearings (various)
+- **Visual:** Easy to get lost in darkness
+- **Audio:** Sounds become disorienting
+- **Requires:** `star-chalk` (crafted here)
+- **Reward Type:** `major-shortcut + confidence`
+- **Function:** Mark route, never get lost again
+
+### Navigation Enhancement
+
+#### Rope Tarp Platform
+- **Location:** Elevated spot *(5, 2, -18)*
+- **Visual:** Could set up better viewing station
+- **Audio:** Platform creaks, needs stability
+- **Requires:** `rope-line-kit` (Woodline)
+- **Reward Type:** `comfort-upgrade + fast-access`
+- **Function:** Quick climb to best constellation viewing
+
+### Secret Linger Spot
+
+#### Moonlit Pond
+- **Location:** Hidden water feature *(-18, 0, -20)*
+- **Early Tease:** Silver glow, water sounds through trees
+- **Requires:** `lantern-stakes` (light path) + `pocket-press` (memory)
+- **Rewards:**
+  - "Owl + Water" audio vignette (best night sound)
+  - Reflection photography (stars doubled)
+  - Ultimate meditation (120 sec = profound peace)
+- **Boost Items:**
+  - `star-chalk` → mark reflection constellation patterns
+  - `rope-line-kit` → comfortable lakeside platform
+  - `shell-wind-chime` → owl interaction (call and response)
+
+### Craft Hub Placements
+
+#### Workbench
+- **Location:** Star Chart Table *(2, 0, 3)*
+- **Tier 1:** Astronomy station (craft Star Chalk)
+- **Tier 2:** Add constellation pin board, chalk storage, star journal
+- **Visual Progression:** Constellation cards, pressed starflowers, moon phases
+
+#### Trail Totem
+- **Location:** Beach approach *(0, 2, -23)*
+- **Style:** Rune stone with star carvings (glows faintly)
+- **Function:** Marks journey's penultimate step
+- **Upgrades Per World:**
+  - All previous charms displayed (house, leaf, stone, creek, pine, lantern)
+  - Beachfront: Shell charm (final piece, completes the set)
+
+### Intentional Loop Summary
+
+**First Visit Flow:**
+1. Enter from Dusk Meadow into deep night
+2. Build Tier 1 workbench
+3. Craft Star Chalk (signature item)
+4. Learn constellation tracing (Big Dipper → Polaris)
+5. Mark tree maze routes with chalk
+6. Identify moon flowers (night botany)
+7. Complete constellation puzzles
+8. Notice locked areas (dew platform, windy ridge, pond)
+9. Proceed to Beachfront
+
+**Return Visit Flow (Creekside complete):**
+1. Return with Step Boards
+2. Cross dew-stone walk safely
+3. Access elevated star platform
+4. Complete advanced constellation puzzles
+
+**Return Visit Flow (Woodline complete):**
+1. Return with Rope Line Kit
+2. Set up rope tarp platform
+3. Fast access to best viewing spots
+4. Comfortable stargazing sessions
+
+**Return Visit Flow (Beach complete):**
+1. Return with Shell Wind Chime
+2. Calm windy ridge passage
+3. Access starflower meadow
+4. Collect rare chalk materials
+
+**Final Visit Flow (All Tools):**
+1. Return with Lantern Stakes + all items
+2. Access Moonlit Pond
+3. Use all boost items for ultimate experience
+4. Complete owl interaction
+5. Achieve perfect reflection photography
+6. Complete all constellation knowledge
+7. Achieve "Night Navigator" completion
 
 ---
 

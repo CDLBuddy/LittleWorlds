@@ -123,11 +123,111 @@ Dusk Firefly Meadow is the **emotional peak before night**—where the game teac
 - **Lighting:** Amber glow from meadow contrasts with dark forest behind
 - **Emotion:** "We brought the light with us (lantern). We're ready."
 
+#### **10. Lantern Table Workbench (Craft Hub)** *(3, 0, -3)*
+- **Tier 0 (Ground Craft):** Flat meadow stone
+- **Tier 1:** Lantern Table - workbench designed for light crafting
+- **Tier 2 Upgrade:** Oil rack, glass charm hooks, wick storage
+- **Signature Craft:** **Lantern Stakes** (fog-clearing light beacons)
+
+#### **11. Lantern Post Trail Totem** *(0, 0, -13)*
+- **Style:** Decorative lantern post (lights up at dusk)
+- **Function:** Marks approach to Night Stars
+- **Upgrades:** Charms hang from post, lantern brightens with completion
+
+---
+
+## 🔒 Gated Content & Backtracking
+
+### Locked Areas (Return Later with Tools)
+
+#### **🌫️ Fog Wall Side Trail A** *(-18, 0, -8)*
+- **Early Tease:** Beautiful path disappears into thick fog
+- **Visual Block:** Fog too thick to navigate safely
+- **Unlock Tool:** **Lantern Stakes** (crafted here)
+- **Placement:** 3 stakes along trail, fog recedes in chunks
+- **Rewards:**
+  - Rare glow moss (luminescent material)
+  - "Fog Retreat" memory entry
+  - View glimpse into Night Stars world
+- **Gate Type:** `requiredItemIds: ["lantern-stakes"]`
+
+#### **🌿 Thorn-Wrapped Lantern Posts** *(12, 0, 5)*
+- **Early Tease:** Lantern placement sockets visible but vine-covered
+- **Visual Block:** Thorny vines prevent safe interaction
+- **Unlock Tool:** **Brush Sickle** (Pine Trails)
+- **Benefit:** Opens second fog trail path
+- **Rewards:**
+  - Alternative route with different firefly patterns
+  - "Thorn Clear" audio vignette
+- **Gate Type:** `requiredItemIds: ["brush-sickle"]`
+
+#### **🪢 Lantern Chain Route** *(-10, 0, -15)*
+- **Early Tease:** Could place lanterns faster with better system
+- **Visual Block:** Placement is slow, fog encroaches quickly
+- **Unlock Tool:** **Rope Line Kit** (Woodline)
+- **Benefit:** Hang lanterns on rope line = fewer placements needed
+- **Rewards:**
+  - Fast unlock of larger fog segments
+  - "Lantern Chain" technique unlocked
+- **Gate Type:** `requiredItemIds: ["rope-line-kit"]`
+
+#### **✨ Firefly Ribbon Guide** *(Various points)*
+- **Early Tease:** Fireflies scattered randomly, hard to follow
+- **Visual Block:** Navigation by living light is tricky
+- **Unlock Tool:** **Shell Wind Chime** (Beach)
+- **Benefit:** Summons fireflies briefly to form trail ribbon
+- **Rewards:**
+  - Temporary "follow the glow" path to destinations
+  - "Firefly Dance" enhanced experience
+- **Gate Type:** `requiredItemIds: ["shell-wind-chime"]`
+
+### Secret Linger Spot: Glow Ring Clearing *(-20, 0, -20)*
+- **Early Tease:** Faint circular glow visible through grass
+- **Unlock Tools:** **Star Chalk** (draw ring) + **Lantern Stakes** (light it)
+- **Rewards:**
+  - Best photo moment in game (fireflies + ring glow)
+  - Special "Ring of Light" audio vignette
+  - Perfect meditation spot (90 sec linger)
+- **Boost Items:**
+  - `pocket-press` → glow petal sketches
+  - `shell-wind-chime` → firefly swarm intensifies
+  - `rope-line-kit` → seating swing
+
 ---
 
 ## 🎮 Gameplay Features
 
 ### Core Mechanics
+
+#### **🕯️ Lantern Stakes Crafting (Signature Item)**
+- **Crafted At:** Lantern Table Workbench (Tier 1)
+- **Materials Needed:**
+  - 4× Wooden stakes (carved from branches)
+  - 4× Small lantern frames (wire + glass from found materials)
+  - 4× Wicks (cattail fluff or cloth strips)
+  - 1× Oil jar (refined plant oil or animal fat)
+- **Assembly:** Assemble mini lanterns, attach to stakes, fill with oil
+- **Output:** **Lantern Stakes** (set of 4 fog-clearing beacons)
+- **Uses Across Worlds:**
+  - **Backyard:** Illuminate shed shadow nook → charm + vignette
+  - **Woodline:** Light hollow log tunnel → shortcut + materials
+  - **Creekside:** Reveal glow-in-water trail → rare stones
+  - **Pine Trails:** Light windy pass (low visibility) → access overlook
+  - **Firefly Dusk:** Main feature - fog retreat in chunks (2-4 stakes)
+  - **Night Stars:** Light constellation platform → star nodes visible
+  - **Beachfront:** Light tidepool route at dawn/night → collectible shells
+
+#### **📦 Workbench Tier System**
+- **Tier 0 (Ground Craft):** Flat meadow stone
+  - Always available
+  - Recipes: Simple light sources, kindling, plant bundles
+- **Tier 1 (Lantern Table):** Specialized light crafting station
+  - Build materials: Flat stones, tool grooves, oil storage
+  - Unlocks: Lantern Stakes + oil processing
+- **Tier 2 (Enhanced Bench):** Full light workshop
+  - Upgrade materials: Oil rack, glass charm hooks, wick storage drawer
+  - Unlocks: Craft 2× lantern sets, colored glass variants
+  - Visual: Displays hanging lanterns, pressed glow petals, firefly sketches
 
 #### **✨ Linger Mode Showcase (Primary Mechanic)**
 - **Trigger:** Stop moving + lower camera (sit/crouch/lie down)
@@ -288,6 +388,131 @@ Dusk Firefly Meadow is the **emotional peak before night**—where the game teac
 - **"Dusk Colors"** — Sky description, color names whispered, painter's palette metaphor
 - **"Grass Whisper"** — Close grass rustle, wind through stems, earth connection
 - **"Last Light"** — Silence between cricket waves, sun's farewell, gratitude moment
+
+---
+
+## 🔄 Backtrack Loop Blueprint
+
+This structure ensures Firefly Dusk remains engaging across multiple visits.
+
+### Spawn / Welcome Point
+- **Location:** Entry Glade from Pine (0, 0, 15)
+- **First Visit:** Lantern stake crafting, firefly observation, linger mastery
+- **Return Visits:** Fog trail unlocks, workbench upgrades
+
+### Main Trail (Always Passable)
+- **Route:** Entry Glade → Ancient Oak → Photography Rock → Linger Nests
+- **Purpose:** Core linger experience, firefly observation, beauty immersion
+- **Gate to Night Stars:** Unlocks after experiencing firefly patterns
+
+### Early Teases (Locked on First Visit)
+
+#### Tease A: Fog Wall Side Trail
+- **Location:** Western meadow edge *(-18, 0, -8)*
+- **Visual:** Beautiful path vanishes into thick fog, firefly glow beyond
+- **Audio:** Muffled cricket chirps, mysterious sounds in fog
+- **Requires:** `lantern-stakes` (crafted here)
+- **Reward Type:** `material + memory + world-preview`
+
+#### Tease B: Thorn-Wrapped Posts
+- **Location:** Eastern firefly zone *(12, 0, 5)*
+- **Visual:** Lantern sockets visible but vine-covered
+- **Audio:** Thorns rustle, fireflies avoid the area
+- **Requires:** `brush-sickle` (Pine Trails)
+- **Reward Type:** `alternate-route + firefly-patterns`
+
+### Mid Unlock (Later Game)
+
+#### Lantern Chain Route
+- **Location:** Northern fog segments *(-10, 0, -15)*
+- **Visual:** Could place lanterns more efficiently
+- **Audio:** Fog seems to resist single lanterns
+- **Requires:** `rope-line-kit` (Woodline)
+- **Reward Type:** `efficiency-upgrade`
+- **Function:** Hang multiple lanterns on line, unlock larger fog areas faster
+
+### Navigation Enhancement
+
+#### Firefly Ribbon Guide
+- **Location:** Pathways between key spots (various)
+- **Visual:** Fireflies scattered, hard to follow intentionally
+- **Audio:** Wing hum comes from all directions
+- **Requires:** `shell-wind-chime` (Beach)
+- **Reward Type:** `navigation-beauty`
+- **Function:** Summons fireflies into temporary trail ribbon (10 sec guide)
+
+### Secret Linger Spot
+
+#### Glow Ring Clearing
+- **Location:** Hidden meadow alcove *(-20, 0, -20)*
+- **Early Tease:** Faint circular glow through tall grass
+- **Requires:** `star-chalk` (draw ring) + `lantern-stakes` (light it)
+- **Rewards:**
+  - Best photo moment (fireflies swarm the ring)
+  - "Ring of Light" special audio vignette
+  - Perfect meditation spot (90 sec = max peace)
+- **Boost Items:**
+  - `pocket-press` → glow petal sketches (rare specimens)
+  - `shell-wind-chime` → firefly swarm intensity doubles
+  - `rope-line-kit` → hanging swing seat in center
+
+### Craft Hub Placements
+
+#### Workbench
+- **Location:** Lantern Table *(3, 0, -3)*
+- **Tier 1:** Light crafting station (craft Lantern Stakes)
+- **Tier 2:** Add oil rack, glass charm hooks, wick storage
+- **Visual Progression:** Displays lanterns, glow petals, firefly sketches
+
+#### Trail Totem
+- **Location:** Path to Night Stars *(0, 0, -13)*
+- **Style:** Decorative lantern post (lights at dusk)
+- **Function:** Marks transition to night
+- **Upgrades Per World:**
+  - Previous: House, leaf, stone, creek, pine, (all charms visible)
+  - Night Stars: Star charm (post glows brighter)
+  - Beachfront: Shell charm (gentle chime in breeze)
+
+### Intentional Loop Summary
+
+**First Visit Flow:**
+1. Enter from Pine Trails at golden hour
+2. Witness first firefly spark (magical welcome)
+3. Build Tier 1 workbench
+4. Craft Lantern Stakes (signature item)
+5. Place stakes on first fog wall → fog retreats
+6. Collect firefly patterns (optional observation)
+7. Use Memory Capture at Photography Rock
+8. Linger at various nests (unlock vignettes)
+9. Notice other locked paths (thorn posts, chain route potential)
+10. Proceed to Night Stars
+
+**Return Visit Flow (Pine complete with Sickle):**
+1. Return with Brush Sickle
+2. Clear thorn-wrapped posts
+3. Access alternate firefly route
+4. Observe different firefly patterns
+5. Collect glow moss materials
+
+**Return Visit Flow (Woodline complete):**
+1. Return with Rope Line Kit
+2. Set up lantern chain route
+3. Unlock large fog segments efficiently
+4. Discover shortcut to Night transition
+
+**Return Visit Flow (Beach complete):**
+1. Return with Shell Wind Chime
+2. Summon firefly ribbon guides
+3. Navigate meadow with living light trails
+4. Experience enhanced firefly interactions
+
+**Final Visit Flow (All Tools):**
+1. Return with Star Chalk + all items
+2. Access Glow Ring Clearing
+3. Use all boost items for maximum experience
+4. Achieve perfect photo with firefly swarm
+5. Complete all linger vignettes
+6. Achieve "Dusk Master" completion
 
 ---
 

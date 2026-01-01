@@ -121,9 +121,271 @@ Pine Trails introduces **preparation and resource gathering**. It teaches:
 - **Lighting:** Backlit trees (sun higher in sky behind you, time has passed)
 - **Emotion:** "We've climbed, and the world is wider now."
 
+#### **10. Log Bench Workbench (Craft Hub)** *(2, 8, -5)*
+- **Tier 0 (Ground Craft):** Flat log surface for assembly
+- **Tier 1:** Log Bench - carved flat top with tool grooves
+- **Tier 2 Upgrade:** Resin-sealed edges, tool hooks, pine needle cushion
+- **Signature Craft:** **Brush Sickle** (trail clearing tool)
+
+#### **11. Pine Bough Hut Shelter** *(-10, 10, -18)*
+- **Structure:** Pine branch roof, needle floor bedding, resin-sealed twine
+- **Function:** Shelter #3, introduces warmth bonus mechanic
+- **Materials:** 8× pine boughs, 12× needle bundles, 3× resin dabs
+- **Benefit:** "Warmth bonus" at night segments, "Pine Shelter" audio layer
+- **Teaching:** Resin waterproofing, insulation concepts
+
+#### **12. Pinecone Garland Trail Totem** *(0, 12, -28)*
+- **Style:** Pinecone garland with resin seal
+- **Function:** Marks approach to Dusk Meadow
+- **Upgrades:** World completion charms dangle from garland
+
+---
+
+## 🔒 Gated Content & Backtracking
+
+### Locked Areas (Return Later with Tools)
+
+#### **🌿 Bramble Corridor** *(8, 10, 5)*
+- **Early Tease:** Path curves through dense thorny undergrowth
+- **Visual Block:** Brambles form natural barrier, hints of shortcut beyond
+- **Unlock Tool:** **Brush Sickle** (crafted here first time, test it immediately)
+- **Rewards:**
+  - Opens whole optional loop trail
+  - Hidden pine resin deposits
+  - "Bramble Clear" memory entry
+- **Gate Type:** `requiredItemIds: ["brush-sickle"]`
+- **Note:** Can craft sickle, then immediately test it on this path
+
+#### **🌲 Resin Tree Shelf** *(-12, 12, -8)*
+- **Early Tease:** Golden resin visible high on trunk, valuable material
+- **Visual Block:** Too high to reach from ground
+- **Unlock Tools:** **Slingshot** (knock resin down) OR **Rope Line Kit** (climb safely)
+- **Rewards:**
+  - Premium resin (for rope kit reinforcement)
+  - Resin wrap upgrade recipe unlocked
+  - "Golden Harvest" memory entry
+- **Gate Type:** `optionalBoostItemIds: ["slingshot", "rope-line-kit"]`
+
+#### **🪵 Needle Ravine Crossing** *(5, 10, -20)*
+- **Early Tease:** Shortcut ravine, but needle-slick rocks dangerous
+- **Visual Block:** Slippery footing, risk of falling
+- **Unlock Tool:** **Step Boards** (Creekside) - stable footing
+- **Rewards:**
+  - Overlook vista point
+  - Rare pinecone cluster (crafting material)
+  - Fast route to camp
+- **Gate Type:** `requiredItemIds: ["step-boards"]`
+
+#### **⭐ Northline Navigation** *(Various maze-like sections)*
+- **Early Tease:** Easy to get turned around in dense pines
+- **Visual Block:** Maze-like in low light, disorienting
+- **Unlock Tool:** **Star Chalk** (Night Stars) - draw north lines on rocks
+- **Benefit:** Easy navigation, confidence in forest
+- **Gate Type:** `requiredItemIds: ["star-chalk"]`
+
+### Secret Linger Spot: Windbreak Hollow *(-15, 11, -25)*
+- **Early Tease:** Wind howls through pass, hard to approach
+- **Unlock Tool:** **Shell Wind Chime** (Beach) - calms wind, reveals quiet zone
+- **Rewards:**
+  - Unique "Sleepy Pine Hush" soundscape
+  - Ultimate meditation spot (90 sec = deep peace)
+  - Shelter upgrade materials
+- **Boost Items:**
+  - `pocket-press` → pine needle/cone sketches
+  - `lantern-stakes` → illuminate hidden path
+  - `rope-line-kit` → secure seating platform
+
 ---
 
 ## 🎮 Gameplay Features
+
+### Core Mechanics
+
+#### **🪓 Brush Sickle Crafting (Signature Item)**
+- **Crafted At:** Log Bench Workbench (Tier 1)
+- **Materials Needed:**
+  - 1× Curved branch (found on trail)
+  - 1× Sharp stone edge (knapped with multitool)
+  - 2× String/cordage (binding)
+  - 1× Pine resin (waterproofing)
+- **Assembly:** Shape handle, attach blade, bind securely, seal with resin
+- **Output:** **Brush Sickle** (trail clearing and fiber harvesting tool)
+- **Uses Across Worlds:**
+  - **Backyard:** Clear tall grass to neighbor yard → toy soldiers + materials
+  - **Woodline:** Cut bramble side trail → stump bench + upgrade materials
+  - **Creekside:** Clear reed curtain → frog NPC + reed bundles
+  - **Pine Trails:** Open needle maze shortcuts (immediate test after crafting)
+  - **Firefly Dusk:** Clear thorn-wrapped lantern posts → place lanterns
+  - **Night Stars:** Clear path to open sky clearing → constellation zone
+  - **Beachfront:** Cut sea grass → fibers for wind chime cord
+
+#### **🏕️ Pine Bough Hut Shelter Building**
+- **Location:** Shelter site *(-10, 10, -18)*
+- **Materials Required:**
+  - 8× Pine boughs (trim from trees with sickle)
+  - 12× Needle bundles (gather from forest floor)
+  - 3× Resin dabs (collect from wounded trees)
+- **Assembly Steps:**
+  1. Position main support poles (lean-to style)
+  2. Layer pine boughs for roof (overlapping shingle pattern)
+  3. Scatter needle bundles for insulated floor
+  4. Seal gaps with resin (waterproofing)
+- **Benefits:**
+  - "Warmth Bonus" mechanic (at night/cold, visual warmth glow)
+  - "Pine Shelter" audio layer (wind outside, quiet inside)
+  - Unlocks "Shelter #3" memory entry
+  - Teaches resin waterproofing technique
+
+#### **📦 Workbench Tier System**
+- **Tier 0 (Ground Craft):** Flat log surface
+  - Always available
+  - Recipes: Pine needle bundles, simple stakes, kindling
+- **Tier 1 (Log Bench):** Carved flat top with tool grooves
+  - Build materials: Select sturdy log, carve flat surface
+  - Unlocks: Brush Sickle + resin processing
+- **Tier 2 (Enhanced Bench):** Full mountain workshop
+  - Upgrade materials: Resin-sealed edges, metal tool hooks, cushion
+  - Unlocks: Craft 2× sickles, better durability, advanced recipes
+  - Visual: Displays tools, pressed pine specimens, pinecones
+
+---
+
+## 🔄 Backtrack Loop Blueprint
+
+This structure ensures Pine Trails remains engaging across multiple visits.
+
+### Spawn / Welcome Point
+- **Location:** Tall Trunk Avenue (0, 0, 20)
+- **First Visit:** Sap collection, lantern crafting, sickle creation
+- **Return Visits:** Shelter maintenance, workbench upgrades
+
+### Main Trail (Always Passable)
+- **Route:** Windy Pass → Pine Camp → Bough Hut area
+- **Purpose:** Ascent journey, preparation for dusk
+- **Gate to Dusk Meadow:** Unlocks after lantern crafted
+
+### Early Teases (Locked on First Visit)
+
+#### Tease A: Bramble Corridor
+- **Location:** Eastern trail fork *(8, 10, 5)*
+- **Visual:** Dense thorny undergrowth, path visible beyond
+- **Audio:** Wind changes tone beyond brambles
+- **Requires:** `brush-sickle` (crafted here)
+- **Reward Type:** `shortcut-loop + material + memory`
+- **Special:** Can test sickle immediately after crafting
+
+#### Tease B: Resin Tree Shelf
+- **Location:** Off-trail tree *(-12, 12, -8)*
+- **Visual:** Golden resin gleaming high on trunk
+- **Audio:** Pine creak, resin smell intensifies nearby
+- **Requires:** `slingshot` OR `rope-line-kit`
+- **Reward Type:** `premium-material + recipe-upgrade`
+
+### Mid Unlock (Later Game)
+
+#### Needle Ravine Crossing
+- **Location:** Northern shortcut *(5, 10, -20)*
+- **Visual:** Ravine with needle-slick rocks, dangerous footing
+- **Audio:** Wind whistles through gap, needles scatter
+- **Requires:** `step-boards` (Creekside)
+- **Reward Type:** `overlook-vista + shortcut + material`
+- **Function:** Fast route bypassing switchbacks
+
+### Navigation Enhancement
+
+#### Northline Navigation System
+- **Location:** Dense pine sections (various)
+- **Visual:** Maze-like in low light, easy to get lost
+- **Audio:** Sounds become disorienting without bearings
+- **Requires:** `star-chalk` (Night Stars)
+- **Reward Type:** `navigation-confidence + comfort`
+- **Function:** Draw north lines on rocks, always know direction
+
+### Secret Linger Spot
+
+#### Windbreak Hollow
+- **Location:** Hidden pass *(-15, 11, -25)*
+- **Early Tease:** Wind howls, hard to approach comfortably
+- **Requires:** `shell-wind-chime` (Beach)
+- **Rewards:**
+  - "Sleepy Pine Hush" soundscape (unique to this spot)
+  - Ultimate meditation (90 sec = deep peace bonus)
+  - Shelter upgrade materials hidden here
+- **Boost Items:**
+  - `pocket-press` → pine needle/cone field journal pages
+  - `lantern-stakes` → illuminate hidden alcove path
+  - `rope-line-kit` → secure comfortable seating platform
+
+### Craft Hub Placements
+
+#### Workbench
+- **Location:** Log Bench *(2, 8, -5)*
+- **Tier 1:** Carved flat surface (craft Brush Sickle)
+- **Tier 2:** Resin-sealed edges, tool hooks, cushion
+- **Visual Progression:** Tools hang on hooks, pressed pine specimens, pinecones
+
+#### Shelter
+- **Location:** Pine Bough Hut *(-10, 10, -18)*
+- **Structure:** Pine branch shelter (Shelter #3)
+- **Upgrades:**
+  - Brush Sickle → harvest more boughs for repairs
+  - Rope Line Kit → reinforce structure
+  - Lantern Stakes → light interior at night
+- **Maintenance:** Needles scatter, need occasional refresh (cozy task)
+
+#### Trail Totem
+- **Location:** Meadow approach *(0, 12, -28)*
+- **Style:** Pinecone garland with resin seal
+- **Function:** Marks transition to dusk
+- **Upgrades Per World:**
+  - Previous worlds: Displayed charms (house, leaf, stone, creek stone)
+  - Firefly Dusk: Lantern charm (lights up at dusk)
+  - Night Stars: Star charm (glows faintly)
+  - Beachfront: Shell charm (wind chime sound)
+
+### Intentional Loop Summary
+
+**First Visit Flow:**
+1. Enter from Creekside via rocky path
+2. Collect sap from pine trees
+3. Find trapper's cache (wire, compass, notes)
+4. Build Tier 1 workbench
+5. Craft Brush Sickle (signature item)
+6. Test sickle on bramble corridor (immediate satisfaction)
+7. Craft Lantern at assembly station (convergence of materials)
+8. Build Pine Bough Hut shelter
+9. Notice locked areas (resin tree, needle ravine, windbreak)
+10. Proceed to Dusk Meadow with lantern
+
+**Return Visit Flow (Creekside complete):**
+1. Return with Step Boards
+2. Cross needle ravine safely
+3. Reach overlook vista
+4. Collect rare pinecone materials
+
+**Return Visit Flow (Woodline items):**
+1. Return with Rope Line Kit
+2. Climb to resin tree shelf
+3. Harvest premium resin
+4. Unlock resin wrap recipe (rope upgrade)
+
+**Return Visit Flow (Night Stars complete):**
+1. Return with Star Chalk
+2. Mark northline navigation routes
+3. Never get lost in dense sections
+4. Confident forest movement
+
+**Final Visit Flow (All Tools):**
+1. Return with Shell Wind Chime
+2. Access Windbreak Hollow
+3. Experience ultimate meditation spot
+4. Collect all hidden shelter upgrade materials
+5. Fully upgrade shelter and workbench
+6. Achieve "Pine Master" completion
+
+---
+
+## 🌲 Pine Trails: Ascent System
 
 ### Core Mechanics
 

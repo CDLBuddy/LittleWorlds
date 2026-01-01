@@ -16,6 +16,10 @@ import { BOOT_INTERACTABLES } from './BootWorld';
 import { BACKYARD_INTERACTABLES } from './backyard/BackyardWorld';
 import { WOODLINE_INTERACTABLES } from './woodline/WoodlineWorld';
 import { CREEK_INTERACTABLES } from './creek/CreekWorld';
+import { PINE_INTERACTABLES } from './pine/PineWorld';
+import { DUSK_INTERACTABLES } from './dusk/DuskWorld';
+import { NIGHT_INTERACTABLES } from './night/NightWorld';
+import { BEACH_INTERACTABLES } from './beach/BeachWorld';
 
 export const WORLD_MANIFESTS: Record<AreaId, WorldManifest> = {
   backyard: {
@@ -29,6 +33,22 @@ export const WORLD_MANIFESTS: Record<AreaId, WorldManifest> = {
   creek: {
     areaId: 'creek',
     interactables: CREEK_INTERACTABLES,
+  },
+  pine: {
+    areaId: 'pine',
+    interactables: PINE_INTERACTABLES,
+  },
+  dusk: {
+    areaId: 'dusk',
+    interactables: DUSK_INTERACTABLES,
+  },
+  night: {
+    areaId: 'night',
+    interactables: NIGHT_INTERACTABLES,
+  },
+  beach: {
+    areaId: 'beach',
+    interactables: BEACH_INTERACTABLES,
   },
 };
 

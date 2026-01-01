@@ -7,9 +7,6 @@
 import {
   Scene,
   Color3,
-  Color4,
-  HemisphericLight,
-  DirectionalLight,
   Vector3,
   MeshBuilder,
   StandardMaterial,
@@ -20,6 +17,7 @@ import { Player } from '@game/entities/player/Player';
 import { Companion } from '@game/entities/companion/Companion';
 import type { RoleId } from '@game/content/areas';
 import { INTERACTABLE_ID, type InteractableId } from '@game/content/interactableIds';
+import { SkySystem } from '@game/systems/sky/SkySystem';
 import { saveFacade } from '@game/systems/saves/saveFacade';
 
 export const CREEK_INTERACTABLES = [
@@ -29,6 +27,8 @@ export const CREEK_INTERACTABLES = [
   INTERACTABLE_ID.CREEK_DEEP_POOL_LINGER,
   INTERACTABLE_ID.CREEK_NORTH_VISTA_MARKER,
   INTERACTABLE_ID.CREEK_STONES_ENTRY,
+  INTERACTABLE_ID.CREEK_PINE_GATE,
+  INTERACTABLE_ID.CREEK_WOODLINE_GATE,
 ] as const satisfies readonly InteractableId[];
 
 interface Interactable {
@@ -39,7 +39,7 @@ interface Interactable {
   alwaysActive?: boolean;
 }
 
-export function createCreekWorld(scene: Scene, eventBus: any, roleId: RoleId = 'boy'): {
+export function createCreekWorld(scene: Scene, eventBus: any, roleId: RoleId = 'boy', fromArea?: string): {
   player: TransformNode;
   playerEntity: Player;
   companion: Companion;
@@ -48,27 +48,9 @@ export function createCreekWorld(scene: Scene, eventBus: any, roleId: RoleId = '
 } {
   console.log('[CreekWorld] Creating Creek world (100×140 corridor)...');
 
-  // Mid-to-late afternoon sky
-  scene.clearColor = new Color4(0.55, 0.7, 0.85, 1.0);
-
-  // Atmospheric fog
-  scene.fogMode = Scene.FOGMODE_EXP2;
-  scene.fogColor = new Color3(0.55, 0.7, 0.85);
-  scene.fogDensity = 0.012;
-
-  // Hemispheric light (ambient)
-  const hemiLight = new HemisphericLight('creekHemi', new Vector3(0, 1, 0), scene);
-  hemiLight.intensity = 0.65;
-  hemiLight.diffuse = new Color3(0.9, 0.92, 1.0); // Cool blues
-  hemiLight.groundColor = new Color3(0.3, 0.45, 0.55); // Water reflection
-
-  // Directional light (afternoon sun from south-west)
-  const dirLight = new DirectionalLight('creekDir', new Vector3(-0.8, -1.5, -0.3), scene);
-  dirLight.intensity = 0.85;
-  dirLight.diffuse = new Color3(1.0, 0.88, 0.7); // Sun-warmed
-
-  dirLight.intensity = 0.85;
-  dirLight.diffuse = new Color3(1.0, 0.88, 0.7); // Sun-warmed
+  // Initialize sky system
+  const skySystem = new SkySystem(scene);
+  void skySystem.apply('creekside', 0);
 
   // === LAYOUT: 100×140 corridor ===
   // West bank (left side, -35 to -15 x)
@@ -181,8 +163,37 @@ export function createCreekWorld(scene: Scene, eventBus: any, roleId: RoleId = '
   // === STEPPING STONES ENTRY INTERACTABLE ===
   const stonesEntry = createStonesEntry(scene, eventBus);
 
+  // === GATE TO PINE TRAILS ===
+  const pineGate = createGateInteractable(
+    scene,
+    INTERACTABLE_ID.CREEK_PINE_GATE,
+    new Vector3(0, 0.5, -65),
+    new Color3(0.6, 0.5, 0.3), // Pine needle brown
+    eventBus,
+    'pine'
+  );
+
+  // === GATE BACK TO WOODLINE ===
+  const woodlineGate = createGateInteractable(
+    scene,
+    INTERACTABLE_ID.CREEK_WOODLINE_GATE,
+    new Vector3(0, 0.5, 65),
+    new Color3(0.4, 0.6, 0.4), // Forest green
+    eventBus,
+    'woodline'
+  );
+
   // Player spawn (south side on west bank, facing north)
-  const player = new Player(scene, new Vector3(-25, 0, 30), roleId);
+  // Dynamic spawn based on entry direction
+  let spawnPos: Vector3;
+  if (fromArea === 'pine') {
+    // Coming from north gate (forward) - spawn near north
+    spawnPos = new Vector3(-25, 0, -55);
+  } else {
+    // Coming from south gate (backward) or default - spawn near south
+    spawnPos = new Vector3(-25, 0, 55);
+  }
+  const player = new Player(scene, spawnPos, roleId);
 
   // Companion spawn (slightly ahead on west bank)
   const companion = new Companion(scene, new Vector3(-22, 0, 27), eventBus);
@@ -211,11 +222,11 @@ export function createCreekWorld(scene: Scene, eventBus: any, roleId: RoleId = '
       player.mesh.position.copyFrom(lastSafePosition);
       
       // Emit splash toast
-      (eventBus as any).emit({
+      eventBus.emit({
         type: 'ui/toast',
         level: 'info',
         message: 'Splash—try again.',
-      });
+      } as any);
       
       console.log('[CreekWorld] Water splash - returned to safe position');
     } else if (onWalkableSurface) {
@@ -232,6 +243,8 @@ export function createCreekWorld(scene: Scene, eventBus: any, roleId: RoleId = '
     deepPool,
     willowRest,
     northVistaMarker,
+    pineGate,
+    woodlineGate,
   ];
 
   // Freeze static meshes after setup (performance)
@@ -281,11 +294,10 @@ export function createCreekWorld(scene: Scene, eventBus: any, roleId: RoleId = '
       slingshotBridge.bridge.dispose();
     }
     
-    // Dispose player, companion, lights
+    // Dispose player, companion, sky system
     player.dispose();
     companion.dispose();
-    hemiLight.dispose();
-    dirLight.dispose();
+    skySystem.dispose();
   };
 
   return {
@@ -314,7 +326,7 @@ function createFilterStation(scene: Scene, eventBus: any, roleId: RoleId): Inter
   mesh.material = mat;
 
   // Check if already used
-  const alreadyFiltered = (saveFacade.getWorldFlag('creek', 'filteredWater') as boolean | undefined) ?? false;
+  const alreadyFiltered = saveFacade.getWorldFlag('creek', 'filteredWater') ?? false;
   if (alreadyFiltered) {
     mat.emissiveColor = new Color3(0.1, 0.2, 0.1); // Subtle green glow (already used)
   }
@@ -374,7 +386,7 @@ function createSlingshotBridge(
   bridgeLogMesh.material = bridgeMat;
 
   // Check persistence
-  const bridgeBuilt = (saveFacade.getWorldFlag('creek', 'bridgeBuilt') as boolean | undefined) ?? false;
+  const bridgeBuilt = saveFacade.getWorldFlag('creek', 'bridgeBuilt') ?? false;
 
   if (bridgeBuilt) {
     branchMesh.setEnabled(false); // Hide branch
@@ -389,7 +401,7 @@ function createSlingshotBridge(
     mesh: branchMesh,
     interact: () => {
       if (roleId === 'boy') {
-        const currentHits = (saveFacade.getWorldFlag('creek', 'slingshotHitCount') as number | undefined) ?? 0;
+        const currentHits = saveFacade.getWorldFlag('creek', 'slingshotHitCount') ?? 0;
         const newHits = currentHits + 1;
         saveFacade.setWorldFlag('creek', 'slingshotHitCount', newHits);
 
@@ -406,11 +418,11 @@ function createSlingshotBridge(
           eventBus.emit({ type: 'interaction/complete', targetId: INTERACTABLE_ID.CREEK_SLINGSHOT_BRANCH_TARGET });
           
           // Toast via cast (ui/toast not in typed events)
-          (eventBus as any).emit({
+          eventBus.emit({
             type: 'ui/toast',
             level: 'info',
             message: 'A bridge forms across the water',
-          });
+          } as any);
         } else {
           // Visual feedback for hit (wobble?)
           branchMat.emissiveColor = new Color3(0.2, 0.1, 0);
@@ -451,7 +463,7 @@ function createLingerMoment(
   const mat = new StandardMaterial(`${id}Mat`, scene);
   mesh.material = mat;
 
-  let alreadyLingered = (saveFacade.getWorldFlag('creek', id) as boolean | undefined) ?? false;
+  let alreadyLingered = saveFacade.getWorldFlag('creek', id) ?? false;
 
   return {
     id,
@@ -460,11 +472,11 @@ function createLingerMoment(
       // Called by InteractionSystem after dwell complete
       if (!alreadyLingered) {
         saveFacade.setWorldFlag('creek', id, true);
-        (eventBus as any).emit({
+        eventBus.emit({
           type: 'ui/toast',
           level: 'info',
           message: toastMessage,
-        });
+        } as any);
         alreadyLingered = true;
         console.log(`[CreekWorld] Linger moment: ${toastMessage}`);
       }
@@ -492,7 +504,7 @@ function createSouthVista(scene: Scene): AbstractMesh[] {
   }
 
   // Conditional campfire smoke (if Woodline campfire was lit)
-  const campfireLit = (saveFacade.getWorldFlag('woodline', 'campfireLit') as boolean | undefined) ?? false;
+  const campfireLit = saveFacade.getWorldFlag('woodline', 'campfireLit') ?? false;
   if (campfireLit) {
     const smoke = MeshBuilder.CreateSphere('campfireSmoke', { diameter: 3 }, scene);
     smoke.position = new Vector3(0, 8, 62);
@@ -587,5 +599,39 @@ function createVistaMarker(scene: Scene, _eventBus: any): Interactable {
       mat.dispose();
     },
     alwaysActive: true, // Not tied to task progression
+  };
+}
+
+function createGateInteractable(
+  scene: Scene,
+  id: InteractableId,
+  position: Vector3,
+  color: Color3,
+  eventBus: any,
+  targetArea: string
+): Interactable {
+  const gate = MeshBuilder.CreateBox(id, { width: 3, height: 2.5, depth: 0.5 }, scene);
+  gate.position = position;
+  gate.isPickable = true;
+  gate.checkCollisions = false;
+  gate.metadata = { interactable: true, id };
+
+  const mat = new StandardMaterial(`${id}_mat`, scene);
+  mat.diffuseColor = color;
+  mat.emissiveColor = color.scale(0.3);
+  gate.material = mat;
+
+  return {
+    id,
+    mesh: gate,
+    alwaysActive: true,
+    interact: () => {
+      console.log(`[CreekWorld] Gate ${id} activated → ${targetArea}`);
+      eventBus.emit({ type: 'game/areaRequest', areaId: targetArea });
+    },
+    dispose: () => {
+      gate.dispose();
+      mat.dispose();
+    },
   };
 }

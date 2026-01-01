@@ -26,17 +26,17 @@ export const migrations: Record<number, Migration> = {
       return {
         ...data,
         version: 2,
-        // Ensure both roles have all required fields
+        // Ensure both roles have all required fields and all areas unlocked
         roles: {
           boy: {
-            unlockedAreas: data.roles.boy?.unlockedAreas || ['backyard'],
+            unlockedAreas: ['backyard', 'woodline', 'creek', 'pine', 'dusk', 'night', 'beach'],
             completedAreas: data.roles.boy?.completedAreas || [],
             completedTasks: data.roles.boy?.completedTasks || [],
             inventory: data.roles.boy?.inventory || [],
             lastAreaId: data.roles.boy?.lastAreaId || 'backyard',
           },
           girl: {
-            unlockedAreas: data.roles.girl?.unlockedAreas || ['backyard'],
+            unlockedAreas: ['backyard', 'woodline', 'creek', 'pine', 'dusk', 'night', 'beach'],
             completedAreas: data.roles.girl?.completedAreas || [],
             completedTasks: data.roles.girl?.completedTasks || [],
             inventory: data.roles.girl?.inventory || [],
@@ -49,7 +49,7 @@ export const migrations: Record<number, Migration> = {
     
     // Migrate from v1 format
     const defaultRoleProgress: RoleProgress = {
-      unlockedAreas: ['backyard'],
+      unlockedAreas: ['backyard', 'woodline', 'creek', 'pine', 'dusk', 'night', 'beach'],
       completedAreas: [],
       completedTasks: data.completedTasks || [],
       inventory: data.inventory || [],
@@ -66,6 +66,25 @@ export const migrations: Record<number, Migration> = {
       },
       lastSelectedRole: null,
       worldFlags: {}, // Initialize worldFlags for v2 saves (added in later update)
+    };
+  },
+
+  // Migrate from version 2 to 3 (unlock all areas)
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
+  3: (data: any) => {
+    return {
+      ...data,
+      version: 3,
+      roles: {
+        boy: {
+          ...data.roles.boy,
+          unlockedAreas: ['backyard', 'woodline', 'creek', 'pine', 'dusk', 'night', 'beach'],
+        },
+        girl: {
+          ...data.roles.girl,
+          unlockedAreas: ['backyard', 'woodline', 'creek', 'pine', 'dusk', 'night', 'beach'],
+        },
+      },
     };
   },
 };

@@ -35,7 +35,7 @@ export interface SaveData {
 
 export class SaveSystem {
   private currentSlot: string | null = null;
-  private readonly SAVE_VERSION = 2;
+  private readonly SAVE_VERSION = 3;
   private readonly STORAGE_PREFIX = 'littleworlds_save_';
 
   /**
@@ -43,7 +43,7 @@ export class SaveSystem {
    */
   createDefaultRoleProgress(): RoleProgress {
     return {
-      unlockedAreas: ['backyard'],
+      unlockedAreas: ['backyard', 'woodline', 'creek', 'pine', 'dusk', 'night', 'beach'],
       completedAreas: [],
       completedTasks: [],
       inventory: [],

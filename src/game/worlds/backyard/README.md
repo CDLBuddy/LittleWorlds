@@ -85,6 +85,68 @@ The Backyard serves as the **tutorial that doesn't feel like a tutorial**. It in
 - **Future Potential:** Identify plants (Girl skill), find worms for fishing later
 - **Connection:** Teaches observation before deeper wilderness
 
+#### **9. Sandbox Workbench (Craft Hub)** *(-7.5, 0.15, 5.5)*
+- **Tier 0 (Ground Craft):** Always available - blanket on sandbox edge
+- **Function:** Basic crafting surface for bundling, tying, simple assembly
+- **Tier 1 Upgrade:** Sandbox Workbench - add toy crates as storage
+- **Tier 2 Upgrade:** Add hooks for tools, toy drawers, charm display
+- **Signature Craft:** **Pocket Press** (leaf/flower preservation tool)
+
+#### **10. Backgate Trail Totem** *(0, 0, -28)*
+- **Function:** Marks progression - displays ribbons/charms as worlds unlock
+- **Visual:** Painted wood sign with toy decorations
+- **Upgrades:** Each world completed adds a new charm or ribbon
+
+---
+
+## 🔒 Gated Content & Backtracking
+
+### Locked Areas (Return Later with Tools)
+
+#### **🌾 Neighbor's Yard - Tall Grass Wall** *(-25, 0, 0)*
+- **Early Tease:** Visible through fence gaps, sparkle trail hints at collectibles
+- **Visual Block:** Grass too tall to wade through safely
+- **Unlock Tool:** **Brush Sickle** (crafted in Pine Trails)
+- **Rewards:**
+  - Toy soldiers #11-13
+  - Rare fiber bundle (for crafting upgrades)
+  - "Pressed Clover" Memory Book entry
+- **Gate Type:** `requiredItemIds: ["brush-sickle"]`
+
+#### **💧 Muddy Corner by Fence** *(12, 0, -22)*
+- **Early Tease:** Dog sniffs and paw prints lead into soggy patch
+- **Visual Block:** Too muddy to cross without getting stuck
+- **Unlock Tool:** **Step Boards** (crafted in Creekside)
+- **Rewards:**
+  - Hidden twine bundle (3 uses)
+  - Board socket locations reveal elsewhere
+  - "Muddy Paws" audio vignette
+- **Gate Type:** `requiredItemIds: ["step-boards"]`
+
+#### **🕯️ Shed Shadow Nook** *(20, 0, 15)*
+- **Early Tease:** Dark corner under shed overhang, mysterious
+- **Visual Block:** Too dark/eerie to explore early on
+- **Unlock Tool:** **Lantern Stakes** (crafted in Firefly Dusk) OR basic lantern
+- **Rewards:**
+  - Cosmetic backpack charm
+  - "Distant Crickets" audio vignette
+  - Toy soldier #14
+- **Gate Type:** `requiredItemIds: ["lantern-stakes"]`
+
+#### **🪢 Rope Swing to Fence Hop** *(22, 1, -8)*
+- **Shortcut:** Quick path from porch side to backgate side
+- **Unlock Tool:** **Rope Line Kit** (crafted in Woodline)
+- **Benefit:** Reduces backtracking time by 30 seconds
+- **Gate Type:** `requiredItemIds: ["rope-line-kit"]`
+
+### Secret Linger Spot: Tree Base Picnic Circle *(5, 0, -12)*
+- **Always Reachable:** But improves with progression
+- **Upgrades:**
+  - **Shell Wind Chime:** Birds land nearby, new chirp sounds
+  - **Pocket Press:** Adds sketch pages to Memory Book
+  - **Star Chalk:** Can draw hopscotch pattern (reveals toy soldier)
+- **Rewards:** Layered audio vignettes, "childhood summers" memory
+
 ---
 
 ## 🎮 Gameplay Features
@@ -108,6 +170,35 @@ The Backyard serves as the **tutorial that doesn't feel like a tutorial**. It in
 
 ### Planned Features
 
+#### **🛠️ Pocket Press Crafting (Signature Item)**
+- **Crafted At:** Sandbox Workbench (Tier 1)
+- **Materials Needed:**
+  - 2× Wooden boards (found near garden)
+  - 1× String (from multitool supplies)
+  - 2× Flat stones (near sandbox)
+- **Assembly:** Simple mini-game - stack boards, thread string, place stones
+- **Output:** **Pocket Press** - preserves leaves/flowers for Memory Book
+- **Uses Across Worlds:**
+  - **Backyard:** Press clover/flower pages → toy soldier hints
+  - **Woodline:** Press leaves/bark → reveals hidden trail markers
+  - **Creekside:** Press reeds → unlocks water-sound vignette
+  - **Pine Trails:** Press pine needles → resin wrap upgrade hint
+  - **Firefly Dusk:** Press glow petals → lantern color variant
+  - **Night Stars:** Press starflower → constellation puzzle clue
+  - **Beachfront:** Press sea grass → shell wind chime tuning clue
+
+#### **📦 Workbench Tier System**
+- **Tier 0 (Ground Craft):** Always available from start
+  - Blanket/flat surface on sandbox edge
+  - Recipes: Twine bundles, charcoal marks, simple stakes
+- **Tier 1 (Sandbox Workbench):** Built after finding materials
+  - Requires: 4× boards, 2× string, 1× hammer (found items)
+  - Unlocks: Pocket Press + bundle recipes
+- **Tier 2 (Enhanced Bench):** Upgrade after visiting other worlds
+  - Add: Tool hooks, toy drawers, charm display
+  - Unlocks: Craft 2 items at once, better durability
+  - Visual: Accumulates charms, pressed leaves, toy soldier guards
+
 #### **🪖 Toy Soldier Collectibles (Optional Quest)**
 - **Count:** 10 toy soldiers hidden throughout Backyard
 - **Locations:** Under sandbox edges, behind fence posts, in grass near trees, tucked by garden
@@ -118,6 +209,10 @@ The Backyard serves as the **tutorial that doesn't feel like a tutorial**. It in
   - Find 10 → Toy drum appears at campfire, cosmetic soldier marches in circle
 - **UI:** Row of 10 silhouettes in Memory Book that fill in as found
 - **Tone:** Nostalgic, playful, zero pressure
+- **Additional Soldiers (with tools):**
+  - #11-13: Behind tall grass wall (needs Brush Sickle)
+  - #14: In shed shadow nook (needs Lantern Stakes)
+  - #15: Under hopscotch chalk (needs Star Chalk)
 
 #### **🎒 Bag Inventory Introduction**
 - Simple icon in corner (kid backpack aesthetic)
@@ -177,6 +272,113 @@ Standing at the backgate, the player should **feel** that Woodline exists beyond
 - "Backyard Summer Days" - distant laughter, sprinkler sounds
 - "Toy Battle Memories" - imaginative sound effects, playful narration
 - "Morning Peace" - deep breath, bird solo, wind through leaves
+
+---
+
+## 🔄 Backtrack Loop Blueprint
+
+This structure ensures Backyard remains engaging across multiple visits.
+
+### Spawn / Welcome Point
+- **Location:** Back porch / sandbox edge
+- **First Visit:** Tool discovery, basic crafting introduction
+- **Return Visits:** Workbench upgrades, new recipes unlock
+
+### Main Trail (Always Passable)
+- **Route:** Porch → Backyard loop → Backgate fence line
+- **Purpose:** Core exploration, establishes world boundaries
+- **Gate to Woodline:** Unlocks after completing basic tasks
+
+### Early Teases (Locked on First Visit)
+
+#### Tease A: Neighbor Yard - Tall Grass
+- **Location:** West fence line *(-25, 0, 0)*
+- **Visual:** Sparkle trail through fence gaps, toy soldier silhouettes
+- **Audio:** Distant wind chimes, grass rustle
+- **Requires:** `brush-sickle` (Pine Trails)
+- **Reward Type:** `material + trinket + memory`
+
+#### Tease B: Muddy Corner
+- **Location:** Southeast corner *(12, 0, -22)*
+- **Visual:** Dog tracks leading in, paw prints in mud
+- **Audio:** Squelching sounds, companion whine
+- **Requires:** `step-boards` (Creekside)
+- **Reward Type:** `material + shortcut-unlock`
+
+### Mid Unlock (Later Game)
+
+#### Shed Shadow Nook
+- **Location:** Northeast *(20, 0, 15)*
+- **Visual:** Dark overhang, mysterious shapes in shadow
+- **Audio:** Quiet echo, cricket chirps intensify
+- **Requires:** `lantern-stakes` (Firefly Dusk)
+- **Reward Type:** `trinket + memory + audio-vignette`
+- **Optional Boost:** `pocket-press` adds extra memory entry
+
+### Shortcut (Backtracking Quality of Life)
+
+#### Rope Swing Fence Hop
+- **Location:** Tire swing tree *(22, 1, -8)*
+- **Requires:** `rope-line-kit` (Woodline)
+- **Function:** Fast travel from porch side → backgate side
+- **Time Saved:** ~30 seconds per crossing
+- **Visual:** Rope extends from swing to fence top
+
+### Secret Linger Spot
+
+#### Tree Base Picnic Circle
+- **Location:** Under oak tree *(5, 0, -12)*
+- **Always Accessible:** Yes, but upgrades with tools
+- **Boost Items:**
+  - `shell-wind-chime` → Birds land, new audio layer
+  - `pocket-press` → Sketch pages unlock
+  - `star-chalk` → Hopscotch pattern reveals toy soldier #15
+- **Rewards:** Layered audio vignettes, "Childhood Summers" memory
+- **Linger Duration:** 60 seconds for full experience
+
+### Craft Hub Placements
+
+#### Workbench
+- **Location:** Sandbox edge *(-7.5, 0.15, 5.5)*
+- **Tier 1:** Toy crate workbench (craft Pocket Press)
+- **Tier 2:** Add hooks, drawers, charm rack
+- **Visual Progression:** Accumulates tools, pressed flowers, toy soldiers
+
+#### Trail Totem
+- **Location:** Backgate entrance *(0, 0, -28)*
+- **Style:** Painted wood sign + toy decorations
+- **Function:** Displays world completion ribbons/charms
+- **Upgrades Per World:**
+  - Woodline: Leaf charm
+  - Creekside: Stone charm
+  - Pine Trails: Pinecone charm
+  - Firefly Dusk: Lantern charm
+  - Night Stars: Star charm
+  - Beachfront: Shell charm
+
+### Intentional Loop Summary
+
+**First Visit Flow:**
+1. Find tools (slingshot, multitool)
+2. Complete basic tasks
+3. Build Tier 1 workbench
+4. Craft Pocket Press
+5. Notice 3 locked areas
+6. Proceed to Woodline
+
+**Return Visit Flow (Pine Trails complete):**
+1. Return with Brush Sickle
+2. Cut tall grass → neighbor yard
+3. Collect toy soldiers + materials
+4. Use materials for workbench Tier 2 upgrade
+5. Notice other locked areas still present
+
+**Return Visit Flow (All Tools):**
+1. Unlock all 3 gated areas
+2. Complete toy soldier collection
+3. Upgrade workbench to Tier 2
+4. Use all boost items at linger spot
+5. Achieve 100% completion memory
 
 ---
 

@@ -12,12 +12,14 @@ import type { RoleId, AreaId } from '@game/content/areas';
 export function getSession(): {
   roleId: RoleId | null;
   areaId: AreaId | null;
+  fromArea: AreaId | null;
   slotId: string;
 } {
   const state = useGameSession.getState();
   return {
     roleId: state.roleId,
     areaId: state.areaId,
+    fromArea: state.fromArea,
     slotId: state.slotId,
   };
 }
@@ -25,8 +27,8 @@ export function getSession(): {
 /**
  * Set current area (triggers GameHost remount)
  */
-export function setArea(areaId: AreaId): void {
-  useGameSession.getState().setArea(areaId);
+export function setArea(areaId: AreaId, fromArea?: AreaId): void {
+  useGameSession.getState().setArea(areaId, fromArea);
 }
 
 /**

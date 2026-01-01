@@ -8,9 +8,6 @@
 import {
   Scene,
   Color3,
-  Color4,
-  HemisphericLight,
-  DirectionalLight,
   PointLight,
   Vector3,
   MeshBuilder,
@@ -22,6 +19,7 @@ import {
 import '@babylonjs/loaders/glTF';
 import { Player } from '@game/entities/player/Player';
 import { Companion } from '@game/entities/companion/Companion';
+import { SkySystem } from '@game/systems/sky/SkySystem';
 import type { RoleId } from '@game/content/areas';
 import { INTERACTABLE_ID, type InteractableId } from '@game/content/interactableIds';
 import { snapshotPerf, logPerfSnapshot } from '@game/debug/perfSnapshot';
@@ -33,6 +31,7 @@ export const WOODLINE_INTERACTABLES = [
   INTERACTABLE_ID.FIELDGUIDE_PICKUP,
   INTERACTABLE_ID.BOWDRILL_STATION,
   INTERACTABLE_ID.WOODLINE_CREEK_GATE,
+  INTERACTABLE_ID.WOODLINE_BACKYARD_GATE,
 ] as const satisfies readonly InteractableId[];
 
 interface Interactable {
@@ -48,7 +47,7 @@ interface CampfireInteractable extends Interactable {
   isLit: () => boolean;
 }
 
-export function createWoodlineWorld(scene: Scene, eventBus: any, roleId: RoleId = 'boy'): {
+export function createWoodlineWorld(scene: Scene, eventBus: any, roleId: RoleId = 'boy', fromArea?: string): {
   player: TransformNode;
   playerEntity: Player;
   companion: Companion;
@@ -57,24 +56,9 @@ export function createWoodlineWorld(scene: Scene, eventBus: any, roleId: RoleId 
   dispose: () => void;
   registerDynamic?: (register: (interactable: Interactable) => void) => void;
 } {
-  // Late morning sky - bright and clear
-  scene.clearColor = new Color4(0.7, 0.85, 1.0, 1.0);
-
-  // Light fog for depth
-  scene.fogMode = Scene.FOGMODE_EXP2;
-  scene.fogColor = new Color3(0.75, 0.85, 0.95);
-  scene.fogDensity = 0.008; // Reduced for larger map
-
-  // Bright hemispheric light (late morning sun high in sky)
-  const hemiLight = new HemisphericLight('hemiLight', new Vector3(0, 1, 0), scene);
-  hemiLight.intensity = 0.8;
-  hemiLight.diffuse = new Color3(1.0, 0.98, 0.92);
-  hemiLight.groundColor = new Color3(0.5, 0.6, 0.5);
-
-  // Strong directional sunlight
-  const dirLight = new DirectionalLight('dirLight', new Vector3(-0.3, -2, -0.8), scene);
-  dirLight.intensity = 1.0;
-  dirLight.diffuse = new Color3(1.0, 0.95, 0.88);
+  // Apply Woodline sky, fog, and lighting via SkySystem
+  const skySystem = new SkySystem(scene);
+  void skySystem.apply('woodline', 0);
 
   // Forest floor ground (larger map)
   const ground = MeshBuilder.CreateGround('ground', { width: 120, height: 120 }, scene);
@@ -232,10 +216,19 @@ export function createWoodlineWorld(scene: Scene, eventBus: any, roleId: RoleId 
   });
 
   // Player spawn (front-center of clearing) - y=0 keeps feet on ground
-  const player = new Player(scene, new Vector3(0, 0, 15), roleId);
+  // Dynamic spawn based on entry direction
+  let spawnPos: Vector3;
+  if (fromArea === 'creek') {
+    // Coming from creek gate (north at z=-25) - spawn near north
+    spawnPos = new Vector3(0, 0, -15);
+  } else {
+    // Coming from backyard gate (south at z=40) or default - spawn near south
+    spawnPos = new Vector3(0, 0, 30);
+  }
+  const player = new Player(scene, spawnPos, roleId);
 
-  // Companion spawn (front-left of player)
-  const companion = new Companion(scene, new Vector3(3, 0, 17), eventBus);
+  // Companion spawn relative to player
+  const companion = new Companion(scene, spawnPos.clone().add(new Vector3(3, 0, 2)), eventBus);
 
   // === INTERACTABLES ===
 
@@ -290,7 +283,17 @@ export function createWoodlineWorld(scene: Scene, eventBus: any, roleId: RoleId 
     new Vector3(0, 0, -25), // North clearing between pine trees
     new Color3(0.4, 0.8, 0.6), // Brighter forest green
     eventBus,
-    roleId
+    'creek'
+  );
+
+  // 5. Backyard gate (return to previous world) - south edge
+  const backyardGate = createGateInteractable(
+    scene,
+    INTERACTABLE_ID.WOODLINE_BACKYARD_GATE,
+    new Vector3(0, 0, 40), // South edge
+    new Color3(0.6, 0.7, 0.5), // Lighter green (backyard grass)
+    eventBus,
+    'backyard'
   );
 
   const interactables: Interactable[] = [
@@ -299,6 +302,7 @@ export function createWoodlineWorld(scene: Scene, eventBus: any, roleId: RoleId 
     fieldguidePickup,
     bowdrillStation,
     creekGate,
+    backyardGate,
   ];
 
   // === PERFORMANCE OPTIMIZATIONS ===
@@ -343,8 +347,7 @@ export function createWoodlineWorld(scene: Scene, eventBus: any, roleId: RoleId 
     player.dispose();
     companion.dispose();
     interactables.forEach(i => i.dispose());
-    hemiLight.dispose();
-    dirLight.dispose();
+    skySystem.dispose();
   };
 
   return {
@@ -544,16 +547,19 @@ function createBowdrillInteractable(
  */
 function createGateInteractable(
   scene: Scene,
-  id: string,
+  id: InteractableId,
   position: Vector3,
   color: Color3,
   eventBus: any,
-  roleId: RoleId
+  targetArea: string
 ): Interactable {
   // Gate marker (prominent arch-like structure)
   const gateBase = MeshBuilder.CreateBox(`${id}-base`, { width: 6, height: 4, depth: 0.8 }, scene);
   gateBase.position = position.clone();
   gateBase.position.y = 2.0;
+  gateBase.isPickable = true;
+  gateBase.checkCollisions = false;
+  gateBase.metadata = { interactable: true, id };
   
   const gateMat = new StandardMaterial(`${id}Mat`, scene);
   gateMat.diffuseColor = color;
@@ -564,23 +570,10 @@ function createGateInteractable(
   return {
     id,
     mesh: gateBase,
-    alwaysActive: true, // Gate is always interactable (checks unlock internally)
+    alwaysActive: true,
     interact: () => {
-      // Check unlock conditions: campfire lit OR area complete
-      const campfireLit = saveFacade.getWorldFlag<boolean>('woodline', 'campfireLit') || false;
-      const areaComplete = saveFacade.getUnlockedAreas(roleId).includes('creek');
-      
-      if (campfireLit || areaComplete) {
-        console.log('[WoodlineGate] Unlocked - transitioning to Creek');
-        eventBus.emit({ type: 'game/areaRequest', areaId: 'creek' });
-      } else {
-        console.log('[WoodlineGate] Locked - campfire must be lit first');
-        eventBus.emit({ 
-          type: 'ui/toast', 
-          level: 'info', 
-          message: 'The path deepens once warmth is found.' 
-        });
-      }
+      console.log(`[WoodlineGate] Gate ${id} activated → ${targetArea}`);
+      eventBus.emit({ type: 'game/areaRequest', areaId: targetArea });
     },
     dispose: () => {
       gateBase.dispose();

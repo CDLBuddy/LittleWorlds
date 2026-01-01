@@ -183,9 +183,10 @@ export class GameApp {
       const inventory = this.taskSystem?.getInventory() || [];
       saveFacade.setInventory(this.startParams.roleId, inventory);
       
-      // Area unlocked - transition
-      console.log('[GameApp] Area unlocked, transitioning to:', areaId);
-      sessionFacade.setArea(areaId as AreaId);
+      // Area unlocked - transition (get current area from session, not startParams)
+      const currentArea = sessionFacade.getSession().areaId;
+      console.log('[GameApp] Area unlocked, transitioning from', currentArea, 'to:', areaId);
+      sessionFacade.setArea(areaId as AreaId, currentArea);
       // GameHost will remount automatically
     } else {
       // Area locked - show soft block
@@ -239,15 +240,31 @@ export class GameApp {
     if (this.startParams.areaId === 'backyard') {
       console.log('[GameApp] Loading BackyardWorld (lazy)...');
       const { createBackyardWorld } = await import('./worlds/backyard/BackyardWorld');
-      world = createBackyardWorld(this.scene, this.bus, this.startParams.roleId);
+      world = createBackyardWorld(this.scene, this.bus, this.startParams.roleId, this.startParams.fromArea || undefined);
     } else if (this.startParams.areaId === 'woodline') {
       console.log('[GameApp] Loading WoodlineWorld (lazy)...');
       const { createWoodlineWorld } = await import('./worlds/woodline/WoodlineWorld');
-      world = createWoodlineWorld(this.scene, this.bus, this.startParams.roleId);
+      world = createWoodlineWorld(this.scene, this.bus, this.startParams.roleId, this.startParams.fromArea || undefined);
     } else if (this.startParams.areaId === 'creek') {
       console.log('[GameApp] Loading CreekWorld (lazy)...');
       const { createCreekWorld } = await import('./worlds/creek/CreekWorld');
-      world = createCreekWorld(this.scene, this.bus, this.startParams.roleId);
+      world = createCreekWorld(this.scene, this.bus, this.startParams.roleId, this.startParams.fromArea || undefined);
+    } else if (this.startParams.areaId === 'pine') {
+      console.log('[GameApp] Loading PineWorld (lazy)...');
+      const { createPineWorld } = await import('./worlds/pine/PineWorld');
+      world = createPineWorld(this.scene, this.bus, this.startParams.roleId, this.startParams.fromArea || undefined);
+    } else if (this.startParams.areaId === 'dusk') {
+      console.log('[GameApp] Loading DuskWorld (lazy)...');
+      const { createDuskWorld } = await import('./worlds/dusk/DuskWorld');
+      world = createDuskWorld(this.scene, this.bus, this.startParams.roleId, this.startParams.fromArea || undefined);
+    } else if (this.startParams.areaId === 'night') {
+      console.log('[GameApp] Loading NightWorld (lazy)...');
+      const { createNightWorld } = await import('./worlds/night/NightWorld');
+      world = createNightWorld(this.scene, this.bus, this.startParams.roleId, this.startParams.fromArea || undefined);
+    } else if (this.startParams.areaId === 'beach') {
+      console.log('[GameApp] Loading BeachWorld (lazy)...');
+      const { createBeachWorld } = await import('./worlds/beach/BeachWorld');
+      world = createBeachWorld(this.scene, this.bus, this.startParams.roleId, this.startParams.fromArea || undefined);
     } else {
       // Fallback to BootWorld for debug/dev only (not lazy-loaded since it's dev-only)
       console.log('[GameApp] Loading BootWorld (debug fallback)');

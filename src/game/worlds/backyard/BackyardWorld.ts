@@ -7,8 +7,6 @@
 import {
   Scene,
   Color3,
-  HemisphericLight,
-  DirectionalLight,
   Vector3,
   MeshBuilder,
   StandardMaterial,
@@ -18,7 +16,7 @@ import {
   Mesh,
 } from '@babylonjs/core';
 import '@babylonjs/loaders/glTF';
-import { SkyMaterial } from '@babylonjs/materials';
+import { SkySystem } from '@game/systems/sky/SkySystem';
 import { Player } from '@game/entities/player/Player';
 import { Companion } from '@game/entities/companion/Companion';
 import type { RoleId } from '@game/content/areas';
@@ -42,7 +40,7 @@ interface Interactable {
   alwaysActive?: boolean; // If true, can be interacted with even without an active task
 }
 
-export function createBackyardWorld(scene: Scene, eventBus: { emit: (event: AppEvent) => void }, roleId: RoleId = 'boy'): {
+export function createBackyardWorld(scene: Scene, eventBus: { emit: (event: AppEvent) => void }, roleId: RoleId = 'boy', fromArea?: string): {
   player: TransformNode;
   playerEntity: Player;
   companion: Companion;
@@ -50,44 +48,9 @@ export function createBackyardWorld(scene: Scene, eventBus: { emit: (event: AppE
   dispose: () => void;
   registerDynamic?: (register: (interactable: Interactable) => void) => void;
 } {
-  // Clear color for sky
-  scene.clearColor = new Color3(0.5, 0.7, 0.9).toColor4();
-
-  // === PROCEDURAL SKY WITH SUNRISE ===
-  const skybox = MeshBuilder.CreateBox('skyBox', { size: 1000 }, scene);
-  const skyMaterial = new SkyMaterial('skyMaterial', scene);
-  skyMaterial.backFaceCulling = false;
-  
-  // Enhanced sunrise atmosphere settings
-  skyMaterial.turbidity = 2; // Lower = clearer sky with vibrant colors
-  skyMaterial.luminance = 1.0; // Sky brightness
-  skyMaterial.rayleigh = 4; // Strong atmospheric scattering for vibrant colors
-  skyMaterial.mieCoefficient = 0.003; // Subtle haze
-  skyMaterial.mieDirectionalG = 0.9; // Strong sun glow
-  
-  // Sun position for dramatic golden hour sunrise (use inclination/azimuth, not explicit position)
-  skyMaterial.inclination = 0.03; // Very low = dramatic sunrise
-  skyMaterial.azimuth = 0.25; // Sun position around horizon
-  
-  skybox.material = skyMaterial;
-  skybox.infiniteDistance = true; // Make skybox render at infinite distance
-  skybox.renderingGroupId = 0; // Render first
-  
-  // Minimal fog for clear sky visibility
-  scene.fogMode = Scene.FOGMODE_EXP2;
-  scene.fogColor = new Color3(1.0, 0.95, 0.88); // Very light warm fog
-  scene.fogDensity = 0.0005; // Extremely subtle
-
-  // Morning hemispheric light
-  const hemiLight = new HemisphericLight('hemiLight', new Vector3(0, 1, 0), scene);
-  hemiLight.intensity = 0.7;
-  hemiLight.diffuse = new Color3(1.0, 0.98, 0.95);
-  hemiLight.groundColor = new Color3(0.6, 0.65, 0.5);
-
-  // Warm morning sun
-  const dirLight = new DirectionalLight('dirLight', new Vector3(-0.5, -2, -1), scene);
-  dirLight.intensity = 0.9;
-  dirLight.diffuse = new Color3(1.0, 0.96, 0.85);
+  // === SKY SYSTEM ===
+  const skySystem = new SkySystem(scene);
+  void skySystem.apply('backyard', 0); // Instant, no fade
 
   // Large ground plane (backyard) - visible as fallback
   const ground = MeshBuilder.CreateGround('ground', { width: 80, height: 80 }, scene);
@@ -448,11 +411,19 @@ export function createBackyardWorld(scene: Scene, eventBus: { emit: (event: AppE
   );
   fencePosts.push(backRightFence);
 
-  // Player spawn (center-front) - y position keeps feet on ground
-  const player = new Player(scene, new Vector3(0, 0, 20), roleId);
+  // Player spawn with dynamic positioning based on entry
+  let spawnPos: Vector3;
+  if (fromArea === 'woodline') {
+    // Coming from woodline gate (north) - spawn near north gate
+    spawnPos = new Vector3(0, 0, -20);
+  } else {
+    // Default spawn (center-front near house)
+    spawnPos = new Vector3(0, 0, 20);
+  }
+  const player = new Player(scene, spawnPos, roleId);
 
-  // Companion spawn (front-left of player)
-  const companion = new Companion(scene, new Vector3(3, 0, 22), eventBus);
+  // Companion spawn relative to player
+  const companion = new Companion(scene, spawnPos.clone().add(new Vector3(3, 0, 2)), eventBus);
 
   // === INTERACTABLES ===
   const interactables: Interactable[] = [];
@@ -542,7 +513,6 @@ export function createBackyardWorld(scene: Scene, eventBus: { emit: (event: AppE
     // Small delay to ensure async mesh loading completes
     setTimeout(() => {
       // Freeze static environment meshes
-      skybox.freezeWorldMatrix();
       ground.freezeWorldMatrix();
       fencePosts.forEach(f => {
         if (f instanceof AbstractMesh) {
@@ -553,7 +523,6 @@ export function createBackyardWorld(scene: Scene, eventBus: { emit: (event: AppE
       // Freeze materials that never change
       fenceMat.freeze();
       groundMat.freeze();
-      skyMaterial.freeze();
       
       // Log performance snapshot after optimization
       const perfSnapshot = snapshotPerf(scene);
@@ -563,8 +532,8 @@ export function createBackyardWorld(scene: Scene, eventBus: { emit: (event: AppE
 
   // Dispose function
   const dispose = () => {
-    skybox.dispose();
-    skyMaterial.dispose();
+    // Dispose panorama sky system
+    skySystem.dispose();
     ground.dispose();
     groundMat.dispose();
     grassParent.dispose();
@@ -580,8 +549,6 @@ export function createBackyardWorld(scene: Scene, eventBus: { emit: (event: AppE
     player.dispose();
     companion.dispose();
     interactables.forEach(i => i.dispose());
-    hemiLight.dispose();
-    dirLight.dispose();
   };
 
   return {

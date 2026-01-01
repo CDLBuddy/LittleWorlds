@@ -115,11 +115,127 @@ craft Fishing pole
 - **Audio:** Faint crackle if you lit the fire, bird calls from Woodline
 - **Emotional:** "We're not far from where we started, but we've learned so much."
 
+#### **9. Flat Rock Slab Workbench (Craft Hub)** *(-5, 0.5, 3)*
+- **Tier 0 (Ground Craft):** Smooth riverbank stones for assembly
+- **Tier 1:** Flat Rock Slab - natural table beside creek
+- **Tier 2 Upgrade:** Mud-brick shelf, drying rack for reeds
+- **Signature Craft:** **Step Boards** (crossing planks for mud/water)
+
+#### **10. Rockbank Shelter** *(8, 0, -12)*
+- **Structure:** Low rock wall, mud packing, driftwood roof
+- **Function:** Shelter #2, introduces "repair" mechanic
+- **Materials:** 8× stones, 10× mud handfuls, 4× driftwood pieces
+- **Story Beat:** Mud can wash out after rain → quick fix mini-game
+- **Benefit:** "Dry Haven" audio layer, creek-side rest spot
+
+#### **11. Stone Cairn Trail Totem** *(0, 0, -28)*
+- **Style:** Stacked stones with reed ribbon
+- **Function:** Marks progression toward Pine Trails
+- **Upgrades:** Charms from each world hang from ribbon
+
+---
+
+## 🔒 Gated Content & Backtracking
+
+### Locked Areas (Return Later with Tools)
+
+#### **🪢 Deep Bank Crossing** *(12, 1, -8)*
+- **Early Tease:** Glint of collectibles across deep channel
+- **Visual Block:** Water too deep, current too strong
+- **Unlock Tool:** **Rope Line Kit** (Woodline) - create handline
+- **Rewards:**
+  - Rare smooth stones (3× special)
+  - Lantern glass shard material
+  - "Deep Crossing" memory entry
+- **Gate Type:** `requiredItemIds: ["rope-line-kit"]`
+
+#### **🌿 Reed Curtain** *(-12, 0, 6)*
+- **Early Tease:** Path curves behind thick reeds, water sounds change
+- **Visual Block:** Reeds too thick to part safely
+- **Unlock Tool:** **Brush Sickle** (Pine Trails)
+- **Rewards:**
+  - Reed bundle (for board crafting)
+  - Frog NPC cameo (cute interaction)
+  - "Reed Whisper" audio vignette
+- **Gate Type:** `requiredItemIds: ["brush-sickle"]`
+
+#### **💧 Muck Flats Loop** *(Various boggy areas)*
+- **Early Tease:** Shortcut paths visible but too muddy
+- **Visual Block:** Feet sink, movement slow, frustrating
+- **Unlock Tool:** **Step Boards** (crafted here)
+- **Benefit:** Creates fast loop route connecting both banks
+- **Gate Type:** `requiredItemIds: ["step-boards"]`
+
+#### **⭐ Stone Marker Trail** *(Stepping stone paths)*
+- **Early Tease:** Hard to remember safe stone sequence
+- **Visual Block:** Navigation challenge, trial-and-error
+- **Unlock Tool:** **Star Chalk** (Night Stars) - mark stable stones
+- **Benefit:** Fast, confident crossing every time
+- **Gate Type:** `requiredItemIds: ["star-chalk"]`
+
+### Secret Linger Spot: Waterfall Pocket *(-15, 0, -20)*
+- **Early Tease:** Water sounds intensify, mist visible
+- **Unlock Tools:** **Lantern Stakes** (at dusk/night) OR **Shell Wind Chime** (calls bird guide)
+- **Rewards:**
+  - Best audio vignette in game: "Water Close-Up"
+  - Meditation spot (60 sec unlocks peace bonus)
+  - Photo opportunity (mist and light)
+- **Boost Items:**
+  - `pocket-press` → water plant sketches
+  - `rope-line-kit` → stable platform to sit
+
 ---
 
 ## 🎮 Gameplay Features
 
 ### Core Mechanics
+
+#### **🛤️ Step Boards Crafting (Signature Item)**
+- **Crafted At:** Flat Rock Slab Workbench (Tier 1)
+- **Materials Needed:**
+  - 5× Planks/driftwood (found along banks)
+  - 3× Reed bundles (Girl identifies + harvests)
+  - 2× String/cordage (inventory)
+- **Assembly:** Lay planks, bind with reeds, test stability
+- **Output:** **Step Boards** (set of 5 portable crossing planks)
+- **Uses Across Worlds:**
+  - **Backyard:** Cross muddy corner → hidden twine bundle
+  - **Woodline:** Cross mossy bog → quiet clearing linger spot
+  - **Creekside:** Unlock alternate creek fork with rare stones
+  - **Pine Trails:** Cross needle-slick ravine → pinecone stash
+  - **Firefly Dusk:** Cross foggy marsh (boards = light sockets)
+  - **Night Stars:** Cross dew-soaked stones → star-clearing platform
+  - **Beachfront:** Cross soft dune grass → shell cluster
+
+#### **🏕️ Rockbank Shelter Building**
+- **Location:** Shelter site *(8, 0, -12)*
+- **Materials Required:**
+  - 8× River stones (smooth, fist-sized)
+  - 10× Mud handfuls (from creek bank)
+  - 4× Driftwood pieces (roof support)
+- **Assembly Steps:**
+  1. Stack stones to form low wall (3 sides)
+  2. Pack mud between stones (weatherproofing)
+  3. Lay driftwood as roof beams
+  4. Add reed thatch for full coverage
+- **Story Beat:** After a story event (rain), mud washes out → repair mini-game
+- **Benefits:**
+  - "Dry Haven" audio layer (rain outside, dry inside)
+  - Unlocks "Shelter #2" memory entry
+  - Teaches maintenance/repair mechanic
+  - Creek-side rest spot with unique ambience
+
+#### **📦 Workbench Tier System**
+- **Tier 0 (Ground Craft):** Smooth riverbank stones
+  - Always available
+  - Recipes: Reed bundles, cordage, simple stakes
+- **Tier 1 (Flat Rock Slab):** Natural stone table
+  - Build materials: Position stable rocks, clear debris
+  - Unlocks: Step Boards + water plant processing
+- **Tier 2 (Enhanced Bench):** Full station features
+  - Upgrade materials: Mud-brick shelf, reed drying rack
+  - Unlocks: Craft 2× board sets, better durability
+  - Visual: Displays dried reeds, pressed water plants, smooth stones
 
 #### **🪨 Stepping Stones System**
 - **Physics:** Semi-rigid bodies (wobble slightly under weight)
@@ -167,6 +283,140 @@ craft Fishing pole
   - Ferns (shade lovers, decorative)
 - **Mechanic:** Magnifying glass icon → short description → field guide page added
 - **Reward:** Collecting 5 creek plants unlocks "Creek Herbalist" achievement
+
+---
+
+## 🔄 Backtrack Loop Blueprint
+
+This structure ensures Creekside remains engaging across multiple visits.
+
+### Spawn / Welcome Point
+- **Location:** Pebble Bank (0, 0, 15)
+- **First Visit:** Stepping stone tutorial, water skills, board crafting
+- **Return Visits:** Workbench upgrades, shelter maintenance
+
+### Main Trail (Always Passable)
+- **Route:** Stepping Stones → Camp Ring → Willow Rest
+- **Purpose:** Core creek navigation, water crossing mastery
+- **Gate to Pine Trails:** Unlocks after demonstrating creek skills
+
+### Early Teases (Locked on First Visit)
+
+#### Tease A: Deep Bank Crossing
+- **Location:** East bank overlook *(12, 1, -8)*
+- **Visual:** Glint of special stones across deep water
+- **Audio:** Deeper water sounds, stronger current
+- **Requires:** `rope-line-kit` (Woodline)
+- **Reward Type:** `material + trinket + memory`
+
+#### Tease B: Reed Curtain Path
+- **Location:** West bank curve *(-12, 0, 6)*
+- **Visual:** Path disappears behind thick reeds, water sounds change
+- **Audio:** Reed rustle, frog chorus intensifies
+- **Requires:** `brush-sickle` (Pine Trails)
+- **Reward Type:** `material + npc-encounter + audio-vignette`
+
+### Mid Unlock (Later Game)
+
+#### Muck Flats Loop Route
+- **Location:** Various boggy areas along banks
+- **Visual:** Obvious shortcuts but feet sink in mud
+- **Audio:** Squelching sounds, movement slows
+- **Requires:** `step-boards` (crafted here)
+- **Reward Type:** `major-shortcut`
+- **Function:** Fast loop connecting both creek banks, reduces travel 50%
+
+### Navigation Enhancement
+
+#### Stone Marker Trail System
+- **Location:** All stepping stone sequences
+- **Visual:** Hard to remember safe paths, trial and error
+- **Audio:** Splash sounds when missing stones
+- **Requires:** `star-chalk` (Night Stars)
+- **Reward Type:** `navigation-confidence`
+- **Function:** Mark stable stones, never miss again
+
+### Secret Linger Spot
+
+#### Waterfall Pocket
+- **Location:** Upstream alcove *(-15, 0, -20)*
+- **Early Tease:** Mist visible, water sounds intensify
+- **Requires:** `lantern-stakes` (Firefly Dusk) OR `shell-wind-chime` (Beach)
+- **Rewards:**
+  - "Water Close-Up" audio vignette (best in game)
+  - Meditation spot (60 sec = peace bonus)
+  - Perfect photo opportunity
+- **Boost Items:**
+  - `pocket-press` → water plant sketches
+  - `rope-line-kit` → stable sitting platform
+  - `step-boards` → approach through mist safely
+
+### Craft Hub Placements
+
+#### Workbench
+- **Location:** Flat Rock Slab *(-5, 0.5, 3)*
+- **Tier 1:** Natural stone table (craft Step Boards)
+- **Tier 2:** Add mud-brick shelf, reed drying rack
+- **Visual Progression:** Displays dried reeds, pressed plants, smooth stones
+
+#### Shelter
+- **Location:** Rockbank site *(8, 0, -12)*
+- **Structure:** Stone and mud shelter (Shelter #2)
+- **Maintenance:** Repair mud after rain events
+- **Upgrades:**
+  - Rope Line Kit → reinforced roof support
+  - Step Boards → dry floor planking
+  - Pocket Press → decorative pressed water plants
+
+#### Trail Totem
+- **Location:** Creek bend toward Pine *(0, 0, -28)*
+- **Style:** Stone cairn with reed ribbon
+- **Function:** Progress marker toward mountains
+- **Upgrades Per World:**
+  - Backyard: Small fence picket
+  - Woodline: Bark piece with carved arrow
+  - Pine Trails: Pinecone cluster
+  - Firefly Dusk: Small lantern charm
+  - Night Stars: Star-chalk marking
+  - Beachfront: Shell necklace
+
+### Intentional Loop Summary
+
+**First Visit Flow:**
+1. Enter from Woodline via southern bank
+2. Learn stepping stone rhythm
+3. Filter water (Girl skill demonstration)
+4. Knock down branch bridge (Boy skill)
+5. Build Tier 1 workbench
+6. Craft Step Boards (signature item)
+7. Build Rockbank shelter
+8. Notice 2 locked paths (deep bank, reed curtain)
+9. Proceed to Pine Trails
+
+**Return Visit Flow (Pine Trails complete):**
+1. Return with Brush Sickle
+2. Cut through reed curtain
+3. Meet frog NPC, collect reed bundles
+4. Use reeds for shelter upgrades
+5. Craft additional board sets
+
+**Return Visit Flow (Woodline items):**
+1. Return with Rope Line Kit
+2. Create handline across deep bank
+3. Collect rare smooth stones
+4. Use stones for workbench decoration
+
+**Return Visit Flow (Night Stars complete):**
+1. Return with Star Chalk
+2. Mark all stepping stone paths
+3. Create fast, confident crossing routes
+4. Never miss stones again
+
+**Final Visit Flow (All Tools):**
+1. Use Step Boards on muck flats (fast loop)
+2. Visit Waterfall Pocket with all boost items
+3. Complete shelter maintenance
+4. Achieve "Creek Master" completion
 
 ---
 

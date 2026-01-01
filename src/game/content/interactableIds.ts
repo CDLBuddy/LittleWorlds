@@ -30,6 +30,7 @@ export const INTERACTABLE_ID = {
   
   // Woodline World - Shared
   WOODLINE_CREEK_GATE: 'woodline_creek_gate',
+  WOODLINE_BACKYARD_GATE: 'woodline_backyard_gate',
   
   // Creek World - Boy
   CREEK_SLINGSHOT_BRANCH_TARGET: 'creek_slingshot_branch_target',
@@ -42,6 +43,24 @@ export const INTERACTABLE_ID = {
   CREEK_DEEP_POOL_LINGER: 'creek_deep_pool_linger',
   CREEK_NORTH_VISTA_MARKER: 'creek_north_vista_marker',
   CREEK_STONES_ENTRY: 'creek_stones_entry',
+  CREEK_PINE_GATE: 'creek_pine_gate',
+  CREEK_WOODLINE_GATE: 'creek_woodline_gate',
+  
+  // Pine World - Shared
+  PINE_DUSK_GATE: 'pine_dusk_gate',
+  PINE_CREEK_GATE: 'pine_creek_gate',
+  
+  // Dusk World - Shared
+  DUSK_NIGHT_GATE: 'dusk_night_gate',
+  DUSK_PINE_GATE: 'dusk_pine_gate',
+  
+  // Night World - Shared
+  NIGHT_BEACH_GATE: 'night_beach_gate',
+  NIGHT_DUSK_GATE: 'night_dusk_gate',
+  
+  // Beach World - Shared
+  BEACH_CAMPFIRE: 'beach_campfire',
+  BEACH_NIGHT_GATE: 'beach_night_gate',
 } as const;
 
 export type InteractableId = typeof INTERACTABLE_ID[keyof typeof INTERACTABLE_ID];

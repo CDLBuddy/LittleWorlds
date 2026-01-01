@@ -48,9 +48,21 @@ export class InteractionSystem {
       return;
     }
     
-    const targetId = this.taskSystem.getCurrentTargetId();
+    // ALWAYS check for nearby always-active interactables FIRST (gates, etc.)
+    // These should work regardless of task state
+    const nearbyAlwaysActive = this.interactables.find((i) => {
+      if (!i.alwaysActive) return false;
+      const distance = Vector3.Distance(playerPos, i.mesh.position);
+      return distance < 3.0;
+    });
     
-    // First, try to interact with the current task target
+    if (nearbyAlwaysActive) {
+      this.handleInteraction(nearbyAlwaysActive, nearbyAlwaysActive.id, playerPos, dt, false);
+      return;
+    }
+    
+    // If no always-active interactable nearby, check for current task target
+    const targetId = this.taskSystem.getCurrentTargetId();
     if (targetId) {
       const target = this.interactables.find((i) => i.id === targetId);
       if (target) {
@@ -59,18 +71,8 @@ export class InteractionSystem {
       }
     }
     
-    // If no task target or task target not found, check for always-active interactables
-    const nearbyAlwaysActive = this.interactables.find((i) => {
-      if (!i.alwaysActive) return false;
-      const distance = Vector3.Distance(playerPos, i.mesh.position);
-      return distance < 3.0; // Same radius as task targets
-    });
-    
-    if (nearbyAlwaysActive) {
-      this.handleInteraction(nearbyAlwaysActive, nearbyAlwaysActive.id, playerPos, dt, false);
-    } else {
-      this.clearDwell();
-    }
+    // No interactables nearby
+    this.clearDwell();
   }
 
   private handleInteraction(

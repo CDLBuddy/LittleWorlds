@@ -84,6 +84,72 @@ The Woodline represents **the first real campsite ritual**—where both twins le
 - **Gate Location:** Not implemented yet, but planned between two large pines
 - **Promise:** "There's more ahead when we're ready."
 
+#### **7. Stump Table Workbench (Craft Hub)** *(3, 0, 2)*
+- **Tier 0 (Ground Craft):** Log surface for basic assembly
+- **Tier 1:** Stump Table - carved flat surface with tool grooves
+- **Tier 2 Upgrade:** Hanging rope spool, small drying rack, knot practice post
+- **Signature Craft:** **Rope Line Kit** (tension lines, stakes, knots)
+
+#### **8. Woodline Lean-To Shelter** *(-12, 0, -10)*
+- **Structure:** Broad leaves, branches, twine lashings
+- **Function:** First shelter build tutorial (simple construction)
+- **Materials:** 6× branches, 10× leaves, 2× string
+- **Benefit:** Linger spot, "sheltered" audio layer, teaches shelter mechanic
+
+#### **9. Trail Totem - Fork Marker** *(0, 0, -20)*
+- **Style:** Carved bark sign with direction arrows
+- **Function:** Displays world completion progress
+- **Upgrades:** Charms hang from branches (leaf, stone, pinecone, etc.)
+
+---
+
+## 🔒 Gated Content & Backtracking
+
+### Locked Areas (Return Later with Tools)
+
+#### **🕯️ Hollow Log Tunnel** *(-15, 0, -18)*
+- **Early Tease:** Faint glow visible inside, creek sounds echo through
+- **Visual Block:** Too dark to navigate safely
+- **Unlock Tool:** **Lantern Stakes** (Firefly Dusk)
+- **Rewards:**
+  - Shortcut toward Creekside entry
+  - Rare wood bundle (for workbench upgrades)
+  - "Hollow Echo" audio vignette
+- **Gate Type:** `requiredItemIds: ["lantern-stakes"]`
+
+#### **🌿 Bramble Side Path** *(10, 0, 8)*
+- **Early Tease:** Path curves around tree, blocked by thorny vines
+- **Visual Block:** Brambles too thick to pass through
+- **Unlock Tool:** **Brush Sickle** (Pine Trails)
+- **Rewards:**
+  - Rare wood + "bench upgrade strap" material
+  - Hidden stump bench (new linger spot)
+  - "Bramble Clear" memory entry
+- **Gate Type:** `requiredItemIds: ["brush-sickle"]`
+
+#### **🪢 Branch Pull-Down Shortcut** *(5, 1.5, -15)*
+- **Early Tease:** Branch hangs above steep-ish slope, out of reach
+- **Visual Block:** Need way to grab and secure branch
+- **Unlock Tool:** **Rope Line Kit** (crafted here)
+- **Benefit:** Major shortcut back to gate (reduces travel time)
+- **Gate Type:** `requiredItemIds: ["rope-line-kit"]`
+
+#### **⭐ Marked Tree Route** *(Various points in dense forest)*
+- **Early Tease:** Easy to get turned around at night or in fog
+- **Visual Block:** Navigation difficulty in low visibility
+- **Unlock Tool:** **Star Chalk** (Night Stars)
+- **Benefit:** Path becomes clearly marked, comfortable to navigate
+- **Gate Type:** `requiredItemIds: ["star-chalk"]`
+
+### Secret Linger Spot: Mossy Overlook *(-18, 2, 5)*
+- **Early Tease:** Visible from below, requires careful climb
+- **Unlock Tools:** **Rope Line Kit** (handline) OR **Step Boards** (stable footing)
+- **Rewards:**
+  - View of Backyard vista
+  - "Wind Through Canopy" memory entry
+  - Best photo spot in Woodline
+- **Gate Type:** `optionalBoostItemIds: ["rope-line-kit", "step-boards"]`
+
 ---
 
 ## 🎮 Gameplay Features
@@ -108,6 +174,53 @@ The Woodline represents **the first real campsite ritual**—where both twins le
 - Campfire state persists (if Boy lit it, Girl sees it already burning)
 
 ### Planned Features
+
+#### **🪢 Rope Line Kit Crafting (Signature Item)**
+- **Crafted At:** Stump Table Workbench (Tier 1)
+- **Materials Needed:**
+  - 3× String/cordage (from Backyard + found here)
+  - 2× Wooden stakes (carved with multitool)
+  - 1× Toggle (carved from branch)
+- **Assembly:** Knot-tying mini-game - practice bowline, tarp line, rescue loop
+- **Output:** **Rope Line Kit** - tension lines, bridge support, climbing aid
+- **Uses Across Worlds:**
+  - **Backyard:** Rope swing to cross muddy corner → hidden trinket
+  - **Woodline:** Pull-down branch shortcut (fast backtrack loop)
+  - **Creekside:** Lash handrail across stepping stones → deep bank collectibles
+  - **Pine Trails:** Tension line for shelter upgrade / reach raised overlook
+  - **Firefly Dusk:** String lantern stakes faster (place in one motion)
+  - **Night Stars:** Secure stargazing tarp / hang star chart
+  - **Beachfront:** Tie driftwood rig → hidden tidepool path
+
+#### **🏕️ Woodline Lean-To Shelter Building**
+- **Location:** Shelter site *(-12, 0, -10)*
+- **Materials Required:**
+  - 6× Long branches (found scattered in clearing)
+  - 10× Large leaves (from underbrush)
+  - 2× String (from inventory or found)
+- **Assembly Steps:**
+  1. Position main support branches (drag-and-place)
+  2. Lean side branches against support
+  3. Layer leaves for roof (simple stack animation)
+  4. Tie with string to secure
+- **Benefits:**
+  - Creates linger spot with "sheltered" audio layer
+  - Unlocks "First Shelter" memory entry
+  - Teaches shelter mechanic for other worlds
+  - Campfire warmth bonus if built nearby
+
+#### **📦 Workbench Tier System**
+- **Tier 0 (Ground Craft):** Log surface, basic assembly
+  - Always available
+  - Recipes: Twine bundles, wooden stakes, simple wraps
+- **Tier 1 (Stump Table):** Carved flat surface with grooves
+  - Build materials: 4× planks, 1× string, carving tool
+  - Unlocks: Rope Line Kit + knot practice
+- **Tier 2 (Enhanced Bench):** Full workshop features
+  - Upgrade materials: Strap from bramble path, hooks from metal scraps
+  - Adds: Hanging rope spool, drying rack, knot practice post
+  - Unlocks: Craft 2× rope kits at once, better durability
+  - Visual: Accumulates charms, pressed leaves, tools on display
 
 #### **🔥 Campsite Rituals (First Introduction)**
 - **Sit by Fire:** Hold position near flames → unlock "Fireside Thoughts" audio vignette
@@ -147,6 +260,133 @@ The Woodline represents **the first real campsite ritual**—where both twins le
   - Maple (helicopter seeds, syrup tease)
 - **Girl Skill:** Use field guide to name each tree
 - **Reward:** Unlock "Forest Friend" achievement, new audio layer (tree names whispered in wind)
+
+---
+
+## 🔄 Backtrack Loop Blueprint
+
+This structure ensures Woodline remains engaging across multiple visits.
+
+### Spawn / Welcome Point
+- **Location:** Gate clearing (0, 0, 15)
+- **First Visit:** Tool discovery (flint, field guide), fire lighting ritual
+- **Return Visits:** Workbench upgrades, shelter improvements
+
+### Main Trail (Always Passable)
+- **Route:** Trail Bend → Small Camp Clearing → Campfire
+- **Purpose:** Core campsite ritual, first real wilderness experience
+- **Gate to Creekside:** Unlocks after campfire is lit
+
+### Early Teases (Locked on First Visit)
+
+#### Tease A: Hollow Log Tunnel
+- **Location:** Northwest clearing edge *(-15, 0, -18)*
+- **Visual:** Faint glow inside, mysterious darkness
+- **Audio:** Creek sounds echo through tunnel, distant water
+- **Requires:** `lantern-stakes` (Firefly Dusk)
+- **Reward Type:** `shortcut + material + audio-vignette`
+
+#### Tease B: Bramble Side Path
+- **Location:** Northeast curve *(10, 0, 8)*
+- **Visual:** Path visible through thorny vines, hints of clearing beyond
+- **Audio:** Wind changes tone beyond brambles, birdsong
+- **Requires:** `brush-sickle` (Pine Trails)
+- **Reward Type:** `material + linger-spot + memory`
+
+### Mid Unlock (Later Game)
+
+#### Branch Pull-Down Shortcut
+- **Location:** Western slope *(5, 1.5, -15)*
+- **Visual:** Branch hangs tantalizingly close, rope marks on trunk
+- **Audio:** Branch creaks in wind, inviting interaction
+- **Requires:** `rope-line-kit` (crafted here)
+- **Reward Type:** `major-shortcut`
+- **Function:** Reduces backtracking time by 40 seconds, connects gate to camp directly
+
+### Navigation Enhancement
+
+#### Marked Tree Route
+- **Location:** Dense forest areas (various points)
+- **Visual:** Easy to lose bearings in thick canopy
+- **Audio:** Forest sounds become disorienting without markers
+- **Requires:** `star-chalk` (Night Stars)
+- **Reward Type:** `navigation-comfort`
+- **Function:** Path becomes clearly marked, reduces anxiety
+
+### Secret Linger Spot
+
+#### Mossy Overlook
+- **Location:** Elevated outcrop *(-18, 2, 5)*
+- **Early Tease:** Visible from below, challenging climb
+- **Requires:** `rope-line-kit` (handline) OR `step-boards` (stable footing)
+- **Rewards:**
+  - View of Backyard vista (emotional callback)
+  - "Wind Through Canopy" memory entry
+  - Best photo opportunity in Woodline
+  - "Overlook Meditation" audio vignette (60 sec linger)
+- **Boost Items:**
+  - `pocket-press` → adds pressed leaf sketches
+  - `shell-wind-chime` → attracts birds to overlook
+
+### Craft Hub Placements
+
+#### Workbench
+- **Location:** Stump Table *(3, 0, 2)*
+- **Tier 1:** Carved flat surface (craft Rope Line Kit)
+- **Tier 2:** Add rope spool, drying rack, knot practice post
+- **Visual Progression:** Accumulates tools, knots on display, charms
+
+#### Shelter
+- **Location:** Lean-To site *(-12, 0, -10)*
+- **Structure:** Leaf and branch shelter (first build)
+- **Upgrades:**
+  - Add fire ring nearby (campfire extension)
+  - Rope Line Kit improves structure stability
+  - Pocket Press adds decorative pressed leaves
+
+#### Trail Totem
+- **Location:** Fork in path *(0, 0, -20)*
+- **Style:** Carved bark sign with direction arrows
+- **Function:** Displays world completion charms
+- **Upgrades Per World:**
+  - Backyard: House charm (miniature fence piece)
+  - Creekside: Smooth stone charm
+  - Pine Trails: Pinecone charm
+  - Firefly Dusk: Lantern charm
+  - Night Stars: Star charm
+  - Beachfront: Shell charm
+
+### Intentional Loop Summary
+
+**First Visit Flow:**
+1. Enter from Backyard through gate
+2. Find flint or field guide (role-specific)
+3. Light campfire (shared victory)
+4. Build Tier 1 workbench
+5. Craft Rope Line Kit
+6. Notice 2 locked paths (hollow log, bramble)
+7. Build Lean-To shelter (optional)
+8. Proceed to Creekside
+
+**Return Visit Flow (Pine Trails complete):**
+1. Return with Brush Sickle
+2. Clear bramble path
+3. Discover hidden stump bench + materials
+4. Use materials for workbench Tier 2 upgrade
+5. Notice other gated areas
+
+**Return Visit Flow (Dusk/Night complete):**
+1. Return with Lantern Stakes and Star Chalk
+2. Light hollow log tunnel → discover shortcut
+3. Mark tree route → comfortable navigation
+4. Use Rope Line Kit on branch shortcut
+5. All shortcuts active → fast backtracking
+
+**Final Visit Flow (All Tools):**
+1. Visit Mossy Overlook with multiple tools
+2. Use all boost items (press, chime)
+3. Complete shelter upgrades
+4. Achieve "Woodline Master" completion
 
 ---
 
