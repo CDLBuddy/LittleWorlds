@@ -136,7 +136,13 @@ export class AudioSystem {
     if (this.bufferCache.has(key)) return; // Already loaded
 
     try {
-      const response = await fetch(url);
+      // Resolve base URL for Vite
+      const base = import.meta.env.BASE_URL ?? '/';
+      const resolvedUrl = url.startsWith('http://') || url.startsWith('https://') || url.startsWith('/') 
+        ? url 
+        : `${base}${url}`;
+      
+      const response = await fetch(resolvedUrl);
       if (!response.ok) {
         throw new Error(`HTTP ${response.status}`);
       }

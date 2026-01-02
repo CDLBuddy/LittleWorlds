@@ -3,6 +3,9 @@ import { PhotoDome } from '@babylonjs/core/Helpers/photoDome';
 import { SKY_PRESETS } from './skyPresets';
 import type { WorldId, WorldLookPreset } from './skyPresets';
 import { detectDeviceCapabilities } from '@game/config/deviceHeuristics';
+import { BillboardCloudSystem } from './BillboardCloudSystem';
+import { createNoiseOverlay } from './NoiseOverlay';
+import type { NoiseOverlayHandle } from './NoiseOverlay';
 
 type SkyHandle = {
   dome: PhotoDome;
@@ -19,6 +22,10 @@ export class SkySystem {
   // Lighting references (owned by system)
   private sunLight: DirectionalLight | null = null;
   private ambientLight: HemisphericLight | null = null;
+  
+  // FX systems
+  private cloudFx: BillboardCloudSystem | null = null;
+  private noiseFx: NoiseOverlayHandle | null = null;
   
   // Dev overlay state (DEV only)
   private devRotation = 0;
@@ -130,6 +137,10 @@ export class SkySystem {
         }
       }
     }
+
+    // Apply FX
+    this.applyBillboardClouds(preset);
+    this.applyNoise(preset);
   }
 
   /**
@@ -171,6 +182,11 @@ export class SkySystem {
           this.currentSky = newSky;
           this.isTransitioning = false;
           this.scene.onBeforeRenderObservable.remove(observer);
+          
+          // Apply FX after transition
+          this.applyBillboardClouds(preset);
+          this.applyNoise(preset);
+          
           resolve();
         }
       });
@@ -245,6 +261,32 @@ export class SkySystem {
     } else {
       this.scene.fogMode = Scene.FOGMODE_NONE;
     }
+  }
+
+  /**
+   * Apply billboard clouds FX
+   */
+  private applyBillboardClouds(preset: WorldLookPreset): void {
+    this.cloudFx?.dispose();
+    this.cloudFx = null;
+
+    const cfg = preset.cloudBillboards;
+    if (!cfg?.enabled) return;
+
+    this.cloudFx = new BillboardCloudSystem(this.scene, cfg, (u) => this.withBase(u));
+  }
+
+  /**
+   * Apply noise overlay FX
+   */
+  private applyNoise(preset: WorldLookPreset): void {
+    this.noiseFx?.dispose();
+    this.noiseFx = null;
+
+    const cfg = preset.noise;
+    if (!cfg?.enabled) return;
+
+    this.noiseFx = createNoiseOverlay(this.scene, cfg, (u) => this.withBase(u));
   }
 
   /**
@@ -364,6 +406,13 @@ export class SkySystem {
     // Dispose lights
     this.sunLight?.dispose();
     this.ambientLight?.dispose();
+
+    // Dispose FX
+    this.cloudFx?.dispose();
+    this.cloudFx = null;
+
+    this.noiseFx?.dispose();
+    this.noiseFx = null;
 
     // Remove dev tools
     if (this.devKeyListener) {
