@@ -1,4 +1,4 @@
-/**
+/** THIS IS A DEV PLAYGROUND WORLD FOR TESTING PURPOSES ONLY  
  * BootWorld - Minimal playable scene with primitives only
  * Ground + lights + fog + camera + player capsule + companion + task interactables
  */
@@ -22,6 +22,8 @@ import { LogPile } from '@game/entities/props/LogPile';
 import { Campfire } from '@game/entities/props/Campfire';
 import type { RoleId } from '@game/content/areas';
 import { INTERACTABLE_ID, type InteractableId } from '@game/content/interactableIds';
+import type { WorldResult } from './types';
+import { createWorldPlayers } from './helpers';
 
 export const BOOT_INTERACTABLES = [
   INTERACTABLE_ID.AXE,
@@ -36,7 +38,7 @@ interface Interactable {
   dispose: () => void;
 }
 
-export function createBootWorld(scene: Scene, eventBus: any, roleId: RoleId = 'boy'): {
+export function createBootWorld(scene: Scene, eventBus: any, roleId: RoleId = 'boy'): WorldResult & {
   player: TransformNode;
   playerEntity: Player;
   companion: Companion;
@@ -73,8 +75,10 @@ export function createBootWorld(scene: Scene, eventBus: any, roleId: RoleId = 'b
   ground.material = groundMat;
   ground.receiveShadows = true;
 
-  // Player entity (loads role-specific model asynchronously)
-  const player = new Player(scene, new Vector3(0, 0.9, 0), roleId);
+  // Create BOTH players using shared helper
+  const { boyPlayer, girlPlayer, activePlayer } = createWorldPlayers(scene, new Vector3(0, 0.9, 0), roleId);
+  const player = activePlayer.mesh;
+  const playerEntity = activePlayer;
 
   // Note: Camera is now created by GameApp's CameraRig
 
@@ -96,7 +100,8 @@ export function createBootWorld(scene: Scene, eventBus: any, roleId: RoleId = 'b
   // Dispose function
   const dispose = () => {
     ground.dispose();
-    player.dispose();
+    boyPlayer.dispose();
+    girlPlayer.dispose();
     groundMat.dispose();
     axe.dispose();
     logPile.dispose();
@@ -106,9 +111,28 @@ export function createBootWorld(scene: Scene, eventBus: any, roleId: RoleId = 'b
     dirLight.dispose();
   };
 
+  // Track current active role
+  let currentActiveRole: RoleId = roleId;
+
   return {
-    player: player.mesh,
-    playerEntity: player,
+    // WorldResult contract implementation
+    getActivePlayer: () => {
+      return currentActiveRole === 'boy' ? boyPlayer : girlPlayer;
+    },
+    getActiveMesh: () => {
+      return (currentActiveRole === 'boy' ? boyPlayer : girlPlayer).mesh;
+    },
+    setActiveRole: (newRoleId: RoleId) => {
+      currentActiveRole = newRoleId;
+      boyPlayer.setActive(newRoleId === 'boy');
+      girlPlayer.setActive(newRoleId === 'girl');
+    },
+    boyPlayer,
+    girlPlayer,
+    
+    // Legacy fields for backward compatibility
+    player,
+    playerEntity,
     companion,
     interactables,
     campfire,

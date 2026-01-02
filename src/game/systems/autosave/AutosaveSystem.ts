@@ -51,6 +51,14 @@ export class AutosaveSystem {
     
     console.log(`[AutosaveSystem] Autosave interval: ${intervalMs}ms`);
   }
+
+  /**
+   * Update the role ID (called when switching characters)
+   */
+  setRole(roleId: RoleId): void {
+    console.log(`[AutosaveSystem] Updating role from ${this.roleId} to ${roleId}`);
+    this.roleId = roleId;
+  }
   
   /**
    * Trigger a save (debounced to prevent rapid saves)

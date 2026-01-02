@@ -166,4 +166,59 @@ export class ProgressionSystem {
   getAreaId(): AreaId {
     return this.areaId;
   }
-}
+
+  /**
+   * Switch to a different role and reload tasks for current area
+   */
+  switchRole(newRoleId: RoleId): void {
+    console.log(`[ProgressionSystem] Switching from ${this.roleId} to ${newRoleId}`);
+    
+    // Reload task list for new role
+    const area = AREAS[this.areaId];
+    if (!area) {
+      console.error(`[ProgressionSystem] Unknown area: ${this.areaId}`);
+      this.roleId = newRoleId; // Update role even on error
+      return;
+    }
+
+    const taskIds = area.tasksByRole[newRoleId];
+    if (!taskIds || taskIds.length === 0) {
+      console.warn(`[ProgressionSystem] No tasks defined for ${newRoleId} in ${this.areaId}`);
+      this.taskIds = [];
+      this.roleId = newRoleId; // Update role even with no tasks
+      return;
+    }
+
+    // Filter out missing tasks
+    this.taskIds = taskIds.filter((id) => {
+      if (!TASKS_BY_ID[id]) {
+        console.warn(`[ProgressionSystem] Task ${id} not found in TASKS_BY_ID`);
+        return false;
+      }
+      return true;
+    });
+
+    // Check which tasks are already complete
+    const savedProgress = saveFacade.loadMain();
+    const completedTasks = savedProgress.roles[newRoleId].completedTasks;
+    
+    // Find first incomplete task
+    this.currentTaskIndex = this.taskIds.findIndex(id => !completedTasks.includes(id));
+    
+    // Update role BEFORE any operations that touch TaskSystem
+    // This prevents desync when debug overlay samples state mid-switch
+    this.roleId = newRoleId;
+    
+    if (this.currentTaskIndex === -1) {
+      // All tasks complete for this area/role
+      console.log(`[ProgressionSystem] All ${this.taskIds.length} tasks already complete for ${newRoleId} in ${this.areaId}`);
+      // Clear any active task in TaskSystem when area is complete
+      this.taskSystem.clearTask();
+      return;
+    }
+
+    console.log(`[ProgressionSystem] Loaded ${this.taskIds.length} tasks for ${newRoleId}, starting at index ${this.currentTaskIndex}`);
+    
+    // Load the current task
+    this.loadCurrentTask();
+  }}

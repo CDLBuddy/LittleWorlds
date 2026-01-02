@@ -94,6 +94,9 @@ class SaveFacade {
     
     if (!role.completedTasks.includes(taskId)) {
       role.completedTasks.push(taskId);
+      console.log(`[saveFacade] Marked task ${taskId} complete for ${roleId}. Total completed: ${role.completedTasks.length}`);
+    } else {
+      console.log(`[saveFacade] Task ${taskId} already complete for ${roleId}`);
     }
     
     this.writeMain(save);

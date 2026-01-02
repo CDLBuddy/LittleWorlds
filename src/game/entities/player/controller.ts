@@ -216,6 +216,8 @@ export class PlayerController {
 
   public setPlayerEntity(player: Player): void {
     this.playerEntity = player;
+    // Update the controlled mesh reference
+    this.player = player.mesh;
   }
 
   public setEnabled(enabled: boolean): void {

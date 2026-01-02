@@ -16,6 +16,7 @@ import { FxSystem } from './systems/fx/FxSystem';
 import { CompanionDebugHelper } from './debug/CompanionDebugHelper';
 import { PlayerDebugHelper } from './debug/PlayerDebugHelper';
 import { WorldEditor } from './debug/WorldEditor';
+import { SwitchDebugOverlay } from './debug/SwitchDebugOverlay';
 import type { RoleId, AreaId } from './content/areas';
 import { ProgressionSystem } from './systems/progression/ProgressionSystem';
 import { AutosaveSystem } from './systems/autosave/AutosaveSystem';
@@ -23,6 +24,7 @@ import { saveFacade } from './systems/saves/saveFacade';
 import * as sessionFacade from './session/sessionFacade';
 import { CharacterSwitchSystem } from './systems/characters/CharacterSwitchSystem';
 import { CheatSystem, createDefaultCheats } from './debug/cheats';
+import type { WorldResult } from './worlds/types';
 
 /**
  * GameApp - Main orchestrator for the Babylon.js game
@@ -38,7 +40,6 @@ export class GameApp {
   private wakeRadiusSystem: WakeRadiusSystem | null = null;
   private taskSystem: TaskSystem | null = null;
   private interactionSystem: InteractionSystem | null = null;
-  private player: TransformNode | null = null;
   private companion: Companion | null = null;
   private campfire: typeof import('@game/entities/props/Campfire').Campfire.prototype | null = null;
   private debugOverlay: DebugOverlay | null = null;
@@ -53,9 +54,8 @@ export class GameApp {
   private playerDebugHelper: PlayerDebugHelper | null = null;
   private worldEditor: WorldEditor | null = null;
   private worldEditorKeyHandler: ((e: KeyboardEvent) => void) | null = null;
-  private playerEntity: Player | null = null;
-  private boyPlayer: Player | null = null;
-  private girlPlayer: Player | null = null;
+  private switchDebugOverlay: SwitchDebugOverlay | null = null;
+  private currentWorld: WorldResult | null = null;
   private progressionSystem: ProgressionSystem | null = null;
   private autosaveSystem: AutosaveSystem | null = null;
   private characterSwitchSystem: CharacterSwitchSystem | null = null;
@@ -112,13 +112,14 @@ export class GameApp {
         }
       } else if (event.type === 'game/task') {
         // Check for task completion
-        if (event.complete && this.player) {
+        if (event.complete && this.currentWorld) {
+          const activePlayerMesh = this.getActivePlayerMesh();
           // Notify progression system
           if (this.progressionSystem) {
             this.progressionSystem.handleTaskEvent(event.taskId, true);
           }
           // Spawn confetti at player position
-          this.fxSystem?.spawnConfetti(this.player.position.clone());
+          this.fxSystem?.spawnConfetti(activePlayerMesh.position.clone());
           // Play success sound
           this.audioSystem?.playSfx(SFX_KEYS.SUCCESS, { volume: 0.8 });
           // Trigger celebrate camera briefly
@@ -128,9 +129,9 @@ export class GameApp {
             type: 'game/taskComplete',
             taskId: event.taskId,
             position: {
-              x: this.player.position.x,
-              y: this.player.position.y,
-              z: this.player.position.z,
+              x: activePlayerMesh.position.x,
+              y: activePlayerMesh.position.y,
+              z: activePlayerMesh.position.z,
             },
           });
         }
@@ -183,8 +184,8 @@ export class GameApp {
     console.log('[GameApp] Handling character switch to:', roleId);
     
     // Update PlayerController to control the new active player
-    const newActivePlayer = roleId === 'boy' ? this.boyPlayer : this.girlPlayer;
-    if (newActivePlayer && this.playerController) {
+    if (this.playerController && this.currentWorld) {
+      const newActivePlayer = this.currentWorld.getActivePlayer();
       this.playerController.setPlayerEntity(newActivePlayer);
       console.log(`[GameApp] PlayerController now controlling: ${roleId}`);
     }
@@ -207,9 +208,12 @@ export class GameApp {
       const inventory = this.taskSystem?.getInventory() || [];
       saveFacade.setInventory(currentRole, inventory);
       
+      // Update session to maintain current role across area transition
+      sessionFacade.setRole(currentRole);
+      
       // Area unlocked - transition (get current area from session, not startParams)
       const currentArea = sessionFacade.getSession().areaId;
-      console.log('[GameApp] Area unlocked, transitioning from', currentArea, 'to:', areaId);
+      console.log('[GameApp] Area unlocked, transitioning from', currentArea, 'to:', areaId, 'as:', currentRole);
       sessionFacade.setArea(areaId as AreaId, currentArea ?? undefined);
       // GameHost will remount automatically
     } else {
@@ -252,11 +256,9 @@ export class GameApp {
     await this.loadAudioAssets();
 
     // Create world based on areaId with lazy loading for performance
-    let world: {
+    let world: WorldResult & {
       player: TransformNode;
       playerEntity: Player;
-      boyPlayer?: Player;
-      girlPlayer?: Player;
       companion: Companion;
       interactables: Array<{ id: string; mesh: AbstractMesh; interact: () => void; dispose: () => void }>;
       campfire?: any;
@@ -298,10 +300,7 @@ export class GameApp {
     }
     
     this.worldDispose = world.dispose;
-    this.player = world.player;
-    this.playerEntity = world.playerEntity;
-    this.boyPlayer = world.boyPlayer || null;
-    this.girlPlayer = world.girlPlayer || null;
+    this.currentWorld = world; // Store WorldResult reference
     this.companion = world.companion;
     this.campfire = world.campfire || null;
     this.interactables = world.interactables;
@@ -321,10 +320,8 @@ export class GameApp {
     });
 
     // Create player controller
-    this.playerController = new PlayerController(this.scene, world.player);
-    if (this.playerEntity) {
-      this.playerController.setPlayerEntity(this.playerEntity);
-    }
+    this.playerController = new PlayerController(this.scene, this.getActivePlayerMesh());
+    this.playerController.setPlayerEntity(this.getActivePlayerEntity());
 
     // Create task system
     this.taskSystem = new TaskSystem(this.bus);
@@ -347,9 +344,10 @@ export class GameApp {
     console.log('[GameApp] CharacterSwitchSystem initialized');
     
     // Wire up player references for visual switching
-    if (this.boyPlayer && this.girlPlayer && this.characterSwitchSystem) {
-      this.characterSwitchSystem.setPlayers(this.boyPlayer, this.girlPlayer);
-      console.log('[GameApp] Wired boy/girl player references to CharacterSwitchSystem');
+    if (this.currentWorld && this.characterSwitchSystem) {
+      this.characterSwitchSystem.setPlayers(this.currentWorld.boyPlayer, this.currentWorld.girlPlayer);
+      this.characterSwitchSystem.setWorld(this.currentWorld);
+      console.log('[GameApp] Wired boy/girl player references and world to CharacterSwitchSystem');
     }
     
     // Create interaction system
@@ -401,6 +399,18 @@ export class GameApp {
     );
     this.progressionSystem.start();
     
+    // Wire progression system to character switch system for task reloading
+    if (this.characterSwitchSystem && this.progressionSystem) {
+      this.characterSwitchSystem.setProgressionSystem(this.progressionSystem);
+      console.log('[GameApp] Wired ProgressionSystem to CharacterSwitchSystem');
+    }
+    
+    // Wire interaction system to character switch system for clearing dwell state
+    if (this.characterSwitchSystem && this.interactionSystem) {
+      this.characterSwitchSystem.setInteractionSystem(this.interactionSystem);
+      console.log('[GameApp] Wired InteractionSystem to CharacterSwitchSystem');
+    }
+    
     // Create autosave system (after task system is ready)
     this.autosaveSystem = new AutosaveSystem(
       this.bus,
@@ -410,6 +420,12 @@ export class GameApp {
     );
     this.autosaveSystem.start();
     console.log('[GameApp] Autosave system started');
+
+    // Wire autosave system to character switch system for role updates
+    if (this.characterSwitchSystem && this.autosaveSystem) {
+      this.characterSwitchSystem.setAutosaveSystem(this.autosaveSystem);
+      console.log('[GameApp] Wired AutosaveSystem to CharacterSwitchSystem');
+    }
 
     // Create wake radius system
     this.wakeRadiusSystem = new WakeRadiusSystem(this.scene, this.bus);
@@ -423,20 +439,26 @@ export class GameApp {
         this.companionDebugHelper.setCompanion(this.companion);
       }
       this.playerDebugHelper = new PlayerDebugHelper(this.scene);
-      if (this.playerEntity) {
-        this.playerDebugHelper.setPlayer(this.playerEntity);
+      if (this.currentWorld) {
+        this.playerDebugHelper.setPlayer(this.getActivePlayerEntity());
       }
 
       // Create world editor (disabled by default)
       this.worldEditor = new WorldEditor(this.scene, this.startParams.areaId);
 
-      // Toggle world editor with F2 key
+      // Toggle world editor with F2 key, debug overlay with F3
       this.worldEditorKeyHandler = (e: KeyboardEvent) => {
         if (e.key === 'F2' && this.worldEditor) {
           this.worldEditor.toggle();
+        } else if (e.key === 'F3' && this.switchDebugOverlay) {
+          this.switchDebugOverlay.toggle();
         }
       };
       window.addEventListener('keydown', this.worldEditorKeyHandler);
+      
+      // Create switch debug overlay
+      this.switchDebugOverlay = new SwitchDebugOverlay();
+      console.log('[GameApp] Switch Debug Overlay created (F3 to toggle)');
 
       // Setup cheat system
       const cheatSystem = new CheatSystem();
@@ -527,14 +549,31 @@ export class GameApp {
   }
 
   /**
-   * Per-frame update
+   * Get the currently active player entity using WorldResult contract
    */
+  private getActivePlayerEntity(): Player {
+    if (!this.currentWorld) {
+      throw new Error('[GameApp] No world loaded');
+    }
+    return this.currentWorld.getActivePlayer();
+  }
+
+  /**
+   * Get the currently active player mesh using WorldResult contract
+   */
+  private getActivePlayerMesh(): TransformNode {
+    if (!this.currentWorld) {
+      throw new Error('[GameApp] No world loaded');
+    }
+    return this.currentWorld.getActiveMesh();
+  }
+
   private update(dt: number) {
     // Update player controller
     this.playerController?.update(dt);
 
     // Determine active player for camera/systems
-    const activePlayer = this.boyPlayer?.isActive ? this.boyPlayer.mesh : this.girlPlayer?.isActive ? this.girlPlayer.mesh : this.player;
+    const activePlayer = this.getActivePlayerMesh();
 
     // Update companion AI
     if (this.companion && activePlayer) {
@@ -578,6 +617,11 @@ export class GameApp {
         this.debugOverlay.updateWakeState(1, targetId);
       }
     }
+    
+    // Update switch debug overlay (DEV only)
+    if (import.meta.env.DEV && this.switchDebugOverlay && this.currentWorld && this.taskSystem && this.progressionSystem) {
+      this.switchDebugOverlay.update(this.taskSystem, this.currentWorld, this.progressionSystem);
+    }
   }
 
   
@@ -600,8 +644,9 @@ export class GameApp {
     }
     
     // Reset player position
-    if (this.player) {
-      this.player.position.set(0, 0.9, 0);
+    if (this.currentWorld) {
+      const activePlayerMesh = this.getActivePlayerMesh();
+      activePlayerMesh.position.set(0, 0.9, 0);
     }
     
     // Reset companion to follow
@@ -665,7 +710,6 @@ export class GameApp {
     // Clean up wake radius system
     this.wakeRadiusSystem?.dispose();
     this.wakeRadiusSystem = null;
-    this.player = null;
 
     // Clean up debug overlay
     this.debugOverlay?.dispose();
@@ -687,6 +731,12 @@ export class GameApp {
     if (this.worldEditorKeyHandler) {
       window.removeEventListener('keydown', this.worldEditorKeyHandler);
       this.worldEditorKeyHandler = null;
+    }
+    
+    // Clean up switch debug overlay
+    if (this.switchDebugOverlay) {
+      this.switchDebugOverlay.dispose();
+      this.switchDebugOverlay = null;
     }
     
     // Stop ambient loop

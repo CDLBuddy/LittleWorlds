@@ -107,7 +107,7 @@ function extractIconKeys(content) {
 }
 
 /**
- * Validate areas reference valid tasks
+ * Validate areas reference valid tasks and have dual-player parity
  */
 async function validateAreas() {
   console.log('\n📋 Validating Areas...');
@@ -123,23 +123,46 @@ async function validateAreas() {
   const taskIds = extractTaskIds(tasksContent);
   success(`Found ${taskIds.size} task definitions`);
   
-  // Extract taskIds from areas
-  const areaTaskRegex = /taskIds:\s*\[([^\]]+)\]/g;
+  // Extract area definitions with tasksByRole
+  const areaRegex = /(\w+):\s*{\s*id:\s*['"](\w+)['"]/g;
+  const tasksByRoleRegex = /tasksByRole:\s*{\s*boy:\s*\[([^\]]*)\],\s*girl:\s*\[([^\]]*)\]/g;
+  
   let match;
   let areaCount = 0;
+  const areaIds = [];
   
-  while ((match = areaTaskRegex.exec(areasContent)) !== null) {
+  // Find all area IDs
+  while ((match = areaRegex.exec(areasContent)) !== null) {
+    areaIds.push(match[2]);
     areaCount++;
-    const taskList = match[1];
-    const referencedTasks = taskList.match(/'([^']+)'/g);
+  }
+  
+  // Validate tasksByRole for each area
+  let tasksByRoleMatch;
+  while ((tasksByRoleMatch = tasksByRoleRegex.exec(areasContent)) !== null) {
+    const boyTasks = tasksByRoleMatch[1].match(/'([^']+)'/g) || [];
+    const girlTasks = tasksByRoleMatch[2].match(/'([^']+)'/g) || [];
     
-    if (referencedTasks) {
-      referencedTasks.forEach(task => {
-        const taskId = task.replace(/'/g, '');
-        if (!taskIds.has(taskId)) {
-          error(`Area references unknown task: "${taskId}"`);
-        }
-      });
+    // Validate boy tasks
+    boyTasks.forEach(task => {
+      const taskId = task.replace(/'/g, '');
+      if (taskId && !taskIds.has(taskId)) {
+        error(`Area references unknown boy task: "${taskId}"`);
+      }
+    });
+    
+    // Validate girl tasks
+    girlTasks.forEach(task => {
+      const taskId = task.replace(/'/g, '');
+      if (taskId && !taskIds.has(taskId)) {
+        error(`Area references unknown girl task: "${taskId}"`);
+      }
+    });
+    
+    // Phase 2.7: Check dual-player parity
+    // Both roles should have tasks (can be empty for placeholder areas)
+    if (boyTasks.length === 0 && girlTasks.length === 0) {
+      warning('Area has no tasks for either role (placeholder area)');
     }
   }
   
@@ -276,6 +299,63 @@ async function validateVersion() {
 }
 
 /**
+ * Validate collections system (Phase 2.7.6)
+ */
+async function validateCollections() {
+  console.log('\n🎁 Validating Collections...');
+  
+  // Try to load collection area templates
+  const collectionAreas = ['backyard', 'woodline', 'creekside', 'pine', 'dusk', 'night', 'beach'];
+  let validCount = 0;
+  let totalFinds = 0;
+  
+  for (const areaId of collectionAreas) {
+    const content = await loadModule(`content/collections/areas/${areaId}.ts`);
+    if (!content) {
+      warning(`Collection area template missing: ${areaId}`);
+      continue;
+    }
+    
+    // Count finds
+    const findMatches = content.match(/id:\s*['"](\w+)['"]/g);
+    if (findMatches) {
+      const findCount = findMatches.length - 2; // Subtract trophy and postcard IDs
+      totalFinds += findCount;
+      
+      // Phase 2.7.6: Each area should have exactly 10 finds
+      if (findCount !== 10) {
+        warning(`Area '${areaId}' has ${findCount} finds, expected 10`);
+      }
+    }
+    
+    // Check for required hiding types
+    const hasEdge = content.includes('EDGE');
+    const hasUnder = content.includes('UNDER');
+    const hasInOn = content.includes('IN_ON');
+    const hasLandmark = content.includes('LANDMARK');
+    const hasSkillGated = content.includes('SKILL_GATED');
+    
+    if (!hasEdge || !hasUnder || !hasInOn || !hasLandmark || !hasSkillGated) {
+      warning(`Area '${areaId}' missing some hiding types (should have 2 of each)`);
+    }
+    
+    // Check for trophy
+    if (!content.includes('trophy:')) {
+      error(`Area '${areaId}' missing trophy definition`);
+    }
+    
+    // Check for postcard
+    if (!content.includes('postcard:')) {
+      error(`Area '${areaId}' missing postcard definition`);
+    }
+    
+    validCount++;
+  }
+  
+  success(`Validated ${validCount} collection areas with ${totalFinds} total finds`);
+}
+
+/**
  * Main validation flow
  */
 async function main() {
@@ -286,6 +366,7 @@ async function main() {
   await validateAreas();
   await validateTasks();
   await validateIcons();
+  await validateCollections();
   
   console.log('\n' + '═'.repeat(50));
   console.log('\n📊 Validation Summary:');

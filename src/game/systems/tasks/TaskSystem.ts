@@ -65,6 +65,16 @@ export class TaskSystem {
     this.emitTaskEvent();
   }
 
+  /**
+   * Clear current task (for completed areas or role switches)
+   */
+  clearTask(): void {
+    console.log('[TaskSystem] Clearing current task');
+    this.currentTask = null;
+    this.currentStepIndex = 0;
+    this.emitTaskEvent();
+  }
+
   getCurrentTargetId(): string | null {
     if (!this.currentTask || this.currentStepIndex >= this.currentTask.steps.length) {
       return null;

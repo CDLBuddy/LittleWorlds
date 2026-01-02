@@ -95,7 +95,7 @@ export function CollectablesTab() {
               
               {/* Progress pips */}
               <div style={{ display: 'flex', gap: '4px', flexWrap: 'wrap' }}>
-                {area.finds.map((find, idx) => {
+                {area.finds.map((find) => {
                   const found = foundIds.includes(find.id);
                   return (
                     <div 

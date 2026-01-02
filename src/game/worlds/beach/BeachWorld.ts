@@ -17,6 +17,8 @@ import { Player } from '@game/entities/player/Player';
 import { Companion } from '@game/entities/companion/Companion';
 import { SkySystem } from '@game/systems/sky/SkySystem';
 import type { RoleId } from '@game/content/areas';
+import type { WorldResult } from '../types';
+import { createWorldPlayers } from '../helpers';
 import { INTERACTABLE_ID, type InteractableId } from '@game/content/interactableIds';
 
 export const BEACH_INTERACTABLES = [
@@ -32,7 +34,7 @@ interface Interactable {
   alwaysActive?: boolean;
 }
 
-export function createBeachWorld(scene: Scene, eventBus: any, roleId: RoleId = 'boy', _fromArea?: string): {
+export function createBeachWorld(scene: Scene, eventBus: any, roleId: RoleId = 'boy', _fromArea?: string): WorldResult & {
   player: TransformNode;
   playerEntity: Player;
   companion: Companion;
@@ -68,7 +70,13 @@ export function createBeachWorld(scene: Scene, eventBus: any, roleId: RoleId = '
   ocean.material = oceanMat;
 
   // === PLAYER & COMPANION ===
-  const player = new Player(scene, new Vector3(0, 0.9, 27), roleId); // Beach only has one entry from Night (near south gate at z=37)
+  const spawnPos = new Vector3(0, 0.9, 27); // Beach only has one entry from Night (near south gate at z=37)
+  
+  // Create BOTH players using shared helper
+  const { boyPlayer, girlPlayer, activePlayer } = createWorldPlayers(scene, spawnPos, roleId);
+  const player = activePlayer.mesh;
+  const playerEntity = activePlayer;
+  
   const companion = new Companion(scene, new Vector3(3, 0.9, 29), eventBus);
 
   // === INTERACTABLES ===
@@ -102,14 +110,34 @@ export function createBeachWorld(scene: Scene, eventBus: any, roleId: RoleId = '
     ocean.dispose();
     oceanMat.dispose();
     skySystem.dispose();
-    player.dispose();
+    boyPlayer.dispose();
+    girlPlayer.dispose();
     companion.dispose();
     interactables.forEach(i => i.dispose());
   };
 
+  // Track current active role
+  let currentActiveRole: RoleId = roleId;
+
   return {
-    player: player.mesh,
-    playerEntity: player,
+    // WorldResult contract implementation
+    getActivePlayer: () => {
+      return currentActiveRole === 'boy' ? boyPlayer : girlPlayer;
+    },
+    getActiveMesh: () => {
+      return (currentActiveRole === 'boy' ? boyPlayer : girlPlayer).mesh;
+    },
+    setActiveRole: (newRoleId: RoleId) => {
+      currentActiveRole = newRoleId;
+      boyPlayer.setActive(newRoleId === 'boy');
+      girlPlayer.setActive(newRoleId === 'girl');
+    },
+    boyPlayer,
+    girlPlayer,
+    
+    // Legacy fields for backward compatibility
+    player,
+    playerEntity,
     companion,
     interactables,
     dispose,

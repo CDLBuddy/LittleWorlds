@@ -17,6 +17,8 @@ import { Player } from '@game/entities/player/Player';
 import { Companion } from '@game/entities/companion/Companion';
 import { SkySystem } from '@game/systems/sky/SkySystem';
 import type { RoleId } from '@game/content/areas';
+import type { WorldResult } from '../types';
+import { createWorldPlayers } from '../helpers';
 import { INTERACTABLE_ID, type InteractableId } from '@game/content/interactableIds';
 
 export const PINE_INTERACTABLES = [
@@ -32,7 +34,7 @@ interface Interactable {
   alwaysActive?: boolean;
 }
 
-export function createPineWorld(scene: Scene, eventBus: any, roleId: RoleId = 'boy', fromArea?: string): {
+export function createPineWorld(scene: Scene, eventBus: any, roleId: RoleId = 'boy', fromArea?: string): WorldResult & {
   player: TransformNode;
   playerEntity: Player;
   companion: Companion;
@@ -67,7 +69,12 @@ export function createPineWorld(scene: Scene, eventBus: any, roleId: RoleId = 'b
     // Coming from south gate (backward) or default - spawn near south
     spawnPos = new Vector3(0, 0.9, 60);
   }
-  const player = new Player(scene, spawnPos, roleId);
+  
+  // Create BOTH players using shared helper
+  const { boyPlayer, girlPlayer, activePlayer } = createWorldPlayers(scene, spawnPos, roleId);
+  const player = activePlayer.mesh;
+  const playerEntity = activePlayer;
+  
   const companion = new Companion(scene, new Vector3(3, 0.9, 62), eventBus);
 
   // === INTERACTABLES ===
@@ -100,14 +107,34 @@ export function createPineWorld(scene: Scene, eventBus: any, roleId: RoleId = 'b
     trailGround.dispose();
     trailMat.dispose();
     skySystem.dispose();
-    player.dispose();
+    boyPlayer.dispose();
+    girlPlayer.dispose();
     companion.dispose();
     interactables.forEach(i => i.dispose());
   };
 
+  // Track current active role
+  let currentActiveRole: RoleId = roleId;
+
   return {
-    player: player.mesh,
-    playerEntity: player,
+    // WorldResult contract implementation
+    getActivePlayer: () => {
+      return currentActiveRole === 'boy' ? boyPlayer : girlPlayer;
+    },
+    getActiveMesh: () => {
+      return (currentActiveRole === 'boy' ? boyPlayer : girlPlayer).mesh;
+    },
+    setActiveRole: (newRoleId: RoleId) => {
+      currentActiveRole = newRoleId;
+      boyPlayer.setActive(newRoleId === 'boy');
+      girlPlayer.setActive(newRoleId === 'girl');
+    },
+    boyPlayer,
+    girlPlayer,
+    
+    // Legacy fields for backward compatibility
+    player,
+    playerEntity,
     companion,
     interactables,
     dispose,

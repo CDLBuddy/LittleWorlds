@@ -23,6 +23,8 @@ import type { RoleId } from '@game/content/areas';
 import type { AppEvent } from '@game/shared/events';
 import { INTERACTABLE_ID, type InteractableId } from '@game/content/interactableIds';
 import { snapshotPerf, logPerfSnapshot } from '@game/debug/perfSnapshot';
+import type { WorldResult } from '../types';
+import { createWorldPlayers } from '../helpers';
 
 export const BACKYARD_INTERACTABLES = [
   INTERACTABLE_ID.SLINGSHOT_PICKUP,
@@ -40,11 +42,9 @@ interface Interactable {
   alwaysActive?: boolean; // If true, can be interacted with even without an active task
 }
 
-export function createBackyardWorld(scene: Scene, eventBus: { emit: (event: AppEvent) => void }, roleId: RoleId = 'boy', fromArea?: string): {
+export function createBackyardWorld(scene: Scene, eventBus: { emit: (event: AppEvent) => void }, roleId: RoleId = 'boy', fromArea?: string): WorldResult & {
   player: TransformNode;
   playerEntity: Player;
-  boyPlayer: Player;
-  girlPlayer: Player;
   companion: Companion;
   interactables: Interactable[];
   dispose: () => void;
@@ -423,13 +423,12 @@ export function createBackyardWorld(scene: Scene, eventBus: { emit: (event: AppE
     spawnPos = new Vector3(0, 0, 20);
   }
   
-  // Create BOTH players (boy and girl) - only one is active
-  const boyPlayer = new Player(scene, spawnPos, 'boy', roleId === 'boy');
-  const girlPlayer = new Player(scene, spawnPos.clone().add(new Vector3(2, 0, 0)), 'girl', roleId === 'girl');
+  // Create BOTH players using shared helper
+  const { boyPlayer, girlPlayer, activePlayer } = createWorldPlayers(scene, spawnPos, roleId);
   
   // Set the active player reference for backward compatibility
-  const player = roleId === 'boy' ? boyPlayer.mesh : girlPlayer.mesh;
-  const playerEntity = roleId === 'boy' ? boyPlayer : girlPlayer;
+  const player = activePlayer.mesh;
+  const playerEntity = activePlayer;
 
   // Companion spawn relative to active player
   const companion = new Companion(scene, spawnPos.clone().add(new Vector3(3, 0, 2)), eventBus);
@@ -561,11 +560,28 @@ export function createBackyardWorld(scene: Scene, eventBus: { emit: (event: AppE
     interactables.forEach(i => i.dispose());
   };
 
+  // Track current active role
+  let currentActiveRole: RoleId = roleId;
+
   return {
-    player,
-    playerEntity,
+    // WorldResult contract implementation
+    getActivePlayer: () => {
+      return currentActiveRole === 'boy' ? boyPlayer : girlPlayer;
+    },
+    getActiveMesh: () => {
+      return (currentActiveRole === 'boy' ? boyPlayer : girlPlayer).mesh;
+    },
+    setActiveRole: (newRoleId: RoleId) => {
+      currentActiveRole = newRoleId;
+      boyPlayer.setActive(newRoleId === 'boy');
+      girlPlayer.setActive(newRoleId === 'girl');
+    },
     boyPlayer,
     girlPlayer,
+    
+    // Legacy fields for backward compatibility (will be removed in Phase 2.7 hardening add-ons)
+    player,
+    playerEntity,
     companion,
     interactables,
     dispose,

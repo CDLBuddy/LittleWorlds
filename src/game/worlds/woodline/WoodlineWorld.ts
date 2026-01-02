@@ -24,6 +24,8 @@ import type { RoleId } from '@game/content/areas';
 import { INTERACTABLE_ID, type InteractableId } from '@game/content/interactableIds';
 import { snapshotPerf, logPerfSnapshot } from '@game/debug/perfSnapshot';
 import { saveFacade } from '@game/systems/saves/saveFacade';
+import type { WorldResult } from '../types';
+import { createWorldPlayers } from '../helpers';
 
 export const WOODLINE_INTERACTABLES = [
   INTERACTABLE_ID.WOODLINE_CAMPFIRE,
@@ -47,7 +49,7 @@ interface CampfireInteractable extends Interactable {
   isLit: () => boolean;
 }
 
-export function createWoodlineWorld(scene: Scene, eventBus: any, roleId: RoleId = 'boy', fromArea?: string): {
+export function createWoodlineWorld(scene: Scene, eventBus: any, roleId: RoleId = 'boy', fromArea?: string): WorldResult & {
   player: TransformNode;
   playerEntity: Player;
   companion: Companion;
@@ -225,7 +227,11 @@ export function createWoodlineWorld(scene: Scene, eventBus: any, roleId: RoleId 
     // Coming from backyard gate (south at z=40) or default - spawn near south
     spawnPos = new Vector3(0, 0, 30);
   }
-  const player = new Player(scene, spawnPos, roleId);
+  
+  // Create BOTH players using shared helper
+  const { boyPlayer, girlPlayer, activePlayer } = createWorldPlayers(scene, spawnPos, roleId);
+  const player = activePlayer.mesh;
+  const playerEntity = activePlayer;
 
   // Companion spawn relative to player
   const companion = new Companion(scene, spawnPos.clone().add(new Vector3(3, 0, 2)), eventBus);
@@ -344,15 +350,35 @@ export function createWoodlineWorld(scene: Scene, eventBus: any, roleId: RoleId 
       t.material?.dispose();
       t.dispose();
     });
-    player.dispose();
+    boyPlayer.dispose();
+    girlPlayer.dispose();
     companion.dispose();
     interactables.forEach(i => i.dispose());
     skySystem.dispose();
   };
 
+  // Track current active role
+  let currentActiveRole: RoleId = roleId;
+
   return {
-    player: player.mesh,
-    playerEntity: player,
+    // WorldResult contract implementation
+    getActivePlayer: () => {
+      return currentActiveRole === 'boy' ? boyPlayer : girlPlayer;
+    },
+    getActiveMesh: () => {
+      return (currentActiveRole === 'boy' ? boyPlayer : girlPlayer).mesh;
+    },
+    setActiveRole: (newRoleId: RoleId) => {
+      currentActiveRole = newRoleId;
+      boyPlayer.setActive(newRoleId === 'boy');
+      girlPlayer.setActive(newRoleId === 'girl');
+    },
+    boyPlayer,
+    girlPlayer,
+    
+    // Legacy fields for backward compatibility
+    player,
+    playerEntity,
     companion,
     interactables,
     campfire: campfireInteractable,

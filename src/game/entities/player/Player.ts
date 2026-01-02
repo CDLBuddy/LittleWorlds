@@ -186,6 +186,19 @@ export class Player {
 
   public setActive(active: boolean): void {
     this.isActive = active;
+    
+    // De-physicalize inactive player to prevent ghost interactions
+    // Cast to any since TransformNode doesn't expose these, but the underlying FBX nodes have them
+    const mesh = this.mesh as any;
+    mesh.isPickable = active; // Disable ray picking when inactive
+    mesh.checkCollisions = active; // Disable collision detection when inactive
+    
+    // Apply to all child meshes as well
+    this.mesh.getChildMeshes().forEach(childMesh => {
+      (childMesh as any).isPickable = active;
+      (childMesh as any).checkCollisions = active;
+    });
+    
     // If inactive, play idle animation
     if (!active) {
       this.playAnimation('idle', true);

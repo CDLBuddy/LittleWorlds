@@ -68,6 +68,12 @@ export class InteractionSystem {
       if (target) {
         this.handleInteraction(target, targetId, playerPos, dt, true);
         return;
+      } else {
+        // Log when target not found (only once per targetId to avoid spam)
+        if (!this.lastPromptId || this.lastPromptId !== `missing:${targetId}`) {
+          console.warn(`[InteractionSystem] Task target "${targetId}" not found in registered interactables. Available:`, this.interactables.map(i => i.id));
+          this.lastPromptId = `missing:${targetId}`;
+        }
       }
     }
     
@@ -163,7 +169,11 @@ export class InteractionSystem {
     }
   }
 
-  private clearDwell(): void {
+  /**
+   * Clear current dwell state and prompts
+   * Public so CharacterSwitchSystem can reset interaction state
+   */
+  clearDwell(): void {
     if (this.dwellTarget) {
       this.eventBus.emit({ type: 'game/dwellClear', id: this.dwellTarget });
     }
@@ -173,6 +183,7 @@ export class InteractionSystem {
     }
     this.dwellTarget = null;
     this.dwellTime = 0;
+    this.interactionCooldown = 0; // Also clear cooldown to allow immediate interaction
   }
 
   dispose(): void {
