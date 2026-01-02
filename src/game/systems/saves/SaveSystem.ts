@@ -15,13 +15,22 @@ export interface SaveDataV1 {
   worldId: string;
 }
 
-// v2 format with dual-role progression
+// v2+ format with dual-role progression
 export interface RoleProgress {
   unlockedAreas: string[];      // AreaId[]
   completedAreas: string[];     // AreaId[]
   completedTasks: string[];     // task ids
-  inventory: string[];          // persistent per role (future-ready)
+  inventory: string[];          // persistent per role
   lastAreaId: string;           // AreaId
+}
+
+// Shared state across both roles (collections, upgrades)
+export interface SharedState {
+  findsByArea: Record<string, string[]>;      // areaId -> findIds[]
+  trophiesByArea: Record<string, boolean>;    // areaId -> collected
+  postcardsByArea: Record<string, boolean>;   // areaId -> collected
+  audioByArea: Record<string, boolean>;       // areaId -> unlocked
+  campUpgrades: string[];                     // upgradeIds[]
 }
 
 export interface SaveData {
@@ -30,12 +39,13 @@ export interface SaveData {
   slotId: string;
   roles: Record<'boy' | 'girl', RoleProgress>;
   lastSelectedRole: 'boy' | 'girl' | null;
+  shared: SharedState;                       // Shared collections/progression
   worldFlags?: Record<string, Record<string, any>>; // Per-world persistent flags
 }
 
 export class SaveSystem {
   private currentSlot: string | null = null;
-  private readonly SAVE_VERSION = 3;
+  private readonly SAVE_VERSION = 4; // Bumped for shared collections
   private readonly STORAGE_PREFIX = 'littleworlds_save_';
 
   /**
@@ -64,6 +74,13 @@ export class SaveSystem {
         girl: this.createDefaultRoleProgress(),
       },
       lastSelectedRole: null,
+      shared: {
+        findsByArea: {},
+        trophiesByArea: {},
+        postcardsByArea: {},
+        audioByArea: {},
+        campUpgrades: [],
+      },
       worldFlags: {}, // Empty world flags registry
     };
   }

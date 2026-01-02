@@ -44,6 +44,14 @@ class SaveFacade {
   }
 
   /**
+   * Get the last selected role
+   */
+  getLastSelectedRole(): 'boy' | 'girl' | null {
+    const save = this.loadMain();
+    return save.lastSelectedRole;
+  }
+
+  /**
    * Get unlocked areas for a role
    */
   getUnlockedAreas(roleId: 'boy' | 'girl'): string[] {
@@ -175,6 +183,33 @@ class SaveFacade {
       delete save.worldFlags[areaId];
     }
     this.writeMain(save);
+    return save;
+  }
+
+  /**
+   * Get shared collections state
+   */
+  getShared(): import('./SaveSystem').SharedState {
+    const save = this.loadMain();
+    return save.shared;
+  }
+
+  /**
+   * Update shared collections state and emit event
+   */
+  setShared(nextShared: Partial<import('./SaveSystem').SharedState>): SaveData {
+    const save = this.loadMain();
+    save.shared = { ...save.shared, ...nextShared };
+    this.writeMain(save);
+    
+    // Emit collections update event if eventBus is available
+    if (typeof window !== 'undefined' && (window as any).__lwEventBus) {
+      (window as any).__lwEventBus.emit({ 
+        type: 'game/collectionsUpdate', 
+        shared: save.shared 
+      });
+    }
+    
     return save;
   }
 }

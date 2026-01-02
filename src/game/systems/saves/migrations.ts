@@ -87,6 +87,24 @@ export const migrations: Record<number, Migration> = {
       },
     };
   },
+
+  // Migrate from version 3 to 4 (add shared collections structure)
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
+  4: (data: any) => {
+    return {
+      ...data,
+      version: 4,
+      shared: {
+        findsByArea: {},
+        trophiesByArea: {},
+        postcardsByArea: {},
+        audioByArea: {},
+        campUpgrades: [],
+      },
+      // Ensure lastSelectedRole exists (may be missing in v3)
+      lastSelectedRole: data.lastSelectedRole ?? null,
+    };
+  },
 };
 
 // eslint-disable-next-line @typescript-eslint/no-explicit-any

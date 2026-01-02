@@ -14,12 +14,14 @@ export class TaskSystem {
   private currentTask: Task | null = null;
   private currentStepIndex = 0;
   private inventory = new Set<string>();
+  private currentRole: 'boy' | 'girl' = 'boy'; // Track current character
   private eventBusSub: (() => void) | null = null;
 
   constructor(private eventBus: EventBus) {
     // Listen for inventory requests from UI
     this.eventBusSub = this.eventBus.on((evt) => {
       if (evt.type === 'ui/getInventory') {
+        console.log('[TaskSystem] UI requested inventory, current role:', this.currentRole, 'items:', this.inventory.size);
         this.broadcastInventory();
       }
     });
@@ -28,6 +30,33 @@ export class TaskSystem {
   addItem(itemId: string): void {
     this.inventory.add(itemId);
     this.broadcastInventory();
+  }
+
+  /**
+   * Get current character role
+   */
+  getCurrentRole(): 'boy' | 'girl' {
+    return this.currentRole;
+  }
+
+  /**
+   * Set inventory from array (for restoring from save)
+   */
+  setInventory(items: string[]): void {
+    this.inventory.clear();
+    items.forEach(item => this.inventory.add(item));
+    this.broadcastInventory();
+  }
+
+  /**
+   * Switch character role and inventory
+   */
+  switchCharacter(roleId: 'boy' | 'girl', items: string[]): void {
+    this.currentRole = roleId;
+    this.inventory.clear();
+    items.forEach(item => this.inventory.add(item));
+    this.broadcastInventory();
+    console.log(`[TaskSystem] Switched to ${roleId} with ${items.length} items`);
   }
 
   startTask(task: Task): void {
@@ -139,7 +168,12 @@ export class TaskSystem {
 
   private broadcastInventory(): void {
     const items = Array.from(this.inventory);
-    this.eventBus.emit({ type: 'game/inventoryUpdate', items });
+    console.log('[TaskSystem] Broadcasting inventory:', this.currentRole, items);
+    this.eventBus.emit({ 
+      type: 'game/inventoryUpdate', 
+      roleId: this.currentRole,
+      items 
+    });
   }
 
   private emitTaskEvent(): void {

@@ -43,6 +43,8 @@ interface Interactable {
 export function createBackyardWorld(scene: Scene, eventBus: { emit: (event: AppEvent) => void }, roleId: RoleId = 'boy', fromArea?: string): {
   player: TransformNode;
   playerEntity: Player;
+  boyPlayer: Player;
+  girlPlayer: Player;
   companion: Companion;
   interactables: Interactable[];
   dispose: () => void;
@@ -420,9 +422,16 @@ export function createBackyardWorld(scene: Scene, eventBus: { emit: (event: AppE
     // Default spawn (center-front near house)
     spawnPos = new Vector3(0, 0, 20);
   }
-  const player = new Player(scene, spawnPos, roleId);
+  
+  // Create BOTH players (boy and girl) - only one is active
+  const boyPlayer = new Player(scene, spawnPos, 'boy', roleId === 'boy');
+  const girlPlayer = new Player(scene, spawnPos.clone().add(new Vector3(2, 0, 0)), 'girl', roleId === 'girl');
+  
+  // Set the active player reference for backward compatibility
+  const player = roleId === 'boy' ? boyPlayer.mesh : girlPlayer.mesh;
+  const playerEntity = roleId === 'boy' ? boyPlayer : girlPlayer;
 
-  // Companion spawn relative to player
+  // Companion spawn relative to active player
   const companion = new Companion(scene, spawnPos.clone().add(new Vector3(3, 0, 2)), eventBus);
 
   // === INTERACTABLES ===
@@ -546,14 +555,17 @@ export function createBackyardWorld(scene: Scene, eventBus: { emit: (event: AppE
       f.material?.dispose();
       f.dispose();
     });
-    player.dispose();
+    boyPlayer.dispose();
+    girlPlayer.dispose();
     companion.dispose();
     interactables.forEach(i => i.dispose());
   };
 
   return {
-    player: player.mesh,
-    playerEntity: player,
+    player,
+    playerEntity,
+    boyPlayer,
+    girlPlayer,
     companion,
     interactables,
     dispose,

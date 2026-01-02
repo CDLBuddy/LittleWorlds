@@ -23,10 +23,12 @@ export class Player {
   private modelLoaded = false;
   private scene: Scene;
   private roleId: RoleId;
+  public isActive = false; // Controls whether this player receives input/camera
 
-  constructor(scene: Scene, position: Vector3, roleId: RoleId = 'boy') {
+  constructor(scene: Scene, position: Vector3, roleId: RoleId = 'boy', isActive = true) {
     this.scene = scene;
     this.roleId = roleId;
+    this.isActive = isActive;
     
     // Create root transform immediately
     this.mesh = new TransformNode('player', scene);
@@ -180,6 +182,18 @@ export class Player {
       });
       this.playAnimation('celebrate', false);
     }
+  }
+
+  public setActive(active: boolean): void {
+    this.isActive = active;
+    // If inactive, play idle animation
+    if (!active) {
+      this.playAnimation('idle', true);
+    }
+  }
+
+  public getRoleId(): RoleId {
+    return this.roleId;
   }
 
   dispose(): void {

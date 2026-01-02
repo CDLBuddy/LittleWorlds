@@ -729,6 +729,11 @@ export class PlayerController {
   public update(dt: number): void {
     if (!this.enabled) return;
     if (!Number.isFinite(dt) || dt <= 0) return;
+    
+    // Only control the active player
+    if (this.playerEntity && !this.playerEntity.isActive) {
+      return;
+    }
 
     // Clamp dt for stability (tab switching / frame spikes)
     dt = Math.min(dt, 0.05);

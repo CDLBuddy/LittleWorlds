@@ -1,3 +1,4 @@
+//src\ui\hud\widgets\InventoryDisplay.tsx
 import { useEffect, useState } from 'react';
 import { eventBus, type AppEvent } from '../../../game/shared/events';
 
