@@ -35,7 +35,7 @@ export type GameToUi =
   | { type: 'game/fps'; fps: number }
   | { type: 'game/prompt'; id: string; icon: PromptIcon; worldPos?: { x: number; y: number; z: number } }
   | { type: 'game/promptClear'; id?: string }
-  | { type: 'game/task'; taskId: string; stepIndex: number; complete?: boolean }
+  | { type: 'game/task'; taskId: string; stepIndex: number; complete?: boolean; roleId: 'boy' | 'girl'; switchSeq?: number }
   | { type: 'game/taskComplete'; taskId: string; position: { x: number; y: number; z: number } }
   | { type: 'game/companion/state'; state: CompanionState; targetId?: string }
   | { type: 'game/audio/locked'; locked: boolean }

@@ -73,19 +73,44 @@ export class ProgressionSystem {
 
   /**
    * Handle task completion event
+   * @param taskId - The task that was completed
+   * @param complete - Whether the task is complete
+   * @param roleId - The role that completed the task (from event stamp)
    */
-  handleTaskEvent(taskId: string, complete: boolean): void {
+  handleTaskEvent(taskId: string, complete: boolean, roleId?: RoleId): void {
     if (!complete) return;
 
-    console.log(`[ProgressionSystem] Task complete: ${taskId}`);
+    // Determine effective role (prefer stamped role from event)
+    const effectiveRole = roleId ?? this.roleId;
 
-    // Mark task as complete in save
-    saveFacade.markTaskComplete(this.roleId, taskId);
+    // SAFETY: Reject stale role completions (task was for a different role)
+    if (roleId && roleId !== this.roleId) {
+      console.warn(
+        `[ProgressionSystem] ⚠️  Ignoring task event for ${roleId} while current role is ${this.roleId}`,
+        { taskId, effectiveRole, currentRole: this.roleId }
+      );
+      return;
+    }
+
+    // SAFETY: Reject out-of-order completions (prevents duplicate/stale task events)
+    const expectedId = this.taskIds[this.currentTaskIndex];
+    if (taskId !== expectedId) {
+      console.warn(
+        `[ProgressionSystem] ⚠️  Ignoring stale/out-of-order completion`,
+        { expected: expectedId, got: taskId, index: this.currentTaskIndex }
+      );
+      return;
+    }
+
+    console.log(`[ProgressionSystem] Task complete: ${taskId} (role: ${effectiveRole})`);
+
+    // Mark task as complete in save (using effective role)
+    saveFacade.markTaskComplete(effectiveRole, taskId);
 
     // If using boot fallback, treat campfire completion as Backyard complete
     if (this.usingBootFallback && taskId === campfire_v1.id) {
       console.log('[ProgressionSystem] BootWorld fallback: Marking Backyard complete');
-      this.completeArea();
+      this.completeArea(effectiveRole);
       return;
     }
 
@@ -95,7 +120,7 @@ export class ProgressionSystem {
     if (this.currentTaskIndex >= this.taskIds.length) {
       // All tasks in area complete
       console.log(`[ProgressionSystem] All tasks complete in ${this.areaId}`);
-      this.completeArea();
+      this.completeArea(effectiveRole);
     } else {
       // Load next task
       this.loadCurrentTask();
@@ -104,19 +129,20 @@ export class ProgressionSystem {
 
   /**
    * Mark area as complete and unlock next
+   * @param roleId - The role completing the area (defaults to this.roleId)
    */
-  private completeArea(): void {
+  private completeArea(roleId: RoleId = this.roleId): void {
     const area = AREAS[this.areaId];
     const nextAreaId = area?.next;
 
-    console.log(`[ProgressionSystem] Completing area ${this.areaId}, next: ${nextAreaId || 'none'}`);
+    console.log(`[ProgressionSystem] Completing area ${this.areaId} for ${roleId}, next: ${nextAreaId || 'none'}`);
 
-    // Mark area complete and unlock next
-    saveFacade.markAreaComplete(this.roleId, this.areaId, nextAreaId);
+    // Mark area complete and unlock next (using explicit roleId)
+    saveFacade.markAreaComplete(roleId, this.areaId, nextAreaId);
 
-    // Save inventory state
+    // Save inventory state (using explicit roleId)
     const inventory = this.taskSystem.getInventory();
-    saveFacade.setInventory(this.roleId, inventory);
+    saveFacade.setInventory(roleId, inventory);
     
     // Emit toast for area completion (cast to any as ui/toast is not in GameToUi union)
     if (nextAreaId) {

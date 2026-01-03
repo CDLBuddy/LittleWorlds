@@ -1,3 +1,4 @@
+// GameApp.ts - Main game application orchestrator
 import { Engine, Scene, AbstractMesh, TransformNode } from '@babylonjs/core';
 import { eventBus } from './shared/events';
 import { createBootWorld } from './worlds/BootWorld';
@@ -41,7 +42,7 @@ export class GameApp {
   private taskSystem: TaskSystem | null = null;
   private interactionSystem: InteractionSystem | null = null;
   private companion: Companion | null = null;
-  private campfire: typeof import('@game/entities/props/Campfire').Campfire.prototype | null = null;
+  private campfire: { update?: (dt: number) => void } | null = null;
   private debugOverlay: DebugOverlay | null = null;
   private interactables: Array<{ id: string; mesh: AbstractMesh }> = [];
   private eventUnsubscribe: (() => void) | null = null;
@@ -114,9 +115,10 @@ export class GameApp {
         // Check for task completion
         if (event.complete && this.currentWorld) {
           const activePlayerMesh = this.getActivePlayerMesh();
-          // Notify progression system
+          // Notify progression system (Phase 2.9: pass role-stamped roleId)
           if (this.progressionSystem) {
-            this.progressionSystem.handleTaskEvent(event.taskId, true);
+            // event.roleId is guaranteed to exist on game/task events (Phase 2.9)
+            this.progressionSystem.handleTaskEvent(event.taskId, true, event.roleId as RoleId);
           }
           // Spawn confetti at player position
           this.fxSystem?.spawnConfetti(activePlayerMesh.position.clone());
@@ -261,7 +263,7 @@ export class GameApp {
       playerEntity: Player;
       companion: Companion;
       interactables: Array<{ id: string; mesh: AbstractMesh; interact: () => void; dispose: () => void }>;
-      campfire?: any;
+      campfire?: unknown;
       dispose: () => void;
     };
     
@@ -302,7 +304,7 @@ export class GameApp {
     this.worldDispose = world.dispose;
     this.currentWorld = world; // Store WorldResult reference
     this.companion = world.companion;
-    this.campfire = world.campfire || null;
+    this.campfire = (world.campfire as { update?: (dt: number) => void }) || null;
     this.interactables = world.interactables;
     
     // Create camera rig
@@ -360,7 +362,7 @@ export class GameApp {
     
     // Enable dynamic registration for late-loading assets
     if ('registerDynamic' in world && typeof world.registerDynamic === 'function') {
-      world.registerDynamic((interactable: { id: string; mesh: AbstractMesh; interact: () => void; dispose: () => void }) => {
+      (world.registerDynamic as (callback: (interactable: { id: string; mesh: AbstractMesh; interact: () => void; dispose: () => void }) => void) => void)((interactable: { id: string; mesh: AbstractMesh; interact: () => void; dispose: () => void }) => {
         this.interactionSystem!.registerInteractable(interactable);
         console.log(`[GameApp] Dynamically registered interactable: ${interactable.id}`);
       });
@@ -384,7 +386,7 @@ export class GameApp {
           type: 'ui/toast', 
           level: 'warning', 
           message: `Dev: Area ${this.startParams.areaId} missing manifest` 
-        } as any);
+        });
       }
     }
 
@@ -433,6 +435,85 @@ export class GameApp {
 
     // Create debug overlay (dev only)
     if (import.meta.env.DEV) {
+      // === DEV TRACE HARNESS (Phase 2.8) ===
+      console.log('[GameApp] Initializing Phase 2.8 trace harness...');
+      
+      // Import trace utilities
+      const { trace } = await import('./debug/trace/trace');
+      const { traceBuffer } = await import('./debug/trace/TraceBuffer');
+      const { attachEventBusTap } = await import('./debug/trace/attachEventBusTap');
+      const { attachSaveFacadeTap } = await import('./debug/trace/attachSaveFacadeTap');
+      const { setSnapshotRefs, captureSnapshot, isSnapshotConsistent, getSnapshotMismatches } = await import('./debug/trace/snapshot');
+      
+      // Set snapshot system references
+      if (this.taskSystem && this.currentWorld && this.progressionSystem && this.autosaveSystem) {
+        setSnapshotRefs(
+          this.taskSystem,
+          this.currentWorld,
+          this.progressionSystem,
+          this.autosaveSystem as unknown as { roleId?: 'boy' | 'girl' }
+        );
+      }
+      
+      // Attach taps to EventBus and saveFacade
+      attachEventBusTap(this.bus);
+      attachSaveFacadeTap(saveFacade as Parameters<typeof attachSaveFacadeTap>[0]);
+      
+      // Expose globals for console access
+      (window as { __trace?: typeof trace }).__trace = trace;
+      (window as { __traceDump?: (count?: number, category?: 'event' | 'save' | 'switch' | 'system' | 'error') => unknown }).__traceDump = (count?: number, category?: 'event' | 'save' | 'switch' | 'system' | 'error') => {
+        const entries = category ? traceBuffer.getByCategory(category, count) : traceBuffer.getLast(count);
+        console.group(`📊 Trace Dump (${entries.length} entries)`);
+        entries.forEach((entry, _idx) => {
+          const time = new Date(entry.t).toLocaleTimeString('en-US', { hour12: false });
+          const icon = entry.level === 'error' ? '🔥' : entry.level === 'warn' ? '⚠️' : '📝';
+          console.log(`${icon} [${time}] [${entry.cat}] ${entry.msg}`, entry.data ?? '');
+        });
+        console.groupEnd();
+        return entries;
+      };
+      
+      (window as { __traceClear?: () => void }).__traceClear = () => {
+        traceBuffer.clear();
+        console.log('🧹 Trace buffer cleared');
+      };
+      
+      (window as { __traceStats?: () => unknown }).__traceStats = () => {
+        const stats = traceBuffer.getStats();
+        console.log('📊 Trace buffer stats:', stats);
+        return stats;
+      };
+      
+      (window as { __snapshot?: () => unknown }).__snapshot = () => {
+        const snap = captureSnapshot();
+        const consistent = isSnapshotConsistent(snap);
+        const mismatches = getSnapshotMismatches(snap);
+        console.group('📸 Role Snapshot');
+        console.log('TaskSystem role:', snap.taskRole);
+        console.log('World role:', snap.worldRole);
+        console.log('ProgressionSystem role:', snap.progressRole);
+        console.log('AutosaveSystem role:', snap.autosaveRole);
+        console.log('Inventory count:', snap.inventoryCount);
+        console.log('Current task:', snap.currentTaskId);
+        console.log('---');
+        console.log(consistent ? '✅ All roles consistent' : '❌ ROLE DESYNC DETECTED');
+        if (mismatches.length > 0) {
+          console.error('Mismatches:', mismatches);
+        }
+        console.groupEnd();
+        return snap;
+      };
+      
+      console.log('[GameApp] ✅ Trace harness initialized');
+      console.log('[GameApp] Available commands:');
+      console.log('  - __traceDump(count?, category?) — Show last N trace entries');
+      console.log('  - __traceClear() — Clear trace buffer');
+      console.log('  - __traceStats() — Show buffer stats');
+      console.log('  - __snapshot() — Capture current role state across all systems');
+      console.log('  - window.__traceConfig — Toggle console logging per category');
+      
+      // === END TRACE HARNESS ===
+      
       this.debugOverlay = new DebugOverlay(this.scene);
       this.companionDebugHelper = new CompanionDebugHelper();
       if (this.companion) {
@@ -467,12 +548,12 @@ export class GameApp {
       cheats.forEach(cheat => cheatSystem.registerCheat(cheat));
       
       // Expose to window for console access
-      (window as any).__cheats = cheatSystem;
-      (window as any).giveitem = (itemId: string) => cheatSystem.giveItem(itemId);
-      (window as any).givefind = (areaId: string, findId: string) => cheatSystem.giveFind(areaId, findId);
-      (window as any).setfindcount = (areaId: string, count: number) => cheatSystem.setFindCount(areaId, count);
-      (window as any).unlockpostcard = (areaId: string) => cheatSystem.unlockPostcard(areaId);
-      (window as any).unlocktrophy = (areaId: string) => cheatSystem.unlockTrophy(areaId);
+      (window as { __cheats?: CheatSystem }).__cheats = cheatSystem;
+      (window as { giveitem?: (itemId: string) => void }).giveitem = (itemId: string) => cheatSystem.giveItem(itemId);
+      (window as { givefind?: (areaId: string, findId: string) => void }).givefind = (areaId: string, findId: string) => cheatSystem.giveFind(areaId, findId);
+      (window as { setfindcount?: (areaId: string, count: number) => void }).setfindcount = (areaId: string, count: number) => cheatSystem.setFindCount(areaId, count);
+      (window as { unlockpostcard?: (areaId: string) => void }).unlockpostcard = (areaId: string) => cheatSystem.unlockPostcard(areaId);
+      (window as { unlocktrophy?: (areaId: string) => void }).unlocktrophy = (areaId: string) => cheatSystem.unlockTrophy(areaId);
 
       console.log('[GameApp] Press F2 to toggle World Editor');
       console.log('[GameApp] Cheats available:');

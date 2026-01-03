@@ -1,41 +1,56 @@
 /**
  * PineWorld - Fourth playable area (late afternoon ascent)
  * 90×160 uphill trail through pine forest
- * Late afternoon atmosphere, pine needle sounds, lantern crafting
+ *
+ * Visual Greybox Goals:
+ * - Uphill reads instantly (slope + switchback trail ribbon + berm props)
+ * - Dense forest walls (procedural scatter bands)
+ * - Key locations implied (cairns, overlook, lantern station, cache)
+ * - Optional billboard cloud FX (if not already handled by SkySystem)
  */
 
-import {
-  Scene,
-  Color3,
-  Vector3,
-  MeshBuilder,
-  StandardMaterial,
-  AbstractMesh,
-  TransformNode,
-} from '@babylonjs/core';
-import { Player } from '@game/entities/player/Player';
-import { Companion } from '@game/entities/companion/Companion';
-import { SkySystem } from '@game/systems/sky/SkySystem';
+import { Color3, type Scene } from '@babylonjs/core';
 import type { RoleId } from '@game/content/areas';
 import type { WorldResult } from '../types';
 import { createWorldPlayers } from '../helpers';
-import { INTERACTABLE_ID, type InteractableId } from '@game/content/interactableIds';
+import { INTERACTABLE_ID } from '@game/content/interactableIds';
+import { Player } from '@game/entities/player/Player';
+import { Companion } from '@game/entities/companion/Companion';
+import { SkySystem } from '@game/systems/sky/SkySystem';
+import { BillboardCloudSystem } from '@game/systems/sky/BillboardCloudSystem';
 
-export const PINE_INTERACTABLES = [
-  INTERACTABLE_ID.PINE_DUSK_GATE,
-  INTERACTABLE_ID.PINE_CREEK_GATE,
-] as const satisfies readonly InteractableId[];
+// Pine world modules (clean barrel import)
+import {
+  createTerrain,
+  createTerrainGuards,
+  createTrailRibbon,
+  createForest,
+  createProps,
+  createMarkers,
+  createGateInteractable,
+  WORLD_ID,
+  PINE_TERRAIN,
+  DisposableBag,
+  MaterialCache,
+  withBase,
+  atTerrain,
+  type Interactable,
+} from './index';
 
-interface Interactable {
-  id: string;
-  mesh: AbstractMesh;
-  interact: () => void;
-  dispose: () => void;
-  alwaysActive?: boolean;
-}
+// Re-export for worldManifest
+export { PINE_INTERACTABLES } from './index';
 
-export function createPineWorld(scene: Scene, eventBus: any, roleId: RoleId = 'boy', fromArea?: string): WorldResult & {
-  player: TransformNode;
+// ------------------------------------------------------------
+// Main world factory
+// ------------------------------------------------------------
+
+export function createPineWorld(
+  scene: Scene,
+  eventBus: { emit: (event: any) => void },
+  roleId: RoleId = 'boy',
+  fromArea?: string
+): WorldResult & {
+  player: any;
   playerEntity: Player;
   companion: Companion;
   interactables: Interactable[];
@@ -43,87 +58,138 @@ export function createPineWorld(scene: Scene, eventBus: any, roleId: RoleId = 'b
 } {
   console.log('[PineWorld] Creating Pine Trails world...');
 
-  // Apply Pine Trails sky, fog, and lighting via SkySystem
+  // Centralized disposal (prevents double-dispose + missed mats)
+  const bag = new DisposableBag();
+  const mats = new MaterialCache(bag);
+
+  // --- SKY / LOOK (SkySystem) ---
   const skySystem = new SkySystem(scene);
-  void skySystem.apply('pinetrails', 0);
+  bag.trackOther(skySystem);
+  void skySystem.apply(WORLD_ID, 0);
 
-  // === LAYOUT: 90×160 uphill trail ===
-  // Main trail ground (follows elevation)
-  const trailGround = MeshBuilder.CreateGround('pine_trail', { width: 90, height: 160 }, scene);
-  trailGround.position = new Vector3(0, 0, 0);
-  trailGround.isPickable = true;
-  trailGround.checkCollisions = false;
-  trailGround.metadata = { walkable: true };
-  const trailMat = new StandardMaterial('pineTrailMat', scene);
-  trailMat.diffuseColor = new Color3(0.35, 0.3, 0.25); // Pine needle brown
-  trailMat.specularColor = new Color3(0.1, 0.1, 0.1);
-  trailGround.material = trailMat;
+  // --- Optional billboard cloud FX (ONLY if you want extra layer beyond pano) ---
+  const cloudUrls = [
+    'assets/sky/_fx/clouds/cloud_01.png',
+    'assets/sky/_fx/clouds/cloud_02.png',
+    'assets/sky/_fx/clouds/cloud_03.png',
+    'assets/sky/_fx/clouds/cloud_04.png',
+    'assets/sky/_fx/clouds/cloud_05.png',
+    'assets/sky/_fx/clouds/cloud_06.png',
+    'assets/sky/_fx/clouds/cloud_07.png',
+  ];
 
-  // === PLAYER & COMPANION ===
-  // Dynamic spawn based on entry direction
-  let spawnPos: Vector3;
-  if (fromArea === 'dusk') {
-    // Coming from north gate (forward) - spawn near north
-    spawnPos = new Vector3(0, 0.9, -50);
-  } else {
-    // Coming from south gate (backward) or default - spawn near south
-    spawnPos = new Vector3(0, 0.9, 60);
-  }
-  
-  // Create BOTH players using shared helper
+  const clouds = bag.trackOther(
+    new BillboardCloudSystem(
+      scene,
+      {
+        enabled: true,
+        urls: cloudUrls,
+        count: 18,
+        radiusMin: 260,
+        radiusMax: 780,
+        heightMin: 130,
+        heightMax: 220,
+        sizeMin: 60,
+        sizeMax: 170,
+        alphaMin: 0.07,
+        alphaMax: 0.18,
+        speedMin: 0.08,
+        speedMax: 0.28,
+        windDir: { x: 1, z: 0.2 },
+        wrap: true,
+        fadeInSec: 0.8,
+        billboard: true,
+        brightness: 1.25,
+        tint: { r: 1.02, g: 0.98, b: 0.95 },
+        renderingGroupId: 1,
+      },
+      withBase
+    )
+  );
+
+  // --- TERRAIN ---
+  const terrain = createTerrain(scene, bag, mats);
+  createTerrainGuards(scene, bag);
+
+  // --- TRAIL RIBBON ---
+  const trail = createTrailRibbon(scene, bag, mats);
+
+  // --- FOREST ---
+  const forest = createForest(scene, bag, mats);
+
+  // --- PROPS / LANDMARKS ---
+  const props = createProps(scene, bag, mats);
+
+  // --- MARKERS ---
+  const markers = createMarkers(scene, bag, mats);
+
+  // --- PLAYER & COMPANION ---
+  const spawnZ = fromArea === 'dusk' ? -50 : 60;
+  const spawnPos = atTerrain(0, spawnZ, PINE_TERRAIN.playerYOffset);
+
   const { boyPlayer, girlPlayer, activePlayer } = createWorldPlayers(scene, spawnPos, roleId);
   const player = activePlayer.mesh;
   const playerEntity = activePlayer;
-  
-  const companion = new Companion(scene, new Vector3(3, 0.9, 62), eventBus);
 
-  // === INTERACTABLES ===
+  const companion = new Companion(
+    scene,
+    atTerrain(3, spawnZ + 2, PINE_TERRAIN.playerYOffset),
+    eventBus
+  );
+
+  // --- INTERACTABLES ---
   const interactables: Interactable[] = [];
 
-  // North gate to Dusk Meadow (moved closer for testing)
+  // Gates positioned near terrain bounds
+  const northGateZ = -78;
+  const southGateZ = 78;
+
   const northGate = createGateInteractable(
     scene,
     INTERACTABLE_ID.PINE_DUSK_GATE,
-    new Vector3(0, 2, -60), // Moved from -70 to -60, raised to y=2
-    new Color3(2.0, 1.5, 0.2), // BRIGHT yellow/gold for testing
+    atTerrain(0, northGateZ, 4),
+    new Color3(2.0, 1.5, 0.2),
     eventBus,
-    'dusk'
+    'dusk',
+    bag,
+    mats
   );
   interactables.push(northGate);
 
-  // South gate back to Creek
   const southGate = createGateInteractable(
     scene,
     INTERACTABLE_ID.PINE_CREEK_GATE,
-    new Vector3(0, 0.5, 75),
-    new Color3(0.4, 0.7, 0.8), // Creek water blue
+    atTerrain(0, southGateZ, 4),
+    new Color3(0.4, 0.7, 0.8),
     eventBus,
-    'creek'
+    'creek',
+    bag,
+    mats
   );
   interactables.push(southGate);
-
-  // Dispose function
-  const dispose = () => {
-    trailGround.dispose();
-    trailMat.dispose();
-    skySystem.dispose();
-    boyPlayer.dispose();
-    girlPlayer.dispose();
-    companion.dispose();
-    interactables.forEach(i => i.dispose());
-  };
 
   // Track current active role
   let currentActiveRole: RoleId = roleId;
 
+  const dispose = () => {
+    boyPlayer.dispose();
+    girlPlayer.dispose();
+    companion.dispose();
+    interactables.forEach((i) => i.dispose());
+    bag.dispose();
+    
+    // Quiet unused warnings
+    void clouds;
+    void terrain;
+    void trail;
+    void forest;
+    void props;
+    void markers;
+  };
+
   return {
-    // WorldResult contract implementation
-    getActivePlayer: () => {
-      return currentActiveRole === 'boy' ? boyPlayer : girlPlayer;
-    },
-    getActiveMesh: () => {
-      return (currentActiveRole === 'boy' ? boyPlayer : girlPlayer).mesh;
-    },
+    getActivePlayer: () => (currentActiveRole === 'boy' ? boyPlayer : girlPlayer),
+    getActiveMesh: () => (currentActiveRole === 'boy' ? boyPlayer : girlPlayer).mesh,
     setActiveRole: (newRoleId: RoleId) => {
       currentActiveRole = newRoleId;
       boyPlayer.setActive(newRoleId === 'boy');
@@ -131,47 +197,10 @@ export function createPineWorld(scene: Scene, eventBus: any, roleId: RoleId = 'b
     },
     boyPlayer,
     girlPlayer,
-    
-    // Legacy fields for backward compatibility
     player,
     playerEntity,
     companion,
     interactables,
     dispose,
-  };
-}
-
-// === HELPER: Gate Interactable ===
-function createGateInteractable(
-  scene: Scene,
-  id: InteractableId,
-  position: Vector3,
-  color: Color3,
-  eventBus: any,
-  targetArea: string
-): Interactable {
-  const gate = MeshBuilder.CreateBox(id, { width: 15, height: 8, depth: 1 }, scene);
-  gate.position = position;
-  gate.isPickable = true;
-  gate.checkCollisions = false;
-  gate.metadata = { interactable: true, id };
-
-  const mat = new StandardMaterial(`${id}_mat`, scene);
-  mat.diffuseColor = color;
-  mat.emissiveColor = color.scale(0.8); // Much brighter glow
-  gate.material = mat;
-
-  return {
-    id,
-    mesh: gate,
-    alwaysActive: true,
-    interact: () => {
-      console.log(`[PineWorld] Gate ${id} activated → ${targetArea}`);
-      eventBus.emit({ type: 'game/areaRequest', areaId: targetArea });
-    },
-    dispose: () => {
-      gate.dispose();
-      mat.dispose();
-    },
   };
 }

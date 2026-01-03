@@ -122,13 +122,13 @@ export default function ProfileSelect() {
               <h3 style={{ fontSize: '1.5rem', marginBottom: '1rem' }}>Continue</h3>
               <div style={{ display: 'flex', flexDirection: 'column', gap: '0.5rem' }}>
                 {unlockedAreas.map((areaId) => {
-                  const area = AREAS[areaId as AreaId];
+                  const area = AREAS[areaId];
                   if (!area) return null;
                   
                   return (
                     <button
                       key={areaId}
-                      onClick={() => handleContinue(areaId as AreaId)}
+                      onClick={() => handleContinue(areaId)}
                       style={{
                         padding: '0.75rem 2rem',
                         fontSize: '1rem',

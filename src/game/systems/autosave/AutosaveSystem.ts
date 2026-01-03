@@ -14,13 +14,14 @@ interface EventBus {
 export class AutosaveSystem {
   private unsub: (() => void) | null = null;
   private intervalHandle: NodeJS.Timeout | null = null;
-  private pendingSave = false;
+  private paused = false; // Transaction safety: block saves during switch
   private debounceTimer: NodeJS.Timeout | null = null;
+  // private scheduledEpoch: number | null = null; // Epoch when save was scheduled - currently unused
   
   constructor(
     private eventBus: EventBus,
     private taskSystem: TaskSystem,
-    private roleId: RoleId,
+    private roleId: RoleId, // Keep for logging only, not for writes
     private areaId: AreaId
   ) {}
   
@@ -59,6 +60,40 @@ export class AutosaveSystem {
     console.log(`[AutosaveSystem] Updating role from ${this.roleId} to ${roleId}`);
     this.roleId = roleId;
   }
+
+  /**
+   * Cancel any pending debounced save (Phase 2.9 transaction safety)
+   */
+  cancelPending(): void {
+    if (this.debounceTimer) {
+      clearTimeout(this.debounceTimer);
+      this.debounceTimer = null;
+      // this.scheduledEpoch = null; // Currently unused
+      if (import.meta.env.DEV) {
+        console.log('[AutosaveSystem] Canceled pending save');
+      }
+    }
+  }
+
+  /**
+   * Pause saves during character switch (Phase 2.9 transaction safety)
+   */
+  pause(): void {
+    this.paused = true;
+    if (import.meta.env.DEV) {
+      console.log('[AutosaveSystem] Paused (transaction in progress)');
+    }
+  }
+
+  /**
+   * Resume saves after character switch (Phase 2.9 transaction safety)
+   */
+  resume(): void {
+    this.paused = false;
+    if (import.meta.env.DEV) {
+      console.log('[AutosaveSystem] Resumed');
+    }
+  }
   
   /**
    * Trigger a save (debounced to prevent rapid saves)
@@ -69,31 +104,50 @@ export class AutosaveSystem {
       clearTimeout(this.debounceTimer);
     }
     
+    // Capture current epoch when scheduling
+    const epoch = this.taskSystem.getRoleEpoch();
+    
     // Debounce: save after 500ms of inactivity
     this.debounceTimer = setTimeout(() => {
-      this.performSave(reason);
+      this.performSave(reason, epoch);
       this.debounceTimer = null;
     }, 500);
   }
   
   /**
    * Perform the actual save operation
+   * @param reason - Why the save was triggered
+   * @param scheduledEpoch - The role epoch when save was scheduled
    */
-  private performSave(_reason: string): void {
-    if (this.pendingSave) {
-      return; // Already saving
+  private performSave(_reason: string, scheduledEpoch: number): void {
+    // TRANSACTION SAFETY: Block saves during switch
+    if (this.paused) {
+      if (import.meta.env.DEV) {
+        console.log('[AutosaveSystem] Save blocked (paused during switch)');
+      }
+      return;
     }
     
-    this.pendingSave = true;
+    // EPOCH SAFETY: Reject if role changed since scheduling
+    const currentEpoch = this.taskSystem.getRoleEpoch();
+    if (scheduledEpoch !== currentEpoch) {
+      if (import.meta.env.DEV) {
+        console.warn(
+          `[AutosaveSystem] ⚠️  Save cancelled (role changed): scheduled@epoch${scheduledEpoch}, now@epoch${currentEpoch}`
+        );
+      }
+      return;
+    }
     
     try {
+      // ROLE SAFETY: Derive role at write-time (never use cached this.roleId)
+      const currentRole = this.taskSystem.getCurrentRole();
       const inventory = this.taskSystem.getInventory();
-      saveFacade.syncInventory(this.roleId, inventory);
-      saveFacade.syncLastArea(this.roleId, this.areaId);
+      
+      saveFacade.syncInventory(currentRole, inventory);
+      saveFacade.syncLastArea(currentRole, this.areaId);
     } catch (error) {
       console.error('[AutosaveSystem] Save failed:', error);
-    } finally {
-      this.pendingSave = false;
     }
   }
   
@@ -120,14 +174,16 @@ export class AutosaveSystem {
   }
   
   /**
-   * Force an immediate save (called on dispose)
+   * Force an immediate save (called after switch completes)
    */
   forceSave(): void {
     if (this.debounceTimer) {
       clearTimeout(this.debounceTimer);
       this.debounceTimer = null;
     }
-    this.performSave('force');
+    // Use current epoch for immediate save
+    const currentEpoch = this.taskSystem.getRoleEpoch();
+    this.performSave('force', currentEpoch);
   }
   
   dispose(): void {
