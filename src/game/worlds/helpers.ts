@@ -1,3 +1,4 @@
+//src/game/worlds/helpers.ts
 /**
  * Phase 2.7.2: Shared World Helpers
  * 

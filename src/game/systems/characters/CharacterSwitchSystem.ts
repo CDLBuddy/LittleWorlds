@@ -1,4 +1,4 @@
-/**
+/** src/game/systems/characters/CharacterSwitchSystem.ts
  * Character Switch System - Orchestrates character role switching
  *
  * Robustness upgrades:

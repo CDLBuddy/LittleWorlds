@@ -1,4 +1,4 @@
-/**
+/** src/game/systems/autosave/AutosaveSystem.ts
  * AutosaveSystem - Automatic progress persistence
  * Saves inventory and progress at key moments to prevent data loss
  */
