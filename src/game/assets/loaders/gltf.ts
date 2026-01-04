@@ -57,11 +57,11 @@ export async function loadGlb(
     // Collect animation groups
     const animationGroups = result.animationGroups || [];
     
-    console.log(`[GLB Loader] Loaded ${url}:`, {
-      meshes: meshes.length,
-      animations: animationGroups.length,
-      animationNames: animationGroups.map(g => g.name)
-    });
+    // console.log(`[GLB Loader] Loaded ${url}:`, {
+    //   meshes: meshes.length,
+    //   animations: animationGroups.length,
+    //   animationNames: animationGroups.map(g => g.name)
+    // });
     
     return {
       root,

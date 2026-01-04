@@ -17,7 +17,6 @@ import {
   SceneLoader,
 } from '@babylonjs/core';
 import '@babylonjs/loaders/glTF';
-import { Player } from '@game/entities/player/Player';
 import { Companion } from '@game/entities/companion/Companion';
 import { SkySystem } from '@game/systems/sky/SkySystem';
 import type { RoleId } from '@game/content/areas';
@@ -26,6 +25,8 @@ import { snapshotPerf, logPerfSnapshot } from '@game/debug/perfSnapshot';
 import { saveFacade } from '@game/systems/saves/saveFacade';
 import type { WorldResult } from '../types';
 import { createWorldPlayers } from '../helpers';
+import { consumePendingSpawn } from '../spawnState';
+import { getSpawnForWorld } from '../spawnRegistry';
 
 export const WOODLINE_INTERACTABLES = [
   INTERACTABLE_ID.WOODLINE_CAMPFIRE,
@@ -49,9 +50,7 @@ interface CampfireInteractable extends Interactable {
   isLit: () => boolean;
 }
 
-export function createWoodlineWorld(scene: Scene, eventBus: any, roleId: RoleId = 'boy', fromArea?: string): WorldResult & {
-  player: TransformNode;
-  playerEntity: Player;
+export function createWoodlineWorld(scene: Scene, eventBus: any, roleId: RoleId = 'boy', _fromArea?: string): WorldResult & {
   companion: Companion;
   interactables: Interactable[];
   campfire: CampfireInteractable;
@@ -217,24 +216,15 @@ export function createWoodlineWorld(scene: Scene, eventBus: any, roleId: RoleId 
     console.error('[Woodline] Failed to load pine trees model:', message, exception);
   });
 
-  // Player spawn (front-center of clearing) - y=0 keeps feet on ground
-  // Dynamic spawn based on entry direction
-  let spawnPos: Vector3;
-  if (fromArea === 'creek') {
-    // Coming from creek gate (north at z=-25) - spawn near north
-    spawnPos = new Vector3(0, 0, -15);
-  } else {
-    // Coming from backyard gate (south at z=40) or default - spawn near south
-    spawnPos = new Vector3(0, 0, 30);
-  }
+  // Player spawn using registry (no fromArea branching)
+  const pending = consumePendingSpawn();
+  const spawn = getSpawnForWorld('woodline', pending?.entryGateId);
   
-  // Create BOTH players using shared helper
-  const { boyPlayer, girlPlayer, activePlayer } = createWorldPlayers(scene, spawnPos, roleId);
-  const player = activePlayer.mesh;
-  const playerEntity = activePlayer;
+  // Create BOTH players using shared helper with spawn point
+  const { boyPlayer, girlPlayer } = createWorldPlayers(scene, spawn, roleId);
 
   // Companion spawn relative to player
-  const companion = new Companion(scene, spawnPos.clone().add(new Vector3(3, 0, 2)), eventBus);
+  const companion = new Companion(scene, spawn.position.clone().add(new Vector3(3, 0, 2)), eventBus);
 
   // === INTERACTABLES ===
 
@@ -375,10 +365,9 @@ export function createWoodlineWorld(scene: Scene, eventBus: any, roleId: RoleId 
     },
     boyPlayer,
     girlPlayer,
+    spawnForward: spawn.forward.clone(),
     
-    // Legacy fields for backward compatibility
-    player,
-    playerEntity,
+    // Required by GameApp
     companion,
     interactables,
     campfire: campfireInteractable,
@@ -599,7 +588,7 @@ function createGateInteractable(
     alwaysActive: true,
     interact: () => {
       console.log(`[WoodlineGate] Gate ${id} activated → ${targetArea}`);
-      eventBus.emit({ type: 'game/areaRequest', areaId: targetArea });
+      eventBus.emit({ type: 'game/areaRequest', areaId: targetArea, fromGateId: id });
     },
     dispose: () => {
       gateBase.dispose();

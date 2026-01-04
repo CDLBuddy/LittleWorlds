@@ -55,7 +55,9 @@ export class ProgressionSystem {
       });
     }
 
-    console.log(`[ProgressionSystem] Initialized for ${roleId} in ${areaId}:`, this.taskIds);
+    if (import.meta.env.DEV) {
+      console.log(`[ProgressionSystem] Initialized for ${roleId} in ${areaId}:`, this.taskIds);
+    }
   }
 
   /**
@@ -181,7 +183,9 @@ export class ProgressionSystem {
       return;
     }
 
-    console.log(`[ProgressionSystem] Starting task ${this.currentTaskIndex + 1}/${this.taskIds.length}: ${task.name}`);
+    if (import.meta.env.DEV) {
+      console.log(`[ProgressionSystem] Starting task ${this.currentTaskIndex + 1}/${this.taskIds.length}: ${task.name}`);
+    }
     this.taskSystem.startTask(task);
   }
 

@@ -1,5 +1,5 @@
 // GameApp.ts - Main game application orchestrator
-import { Engine, Scene, AbstractMesh, TransformNode } from '@babylonjs/core';
+import { Engine, Scene, AbstractMesh, TransformNode, Vector3 } from '@babylonjs/core';
 import { eventBus } from './shared/events';
 import { createBootWorld } from './worlds/BootWorld';
 import { Player } from './entities/player/Player';
@@ -18,7 +18,8 @@ import { CompanionDebugHelper } from './debug/CompanionDebugHelper';
 import { PlayerDebugHelper } from './debug/PlayerDebugHelper';
 import { WorldEditor } from './debug/WorldEditor';
 import { SwitchDebugOverlay } from './debug/SwitchDebugOverlay';
-import type { RoleId, AreaId } from './content/areas';
+import type { RoleId } from './content/areas';
+import { isAreaId, type AreaId } from './content/areas';
 import { ProgressionSystem } from './systems/progression/ProgressionSystem';
 import { AutosaveSystem } from './systems/autosave/AutosaveSystem';
 import { saveFacade } from './systems/saves/saveFacade';
@@ -26,6 +27,10 @@ import * as sessionFacade from './session/sessionFacade';
 import { CharacterSwitchSystem } from './systems/characters/CharacterSwitchSystem';
 import { CheatSystem, createDefaultCheats } from './debug/cheats';
 import type { WorldResult } from './worlds/types';
+import { GATE_PAIR } from './content/gatePairs';
+import { setPendingSpawn } from './worlds/spawnState';
+import type { InteractableId } from './content/interactableIds';
+import { validateSpawnSystem } from './worlds/validateSpawnSystem';
 
 /**
  * GameApp - Main orchestrator for the Babylon.js game
@@ -64,6 +69,12 @@ export class GameApp {
 
   constructor(canvas: HTMLCanvasElement, private bus: typeof eventBus, startParams: { roleId: RoleId; areaId: AreaId; fromArea?: AreaId }) {
     this.startParams = startParams;
+    
+    // DEV: Validate spawn system integrity at startup
+    if (import.meta.env.DEV) {
+      validateSpawnSystem();
+    }
+    
     // Initialize Babylon engine with iPad-friendly settings
     this.engine = new Engine(canvas, true, {
       preserveDrawingBuffer: false,
@@ -91,8 +102,8 @@ export class GameApp {
       } else if (event.type === 'ui/restart') {
         this.onRestart();
       } else if (event.type === 'game/areaRequest') {
-        // Handle gate area request
-        this.onAreaRequest(event.areaId);
+        // Handle gate area request with optional gate tracking
+        this.onAreaRequest(event.areaId, event.fromArea, event.fromGateId);
       } else if (event.type === 'game/companion/state') {
         // Play SFX based on companion state
         if (event.state === 'LeadToTarget') {
@@ -118,7 +129,7 @@ export class GameApp {
           // Notify progression system (Phase 2.9: pass role-stamped roleId)
           if (this.progressionSystem) {
             // event.roleId is guaranteed to exist on game/task events (Phase 2.9)
-            this.progressionSystem.handleTaskEvent(event.taskId, true, event.roleId as RoleId);
+            this.progressionSystem.handleTaskEvent(event.taskId, true, event.roleId);
           }
           // Spawn confetti at player position
           this.fxSystem?.spawnConfetti(activePlayerMesh.position.clone());
@@ -195,8 +206,19 @@ export class GameApp {
     // Camera will automatically follow the active player in update loop
   }
   
-  private onAreaRequest(areaId: string) {
-    console.log('[GameApp] Area request:', areaId);
+  private onAreaRequest(areaId: string, fromArea?: string, fromGateId?: string) {
+    console.log('[GameApp] Area request:', areaId, 'from gate:', fromGateId);
+    
+    // Validate areaId at boundary
+    if (!isAreaId(areaId)) {
+      console.error('[GameApp] ❌ Invalid areaId:', areaId);
+      if (import.meta.env.DEV) {
+        throw new Error(`Invalid area ID: ${areaId}`);
+      }
+      return;
+    }
+    
+    // areaId is now narrowed to AreaId type by the type guard above
     
     // Get current role from TaskSystem (not startParams)
     const currentRole = this.taskSystem?.getCurrentRole() || 'boy';
@@ -205,7 +227,7 @@ export class GameApp {
     const unlockedAreas = saveFacade.getUnlockedAreas(currentRole);
     console.log('[GameApp] Unlocked areas for role:', currentRole, unlockedAreas);
     
-    if (unlockedAreas.includes(areaId as AreaId)) {
+    if (unlockedAreas.includes(areaId)) {
       // Save inventory before transitioning
       const inventory = this.taskSystem?.getInventory() || [];
       saveFacade.setInventory(currentRole, inventory);
@@ -213,10 +235,37 @@ export class GameApp {
       // Update session to maintain current role across area transition
       sessionFacade.setRole(currentRole);
       
-      // Area unlocked - transition (get current area from session, not startParams)
-      const currentArea = sessionFacade.getSession().areaId;
+      // Area unlocked - compute entry gate and set pending spawn
+      const currentAreaRaw: string | undefined = sessionFacade.getSession().areaId ?? fromArea;
+      // Runtime type guard to validate area ID from session
+      const currentArea: AreaId | undefined = isAreaId(currentAreaRaw) 
+        ? currentAreaRaw 
+        : (fromArea && isAreaId(fromArea) ? fromArea : undefined);
+      
+      // If fromGateId provided, compute entryGateId via GATE_PAIR
+      let entryGateId: InteractableId | undefined;
+      if (fromGateId) {
+        entryGateId = GATE_PAIR[fromGateId as InteractableId];
+        if (!entryGateId) {
+          console.error('[GameApp] ❌ No gate pair found for:', fromGateId, '- Add to GATE_PAIR mapping!');
+          if (import.meta.env.DEV) {
+            throw new Error(`Missing gate pair for ${fromGateId}`);
+          }
+        } else {
+          console.log('[GameApp] Computed entry gate:', entryGateId);
+        }
+      } else if (import.meta.env.DEV && fromArea) {
+        console.warn('[GameApp] ⚠️ Gate transition without fromGateId - falling back to default spawn');
+      }
+      
+      // Set pending spawn for world to consume (areaId already validated above)
+      setPendingSpawn({
+        toArea: areaId,
+        entryGateId,
+      });
+      
       console.log('[GameApp] Area unlocked, transitioning from', currentArea, 'to:', areaId, 'as:', currentRole);
-      sessionFacade.setArea(areaId as AreaId, currentArea ?? undefined);
+      sessionFacade.setArea(areaId, currentArea);
       // GameHost will remount automatically
     } else {
       // Area locked - show soft block
@@ -248,7 +297,7 @@ export class GameApp {
       console.warn('[GameApp] Already running, ignoring start() call');
       return;
     }
-    console.log('[GameApp] Starting...');
+    // console.log('[GameApp] Starting...');
     this.isRunning = true;
     
     // Initialize audio system
@@ -259,8 +308,6 @@ export class GameApp {
 
     // Create world based on areaId with lazy loading for performance
     let world: WorldResult & {
-      player: TransformNode;
-      playerEntity: Player;
       companion: Companion;
       interactables: Array<{ id: string; mesh: AbstractMesh; interact: () => void; dispose: () => void }>;
       campfire?: unknown;
@@ -268,7 +315,7 @@ export class GameApp {
     };
     
     if (this.startParams.areaId === 'backyard') {
-      console.log('[GameApp] Loading BackyardWorld (lazy)...');
+      // console.log('[GameApp] Loading BackyardWorld (lazy)...');
       const { createBackyardWorld } = await import('./worlds/backyard/BackyardWorld');
       world = createBackyardWorld(this.scene, this.bus, this.startParams.roleId, this.startParams.fromArea);
     } else if (this.startParams.areaId === 'woodline') {
@@ -316,14 +363,27 @@ export class GameApp {
     // Create FX system
     this.fxSystem = new FxSystem(this.scene);
     
-    console.log('[GameApp] World loaded:', {
-      companion: this.companion.mesh.position,
-      interactables: this.interactables.length
-    });
+    // console.log('[GameApp] World loaded:', {
+    //   companion: this.companion.mesh.position,
+    //   interactables: this.interactables.length
+    // });
 
     // Create player controller
     this.playerController = new PlayerController(this.scene, this.getActivePlayerMesh());
     this.playerController.setPlayerEntity(this.getActivePlayerEntity());
+    
+    // Snap camera behind player's spawn forward direction (after target is established)
+    // and reset yaw baseline so first frame delta = 0
+    if (this.cameraRig) {
+      const activePlayerMesh = this.getActivePlayerMesh();
+      // Do one update to establish target
+      this.cameraRig.update(activePlayerMesh.position, undefined, 1/60, 0);
+      // Now snap to spawn forward
+      const spawnForward = new Vector3(world.spawnForward.x, world.spawnForward.y, world.spawnForward.z);
+      this.cameraRig.snapBehindForward(spawnForward);
+      // Reset yaw delta baseline to prevent first-frame rotation
+      this.playerController.resetYawBaseline();
+    }
 
     // Create task system
     this.taskSystem = new TaskSystem(this.bus);
@@ -335,21 +395,21 @@ export class GameApp {
     // Load saved inventory for starting role and set role
     const savedInventory = saveFacade.getInventory(startRole);
     this.taskSystem.switchCharacter(startRole, savedInventory);
-    console.log(`[GameApp] Started as ${startRole} with inventory:`, savedInventory);
+    // console.log(`[GameApp] Started as ${startRole} with inventory:`, savedInventory);
     
     // Emit appReady event so UI can safely request inventory
     this.bus.emit({ type: 'game/appReady', roleId: startRole });
-    console.log(`[GameApp] Emitted game/appReady with role: ${startRole}`);
+    // console.log(`[GameApp] Emitted game/appReady with role: ${startRole}`);
     
     // Create character switch system (orchestrates switching)
     this.characterSwitchSystem = new CharacterSwitchSystem(this.bus, this.taskSystem);
-    console.log('[GameApp] CharacterSwitchSystem initialized');
+    // console.log('[GameApp] CharacterSwitchSystem initialized');
     
     // Wire up player references for visual switching
     if (this.currentWorld && this.characterSwitchSystem) {
       this.characterSwitchSystem.setPlayers(this.currentWorld.boyPlayer, this.currentWorld.girlPlayer);
       this.characterSwitchSystem.setWorld(this.currentWorld);
-      console.log('[GameApp] Wired boy/girl player references and world to CharacterSwitchSystem');
+      // console.log('[GameApp] Wired boy/girl player references and world to CharacterSwitchSystem');
     }
     
     // Create interaction system
@@ -364,7 +424,7 @@ export class GameApp {
     if ('registerDynamic' in world && typeof world.registerDynamic === 'function') {
       (world.registerDynamic as (callback: (interactable: { id: string; mesh: AbstractMesh; interact: () => void; dispose: () => void }) => void) => void)((interactable: { id: string; mesh: AbstractMesh; interact: () => void; dispose: () => void }) => {
         this.interactionSystem!.registerInteractable(interactable);
-        console.log(`[GameApp] Dynamically registered interactable: ${interactable.id}`);
+        // console.log(`[GameApp] Dynamically registered interactable: ${interactable.id}`);
       });
     }
     
@@ -392,7 +452,7 @@ export class GameApp {
 
     // Create progression system and start
     const useDevBootFallback = import.meta.env.DEV && !['backyard', 'woodline'].includes(this.startParams.areaId);
-    console.log('[GameApp] ProgressionSystem devBootFallback:', useDevBootFallback);
+    // console.log('[GameApp] ProgressionSystem devBootFallback:', useDevBootFallback);
     this.progressionSystem = new ProgressionSystem(
       this.taskSystem,
       startRole, // Use determined start role
@@ -404,13 +464,13 @@ export class GameApp {
     // Wire progression system to character switch system for task reloading
     if (this.characterSwitchSystem && this.progressionSystem) {
       this.characterSwitchSystem.setProgressionSystem(this.progressionSystem);
-      console.log('[GameApp] Wired ProgressionSystem to CharacterSwitchSystem');
+      // console.log('[GameApp] Wired ProgressionSystem to CharacterSwitchSystem');
     }
     
     // Wire interaction system to character switch system for clearing dwell state
     if (this.characterSwitchSystem && this.interactionSystem) {
       this.characterSwitchSystem.setInteractionSystem(this.interactionSystem);
-      console.log('[GameApp] Wired InteractionSystem to CharacterSwitchSystem');
+      // console.log('[GameApp] Wired InteractionSystem to CharacterSwitchSystem');
     }
     
     // Create autosave system (after task system is ready)
@@ -421,12 +481,12 @@ export class GameApp {
       this.startParams.areaId
     );
     this.autosaveSystem.start();
-    console.log('[GameApp] Autosave system started');
+    // console.log('[GameApp] Autosave system started');
 
     // Wire autosave system to character switch system for role updates
     if (this.characterSwitchSystem && this.autosaveSystem) {
       this.characterSwitchSystem.setAutosaveSystem(this.autosaveSystem);
-      console.log('[GameApp] Wired AutosaveSystem to CharacterSwitchSystem');
+      // console.log('[GameApp] Wired AutosaveSystem to CharacterSwitchSystem');
     }
 
     // Create wake radius system
@@ -436,7 +496,7 @@ export class GameApp {
     // Create debug overlay (dev only)
     if (import.meta.env.DEV) {
       // === DEV TRACE HARNESS (Phase 2.8) ===
-      console.log('[GameApp] Initializing Phase 2.8 trace harness...');
+      // console.log('[GameApp] Initializing Phase 2.8 trace harness...');
       
       // Import trace utilities
       const { trace } = await import('./debug/trace/trace');
@@ -504,13 +564,13 @@ export class GameApp {
         return snap;
       };
       
-      console.log('[GameApp] ✅ Trace harness initialized');
-      console.log('[GameApp] Available commands:');
-      console.log('  - __traceDump(count?, category?) — Show last N trace entries');
-      console.log('  - __traceClear() — Clear trace buffer');
-      console.log('  - __traceStats() — Show buffer stats');
-      console.log('  - __snapshot() — Capture current role state across all systems');
-      console.log('  - window.__traceConfig — Toggle console logging per category');
+      // console.log('[GameApp] ✅ Trace harness initialized');
+      // console.log('[GameApp] Available commands:');
+      // console.log('  - __traceDump(count?, category?) — Show last N trace entries');
+      // console.log('  - __traceClear() — Clear trace buffer');
+      // console.log('  - __traceStats() — Show buffer stats');
+      // console.log('  - __snapshot() — Capture current role state across all systems');
+      // console.log('  - window.__traceConfig — Toggle console logging per category');
       
       // === END TRACE HARNESS ===
       
@@ -539,7 +599,7 @@ export class GameApp {
       
       // Create switch debug overlay
       this.switchDebugOverlay = new SwitchDebugOverlay();
-      console.log('[GameApp] Switch Debug Overlay created (F3 to toggle)');
+      // console.log('[GameApp] Switch Debug Overlay created (F3 to toggle)');
 
       // Setup cheat system
       const cheatSystem = new CheatSystem();
@@ -555,13 +615,13 @@ export class GameApp {
       (window as { unlockpostcard?: (areaId: string) => void }).unlockpostcard = (areaId: string) => cheatSystem.unlockPostcard(areaId);
       (window as { unlocktrophy?: (areaId: string) => void }).unlocktrophy = (areaId: string) => cheatSystem.unlockTrophy(areaId);
 
-      console.log('[GameApp] Press F2 to toggle World Editor');
-      console.log('[GameApp] Cheats available:');
-      console.log('  - giveitem("itemId")');
-      console.log('  - givefind("areaId", "findId")');
-      console.log('  - setfindcount("areaId", count)');
-      console.log('  - unlockpostcard("areaId")');
-      console.log('  - unlocktrophy("areaId")');
+      // console.log('[GameApp] Press F2 to toggle World Editor');
+      // console.log('[GameApp] Cheats available:');
+      // console.log('  - giveitem("itemId")');
+      // console.log('  - givefind("areaId", "findId")');
+      // console.log('  - setfindcount("areaId", count)');
+      // console.log('  - unlockpostcard("areaId")');
+      // console.log('  - unlocktrophy("areaId")');
     }
 
     // Add interactables as wakeables
@@ -626,7 +686,7 @@ export class GameApp {
     });
     
     await Promise.all(audioPromises);
-    console.log('[GameApp] Audio assets loaded');
+    // console.log('[GameApp] Audio assets loaded');
   }
 
   /**
@@ -669,9 +729,11 @@ export class GameApp {
     if (this.cameraRig && activePlayer) {
       // Get player yaw delta for keyboard rotation (A/D keys)
       const yawDelta = this.playerController?.getYawDelta() ?? 0;
+      // Get movement intent for soft recenter logic
+      const moveIntent = this.playerController?.getMoveIntent();
       // Optionally pass companion position as interest point when leading
       const interestPos = (this.companion && this.cameraRig) ? undefined : undefined;
-      this.cameraRig.update(activePlayer.position, interestPos, dt, yawDelta);
+      this.cameraRig.update(activePlayer.position, interestPos, dt, yawDelta, moveIntent);
     }
     
     // Update campfire VFX (if it has an update method)

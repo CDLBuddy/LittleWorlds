@@ -13,9 +13,7 @@ import {
   MeshBuilder,
   StandardMaterial,
   AbstractMesh,
-  TransformNode,
 } from '@babylonjs/core';
-import { Player } from '@game/entities/player/Player';
 import { Companion } from '@game/entities/companion/Companion';
 import { Axe } from '@game/entities/props/Axe';
 import { LogPile } from '@game/entities/props/LogPile';
@@ -39,8 +37,6 @@ interface Interactable {
 }
 
 export function createBootWorld(scene: Scene, eventBus: any, roleId: RoleId = 'boy'): WorldResult & {
-  player: TransformNode;
-  playerEntity: Player;
   companion: Companion;
   interactables: Interactable[];
   campfire: Campfire;
@@ -76,9 +72,7 @@ export function createBootWorld(scene: Scene, eventBus: any, roleId: RoleId = 'b
   ground.receiveShadows = true;
 
   // Create BOTH players using shared helper
-  const { boyPlayer, girlPlayer, activePlayer } = createWorldPlayers(scene, new Vector3(0, 0.9, 0), roleId);
-  const player = activePlayer.mesh;
-  const playerEntity = activePlayer;
+  const { boyPlayer, girlPlayer } = createWorldPlayers(scene, new Vector3(0, 0.9, 0), roleId);
 
   // Note: Camera is now created by GameApp's CameraRig
 
@@ -129,10 +123,9 @@ export function createBootWorld(scene: Scene, eventBus: any, roleId: RoleId = 'b
     },
     boyPlayer,
     girlPlayer,
-    
-    // Legacy fields for backward compatibility
-    player,
-    playerEntity,
+    spawnForward: { x: 0, y: 0, z: 1 }, // Default forward direction
+
+    // Required by GameApp
     companion,
     interactables,
     campfire,

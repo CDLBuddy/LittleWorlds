@@ -38,23 +38,23 @@ export function useInventoryFeed(): InventoryFeed {
 
   useEffect(() => {
     // Request initial inventory
-    console.log('[useInventoryFeed] Requesting initial inventory');
+    // console.log('[useInventoryFeed] Requesting initial inventory');
     eventBus.emit({ type: 'ui/getInventory' });
 
     // Single subscription for all inventory events
     const unsub = eventBus.on((evt: AppEvent) => {
       if (evt.type === 'game/inventoryUpdate') {
-        console.log('[useInventoryFeed] Received inventoryUpdate:', evt.roleId, evt.items);
+        // console.log('[useInventoryFeed] Received inventoryUpdate:', evt.roleId, evt.items);
         setCache(prev => ({
           ...prev,
           [evt.roleId]: evt.items,
         }));
         setActiveRole(evt.roleId);
       } else if (evt.type === 'game/characterSwitch') {
-        console.log('[useInventoryFeed] Character switched to:', evt.roleId);
+        // console.log('[useInventoryFeed] Character switched to:', evt.roleId);
         setActiveRole(evt.roleId);
       } else if (evt.type === 'game/appReady') {
-        console.log('[useInventoryFeed] GameApp ready, requesting inventory for:', evt.roleId);
+        // console.log('[useInventoryFeed] GameApp ready, requesting inventory for:', evt.roleId);
         setActiveRole(evt.roleId);
         // Request inventory now that TaskSystem is guaranteed ready
         eventBus.emit({ type: 'ui/getInventory' });

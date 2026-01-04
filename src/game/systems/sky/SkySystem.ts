@@ -64,7 +64,7 @@ export class SkySystem {
       return;
     }
 
-    console.log(`[SkySystem] Applying preset for ${worldId} (transition: ${transitionMs}ms)`);
+    // console.log(`[SkySystem] Applying preset for ${worldId} (transition: ${transitionMs}ms)`);
 
     // Preload texture if needed
     await this.preload(worldId);
@@ -93,17 +93,17 @@ export class SkySystem {
     const url = this.withBase(sky.url);
     
     if (this.textureCache.has(url)) {
-      console.log(`[SkySystem] Texture already cached: ${url}`);
+      // console.log(`[SkySystem] Texture already cached: ${url}`);
       return;
     }
 
-    console.log(`[SkySystem] Preloading texture: ${url}`);
+    // console.log(`[SkySystem] Preloading texture: ${url}`);
     
     return new Promise((resolve) => {
       const tex = new Texture(url, this.scene);
       tex.onLoadObservable.addOnce(() => {
         this.textureCache.set(url, tex);
-        console.log(`[SkySystem] Preload complete: ${url}`);
+        // console.log(`[SkySystem] Preload complete: ${url}`);
         resolve();
       });
     });

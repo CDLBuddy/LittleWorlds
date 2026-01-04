@@ -52,9 +52,9 @@ export function setSnapshotRefs(
   progressionSystemRef = progressionSystem;
   autosaveSystemRef = autosaveSystem;
 
-  if (import.meta.env.DEV) {
-    console.log('[snapshot] System references set for invariant checking');
-  }
+  // if (import.meta.env.DEV) {
+  //   console.log('[snapshot] System references set for invariant checking');
+  // }
 }
 
 /**

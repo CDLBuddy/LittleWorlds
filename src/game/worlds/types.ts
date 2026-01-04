@@ -42,4 +42,10 @@ export interface WorldResult {
    * Reference to the girl player entity (always exists)
    */
   girlPlayer: Player;
+
+  /**
+   * Spawn forward vector - direction the player is facing INTO the world
+   * Used by camera rig to align behind the player on spawn
+   */
+  spawnForward: { x: number; y: number; z: number };
 }

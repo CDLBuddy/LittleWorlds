@@ -1,17 +1,13 @@
 /**
- * Camera Rig - 3rd-person follow with dynamic framing modes (polished)
+ * Camera Rig - 3rd-person follow with dynamic framing modes (robust + spawn-safe)
  * -----------------------------------------------------------------------------
- * Fixes:
- * - No more "pulling pitch back down" while the player is trying to look around.
- * - Faster left/right orbit (tuned sensibility).
- * - Allows looking higher toward the sky (raised upperBetaLimit).
- *
- * Behavior:
- * - We ONLY steer beta toward preset during brief mode transitions (e.g., FOLLOW->LEAD),
- *   otherwise we respect user camera pitch/orbit.
- * - Radius still blends smoothly for framing.
- * - CELEBRATE mode does a gentle orbit then returns to FOLLOW.
- * - Optional aim mode tightens framing + gentle behind-the-player alpha assist.
+ * Key fixes / polish:
+ * - Adds an explicit "spawn snap" API so the camera aligns with the player's spawn forward.
+ * - Keeps a persistent "behind the player" reference alpha (behindAlpha) that tracks player yaw changes.
+ * - Aim assist now nudges toward behindAlpha (NOT a hardcoded world alpha=0).
+ * - Beta steering only during short mode transitions (and never while the user is dragging).
+ * - Fewer per-frame allocations (uses temp vectors + ToRef lerps).
+ * - Pointer tracking cleanup + proper observer disposal.
  */
 
 import {
@@ -26,10 +22,15 @@ import {
 import type { CameraMode } from '@game/shared/events';
 import { lerpAngle } from '@game/shared/math';
 
+export type MoveIntent = {
+  isMoving: boolean;
+  forwardAmount: number; // -1 (backing) to +1 (forward)
+};
+
 interface CameraSettings {
   radius: number;
   beta: number; // Vertical angle
-  alpha: number; // Horizontal angle
+  alpha: number; // Horizontal angle (kept for completeness; we treat behindAlpha as the real reference)
 }
 
 type CameraRigOptions = {
@@ -60,6 +61,9 @@ type CameraRigOptions = {
 
   // Aim
   aimAssistStrength?: number;
+
+  // Target offset
+  targetHeightOffset?: number;
 };
 
 export class CameraRig {
@@ -90,44 +94,56 @@ export class CameraRig {
   // Beta notes:
   // - beta ~ PI/2 is level horizon-ish
   // - lower beta => camera higher looking down
-  // - higher beta => camera lower looking up more
+  // - higher beta => camera lower looking up more (up toward sky)
   private minBeta = 0.5;
-  private maxBeta = Math.PI / 2 + 0.85; // ⬅️ raised: lets you look up more
+  private maxBeta = Math.PI / 2 + 0.85;
   private maxZ = 10000;
 
   // Input tuning (lower => faster)
   private wheelPrecision = 50;
   private pinchPrecision = 12;
-  private angularSensibilityX = 700; // ⬅️ faster left/right than your 1200
-  private angularSensibilityY = 900; // slightly slower vertical (less twitchy)
+  private angularSensibilityX = 700;
+  private angularSensibilityY = 900;
 
   // Smoothing
   private targetLerp = 0.12;
   private settingsLerp = 0.10;
   private teleportSnapDistance = 10;
 
-  // Target offset - how high above player position to look at (chest/head height)
+  // Target offset - how high above player position to look at
   private targetHeightOffset = 3.0;
 
   // Aim assist
   private aimAssistStrength = 0.18;
 
+  // Free-look recenter (soft pull when moving forward)
+  private recenterDelayMs = 600; // wait after mouse orbit before recentering (higher = more patient)
+  private recenterStrength = 0.01; // how hard we pull toward behind (lower = gentler, 0.04-0.12 range)
+
   // Pointer tracking
   private pointerObs: Observer<PointerInfo> | null = null;
+  private failsafeObs: Observer<Scene> | null = null;
   private userIsDraggingOrbit = false;
   private lastPointerMoveMs = 0;
 
+  // "Behind the player" reference alpha (world-space alpha for ArcRotateCamera).
+  // This is what we nudge toward in aim mode and what we set on spawn snap.
+  private behindAlpha = 0;
+
+  // Temp vectors (avoid allocations)
+  private readonly _tmpA = new Vector3();
+
   // Mode presets (adjusted to look down slightly at character)
   private readonly presets: Record<CameraMode, CameraSettings> = {
-    FOLLOW: { radius: 11, beta: 1.28, alpha: 0 },     // lowered from 1.28 to angle down
-    LEAD: { radius: 17, beta: 1.36, alpha: 0 },       // lowered from 1.36 to angle down
-    CELEBRATE: { radius: 9, beta: 1.22, alpha: 0 },   // lowered from 1.22 to angle down
+    FOLLOW: { radius: 11, beta: 1.28, alpha: 0 },
+    LEAD: { radius: 17, beta: 1.36, alpha: 0 },
+    CELEBRATE: { radius: 9, beta: 1.22, alpha: 0 },
   };
 
   // Aim overlay (optional)
   private readonly aimPreset: CameraSettings = {
     radius: 8.5,
-    beta: 1.15,                                       // lowered from 1.25 to angle down
+    beta: 1.15,
     alpha: 0,
   };
 
@@ -154,12 +170,20 @@ export class CameraRig {
     this.celebrateOrbitSpeed = opts.celebrateOrbitSpeed ?? this.celebrateOrbitSpeed;
 
     this.aimAssistStrength = opts.aimAssistStrength ?? this.aimAssistStrength;
+    this.targetHeightOffset = opts.targetHeightOffset ?? this.targetHeightOffset;
 
     const follow = this.presets.FOLLOW;
     this.currentSettings = { ...follow };
     this.targetSettings = { ...follow };
 
-    this.camera = new ArcRotateCamera('camera', follow.alpha, follow.beta, follow.radius, Vector3.Zero(), scene);
+    this.camera = new ArcRotateCamera(
+      'camera',
+      follow.alpha,
+      follow.beta,
+      follow.radius,
+      Vector3.Zero(),
+      scene
+    );
     this.camera.attachControl(canvas, true);
 
     // Limits
@@ -181,25 +205,57 @@ export class CameraRig {
     // Reduce drift
     this.camera.inertia = 0.2;
 
+    // Initialize behindAlpha to current alpha
+    this.behindAlpha = this.camera.alpha;
+
     // Block context menu on right-click drag (clean orbit feel)
-    canvas.addEventListener(
-      'contextmenu',
-      (e) => e.preventDefault(),
-      { passive: false }
-    );
+    canvas.addEventListener('contextmenu', (e) => e.preventDefault(), { passive: false });
 
     this.setupPointerActivityTracking(scene);
+  }
+
+  /**
+   * Call this immediately after you spawn the player (or when switching worlds)
+   * so the camera aligns with the player’s spawn forward.
+   *
+   * - spawnForward should be the direction the player is facing INTO the world.
+   * - This snaps the camera alpha so the camera sits behind the player.
+   */
+  snapBehindForward(spawnForward: Vector3): void {
+    // Direction from target -> camera should be behind the player => -forward on XZ plane
+    this._tmpA.copyFrom(spawnForward);
+    this._tmpA.y = 0;
+    if (this._tmpA.lengthSquared() < 1e-6) return;
+    this._tmpA.normalize().scaleInPlace(-1);
+
+    const desiredAlpha = CameraRig.alphaFromToCameraDir(this._tmpA);
+
+    // Snap instantly (avoid inertia fighting you on first frame)
+    const oldInertia = this.camera.inertia;
+    this.camera.inertia = 0;
+    this.camera.alpha = desiredAlpha;
+    this.camera.inertia = oldInertia;
+
+    // Update behind reference so aim assist + future smoothing align to spawn
+    this.behindAlpha = desiredAlpha;
+
+    // Also keep currentSettings.alpha coherent (even though we don’t actively blend alpha presets)
+    this.currentSettings.alpha = desiredAlpha;
+    this.targetSettings.alpha = desiredAlpha;
+
+    // Give a brief transition window so beta/radius settle nicely after a hard snap
+    this.modeTransitionUntilMs = Date.now() + this.modeTransitionSeconds * 1000;
   }
 
   setMode(mode: CameraMode): void {
     if (this.currentMode === mode) return;
 
-    console.log(`[CameraRig] Mode: ${this.currentMode} -> ${mode}`);
+    // console.log(`[CameraRig] Mode: ${this.currentMode} -> ${mode}`);
     this.currentMode = mode;
     this.targetSettings = { ...this.presets[mode] };
 
     // Briefly steer toward the new preset so it feels intentional,
-    // but then hands control back to the user.
+    // then hands control back to the user.
     this.modeTransitionUntilMs = Date.now() + this.modeTransitionSeconds * 1000;
 
     if (mode === 'CELEBRATE') {
@@ -241,23 +297,43 @@ export class CameraRig {
     else this.camera.detachControl();
   }
 
-  update(playerPos: Vector3, interestPos?: Vector3, dt = 1 / 60, playerYawDelta = 0): void {
+  /**
+   * Update camera each frame.
+   *
+   * @param playerPos - player world position
+   * @param interestPos - optional override for look target (e.g. interact focus)
+   * @param dt - delta time (seconds)
+   * @param playerYawDelta - how much the player rotated this frame (radians).
+   *   If provided, we rotate BOTH camera.alpha and behindAlpha so the camera keeps its relative framing.
+   * @param moveIntent - player's movement state (for soft recenter logic)
+   */
+  update(playerPos: Vector3, interestPos?: Vector3, dt = 1 / 60, playerYawDelta = 0, moveIntent?: MoveIntent): void {
     dt = Math.min(Math.max(dt, 0), 0.05);
 
-    // Apply player rotation to camera
+    // Apply player yaw to camera + behind reference (keeps "behind player" stable relative to player turns)
     if (playerYawDelta !== 0) {
+      // NOTE: sign depends on your player/controller convention.
+      // Your original code used alpha -= delta; we keep that behavior.
       this.camera.alpha -= playerYawDelta;
+      this.behindAlpha -= playerYawDelta;
     }
 
     // Target smoothing - add height offset for better third-person framing
-    const desiredTarget = interestPos ?? playerPos.clone().addInPlace(new Vector3(0, this.targetHeightOffset, 0));
+    const desiredTarget = this._tmpA;
+    if (interestPos) {
+      desiredTarget.copyFrom(interestPos);
+    } else {
+      desiredTarget.copyFrom(playerPos);
+      desiredTarget.y += this.targetHeightOffset;
+    }
+
     const distToDesired = Vector3.Distance(this.targetPosition, desiredTarget);
 
     if (distToDesired > this.teleportSnapDistance) {
       this.targetPosition.copyFrom(desiredTarget);
     } else {
       const t = 1 - Math.exp(-this.targetLerp * 60 * dt);
-      this.targetPosition = Vector3.Lerp(this.targetPosition, desiredTarget, t);
+      Vector3.LerpToRef(this.targetPosition, desiredTarget, t, this.targetPosition);
     }
 
     this.camera.setTarget(this.targetPosition);
@@ -281,11 +357,12 @@ export class CameraRig {
     const now = Date.now();
     const isTransitioning = now < this.modeTransitionUntilMs;
 
-    // ✅ KEY CHANGE:
     // We DO NOT "pull down" the user's pitch anymore.
     // We only steer beta during transition windows (and only if the user isn't dragging).
     if (isTransitioning && !this.userIsDraggingOrbit) {
-      const targetBeta = Scalar.Clamp(desired.beta, this.camera.lowerBetaLimit ?? this.minBeta, this.camera.upperBetaLimit ?? this.maxBeta);
+      const lower = this.camera.lowerBetaLimit ?? this.minBeta;
+      const upper = this.camera.upperBetaLimit ?? this.maxBeta;
+      const targetBeta = Scalar.Clamp(desired.beta, lower, upper);
       this.camera.beta = Scalar.Clamp(Scalar.Lerp(this.camera.beta, targetBeta, s), this.minBeta, this.maxBeta);
     }
 
@@ -303,9 +380,22 @@ export class CameraRig {
     // Aim assist: gently center behind player if user isn't dragging
     // (Still respects pitch; only nudges yaw.)
     if (this.aimMode && !this.userIsDraggingOrbit) {
-      const targetAlpha = 0;
       const a = 1 - Math.exp(-this.aimAssistStrength * 60 * dt);
-      this.camera.alpha = lerpAngle(this.camera.alpha, targetAlpha, a);
+      this.camera.alpha = lerpAngle(this.camera.alpha, this.behindAlpha, a);
+    }
+
+    // Free-look soft recenter: when player moves forward after free-looking,
+    // gently pull camera back behind them (respects player intent)
+    const userRecentlyOriented = this.userIsDraggingOrbit || (now - this.lastPointerMoveMs) < this.recenterDelayMs;
+    if (!this.aimMode && !userRecentlyOriented && moveIntent?.isMoving) {
+      // Only recenter when moving forward enough (not backing up or strafing)
+      const forward = Math.max(0, moveIntent.forwardAmount ?? 0);
+      if (forward > 0.15) {
+        // Strength scales with forward input so it feels "earned"
+        const k = this.recenterStrength * forward;
+        const a = 1 - Math.exp(-k * 60 * dt);
+        this.camera.alpha = lerpAngle(this.camera.alpha, this.behindAlpha, a);
+      }
     }
   }
 
@@ -313,21 +403,33 @@ export class CameraRig {
     return this.camera;
   }
 
+  /**
+   * Locks/unlocks pointer inputs (useful if you're rotating camera by keyboard/controller).
+   * This clears all inputs (including pointer) when locked, and restores wheel+pointers when unlocked.
+   */
   lockRotation(locked: boolean): void {
-    // Disable camera's input controls when keyboard rotation is active
     if (locked) {
       this.camera.inputs.clear();
     } else {
+      // Restore common inputs. Add more here if you use gamepad/keyboard camera inputs.
       this.camera.inputs.addMouseWheel();
       this.camera.inputs.addPointers();
     }
   }
 
   dispose(): void {
+    const scene = this.camera.getScene();
+
     if (this.pointerObs) {
-      this.camera.getScene().onPointerObservable.remove(this.pointerObs);
+      scene.onPointerObservable.remove(this.pointerObs);
       this.pointerObs = null;
     }
+
+    if (this.failsafeObs) {
+      scene.onBeforeRenderObservable.remove(this.failsafeObs);
+      this.failsafeObs = null;
+    }
+
     this.camera.dispose();
   }
 
@@ -350,10 +452,19 @@ export class CameraRig {
     });
 
     // Failsafe only (prevents “stuck dragging” edge cases)
-    scene.onBeforeRenderObservable.add(() => {
+    this.failsafeObs = scene.onBeforeRenderObservable.add(() => {
       if (!this.userIsDraggingOrbit) return;
       const elapsed = Date.now() - this.lastPointerMoveMs;
       if (elapsed > 2500) this.userIsDraggingOrbit = false;
     });
+  }
+
+  /**
+   * Given a normalized XZ direction from target -> camera, compute ArcRotateCamera alpha.
+   * Alpha = 0 means camera sits on +X axis relative to target.
+   */
+  private static alphaFromToCameraDir(dirToCamera: Vector3): number {
+    // dirToCamera should be normalized, y ignored.
+    return Math.atan2(dirToCamera.z, dirToCamera.x);
   }
 }

@@ -107,6 +107,6 @@ class TraceBuffer {
 export const traceBuffer = new TraceBuffer(500);
 
 // DEV-only confirmation
-if (import.meta.env.DEV) {
-  console.log('[TraceBuffer] Ring buffer initialized (max 500 entries)');
-}
+// if (import.meta.env.DEV) {
+//   console.log('[TraceBuffer] Ring buffer initialized (max 500 entries)');
+// }

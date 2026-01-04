@@ -275,13 +275,13 @@ export class TaskSystem {
     if (!force && sig === this.lastInventorySignature) return;
     this.lastInventorySignature = sig;
 
-    if (import.meta.env.DEV) {
-      console.log('[TaskSystem] Broadcasting inventory:', {
-        role: this.currentRole,
-        count: items.length,
-        epoch: this.roleEpoch,
-      });
-    }
+    // if (import.meta.env.DEV) {
+    //   console.log('[TaskSystem] Broadcasting inventory:', {
+    //     role: this.currentRole,
+    //     count: items.length,
+    //     epoch: this.roleEpoch,
+    //   });
+    // }
 
     this.eventBus.emit({
       type: 'game/inventoryUpdate',

@@ -22,7 +22,7 @@ export class PlayerDebugHelper {
   
   public setPlayer(player: Player): void {
     this.player = player;
-    console.log('[PlayerDebug] Debug helper ready. Press I for info.');
+    // console.log('[PlayerDebug] Debug helper ready. Press I for info.');
   }
   
   private setupKeyboardObserver(): void {

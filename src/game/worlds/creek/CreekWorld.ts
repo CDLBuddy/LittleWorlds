@@ -11,13 +11,13 @@ import {
   MeshBuilder,
   StandardMaterial,
   AbstractMesh,
-  TransformNode,
 } from '@babylonjs/core';
-import { Player } from '@game/entities/player/Player';
 import { Companion } from '@game/entities/companion/Companion';
 import type { RoleId } from '@game/content/areas';
 import type { WorldResult } from '../types';
 import { createWorldPlayers } from '../helpers';
+import { consumePendingSpawn } from '../spawnState';
+import { getSpawnForWorld } from '../spawnRegistry';
 import { INTERACTABLE_ID, type InteractableId } from '@game/content/interactableIds';
 import { SkySystem } from '@game/systems/sky/SkySystem';
 import { saveFacade } from '@game/systems/saves/saveFacade';
@@ -41,9 +41,7 @@ interface Interactable {
   alwaysActive?: boolean;
 }
 
-export function createCreekWorld(scene: Scene, eventBus: any, roleId: RoleId = 'boy', fromArea?: string): WorldResult & {
-  player: TransformNode;
-  playerEntity: Player;
+export function createCreekWorld(scene: Scene, eventBus: any, roleId: RoleId = 'boy', _fromArea?: string): WorldResult & {
   companion: Companion;
   interactables: Interactable[];
   dispose: () => void;
@@ -185,28 +183,19 @@ export function createCreekWorld(scene: Scene, eventBus: any, roleId: RoleId = '
     'woodline'
   );
 
-  // Player spawn (south side on west bank, facing north)
-  // Dynamic spawn based on entry direction
-  let spawnPos: Vector3;
-  if (fromArea === 'pine') {
-    // Coming from north gate (forward) - spawn near north
-    spawnPos = new Vector3(-25, 0, -55);
-  } else {
-    // Coming from south gate (backward) or default - spawn near south
-    spawnPos = new Vector3(-25, 0, 55);
-  }
+  // Player spawn using registry (no fromArea branching)
+  const pending = consumePendingSpawn();
+  const spawn = getSpawnForWorld('creek', pending?.entryGateId);
   
-  // Create BOTH players using shared helper
-  const { boyPlayer, girlPlayer, activePlayer } = createWorldPlayers(scene, spawnPos, roleId);
-  const player = activePlayer.mesh;
-  const playerEntity = activePlayer;
+  // Create BOTH players using shared helper with spawn point
+  const { boyPlayer, girlPlayer, activePlayer } = createWorldPlayers(scene, spawn, roleId);
 
-  // Companion spawn (slightly ahead on west bank)
-  const companion = new Companion(scene, new Vector3(-22, 0, 27), eventBus);
+  // Companion spawn relative to player
+  const companion = new Companion(scene, spawn.position.clone().add(new Vector3(3, 0, 2)), eventBus);
 
   // Position check observer for water splash
   const positionObserver = scene.onBeforeRenderObservable.add(() => {
-    const playerPos = player.position;
+    const playerPos = activePlayer.mesh.position;
     
     // Check if player is on a walkable surface
     const onWalkableSurface = walkableSurfaces.some(surface => {
@@ -225,7 +214,7 @@ export function createCreekWorld(scene: Scene, eventBus: any, roleId: RoleId = '
     
     if (inWater && !onWalkableSurface) {
       // Splash! Teleport back to last safe position
-      player.position.copyFrom(lastSafePosition);
+      activePlayer.mesh.position.copyFrom(lastSafePosition);
       
       // Emit splash toast
       eventBus.emit({
@@ -325,10 +314,9 @@ export function createCreekWorld(scene: Scene, eventBus: any, roleId: RoleId = '
     },
     boyPlayer,
     girlPlayer,
+    spawnForward: spawn.forward.clone(),
     
-    // Legacy fields for backward compatibility
-    player,
-    playerEntity,
+    // Required by GameApp
     companion,
     interactables,
     dispose,
@@ -653,7 +641,7 @@ function createGateInteractable(
     alwaysActive: true,
     interact: () => {
       console.log(`[CreekWorld] Gate ${id} activated → ${targetArea}`);
-      eventBus.emit({ type: 'game/areaRequest', areaId: targetArea });
+      eventBus.emit({ type: 'game/areaRequest', areaId: targetArea, fromGateId: id });
     },
     dispose: () => {
       gate.dispose();

@@ -13,7 +13,7 @@ export function createGateInteractable(
   id: InteractableId,
   position: Vector3,
   color: Color3,
-  eventBus: { emit: (event: { type: string; areaId: string }) => void },
+  eventBus: { emit: (event: { type: string; areaId: string; fromGateId?: string }) => void },
   targetArea: string,
   bag: DisposableBag,
   mats: MaterialCache
@@ -40,7 +40,7 @@ export function createGateInteractable(
     alwaysActive: true,
     interact: () => {
       console.log(`[PineWorld] Gate ${id} activated → ${targetArea}`);
-      eventBus.emit({ type: 'game/areaRequest', areaId: targetArea });
+      eventBus.emit({ type: 'game/areaRequest', areaId: targetArea, fromGateId: id });
     },
     dispose: () => gate.dispose(), // material is cached + disposed by bag
   };

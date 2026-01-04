@@ -175,7 +175,7 @@ export function attachSaveFacadeTap(saveFacade: SaveFacadeType): void {
     return originalSetLastSelectedRole(roleId);
   };
 
-  console.log('[attachSaveFacadeTap] saveFacade taps attached');
+  //console.log('[attachSaveFacadeTap] saveFacade taps attached');
 }
 
 /**

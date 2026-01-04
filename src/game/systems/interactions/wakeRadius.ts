@@ -34,6 +34,8 @@ export class WakeRadiusSystem {
   }
 
   addWakeable(wakeable: Wakeable) {
+    // Force initial world matrix computation to ensure correct absolute position
+    wakeable.mesh.computeWorldMatrix(true);
     this.wakeables.push(wakeable);
   }
 
@@ -45,7 +47,8 @@ export class WakeRadiusSystem {
     const taskTargetId = this.taskSystem?.getCurrentTargetId();
     
     for (const wakeable of this.wakeables) {
-      const distance = Vector3.Distance(playerPosition, wakeable.mesh.position);
+      const wakeablePos = wakeable.mesh.getAbsolutePosition();
+      const distance = Vector3.Distance(playerPosition, wakeablePos);
       const isTaskTarget = taskTargetId === wakeable.id;
       const rIn = isTaskTarget ? this.TASK_R_IN : this.R_IN;
       const rOut = isTaskTarget ? this.TASK_R_IN + 2 : this.R_OUT;

@@ -1,177 +1,193 @@
 /**
  * DuskWorld - Fifth playable area (Firefly Meadow)
- * 110×110 open meadow with golden hour lighting
- * Firefly dusk atmosphere, lantern stakes, linger mode showcase
+ * -----------------------------------------------------------------------------
+ * Visual-first "Firefly Dusk Meadow" inspired by docs/README (golden hour → dusk).
+ *
+ * What this file now does (VISUAL ONLY):
+ * - Golden dusk lighting + soft fog + warm meadow ground
+ * - Tall-grass perimeter + light wildflower scatter (performance-friendly instances)
+ * - Central ancient oak landmark + rope swing (gentle sway)
+ * - 4 firefly clusters with distinct motion patterns (constellation/river/pulse/spiral)
+ * - Photography rock + lantern workbench + lantern totem (decor)
+ * - Gate visuals upgraded to stone pillars (moon-phase vibe) while keeping interact logic
+ *
+ * Non-goals (intentionally NOT implemented here yet):
+ * - Linger mode logic, collecting fireflies, memory capture UI, item gates, quests.
  */
 
 import {
   Scene,
   Color3,
   Vector3,
-  MeshBuilder,
-  StandardMaterial,
-  AbstractMesh,
   TransformNode,
+  HemisphericLight,
+  DirectionalLight,
 } from '@babylonjs/core';
-import { Player } from '@game/entities/player/Player';
+import { GlowLayer } from '@babylonjs/core/Layers/glowLayer';
+
 import { Companion } from '@game/entities/companion/Companion';
 import { SkySystem } from '@game/systems/sky/SkySystem';
 import type { RoleId } from '@game/content/areas';
 import type { WorldResult } from '../types';
 import { createWorldPlayers } from '../helpers';
-import { INTERACTABLE_ID, type InteractableId } from '@game/content/interactableIds';
+import { consumePendingSpawn } from '../spawnState';
+import { getSpawnForWorld } from '../spawnRegistry';
 
-export const DUSK_INTERACTABLES = [
-  INTERACTABLE_ID.DUSK_NIGHT_GATE,
-  INTERACTABLE_ID.DUSK_PINE_GATE,
-] as const satisfies readonly InteractableId[];
+import {
+  DUSK,
+  DUSK_INTERACTABLES,
+  type Interactable,
+  createGround,
+  createFogWall,
+  createTallGrass,
+  createWildflowers,
+  createLingerNests,
+  createAncientOak,
+  createRopeSwing,
+  createProps,
+  createFireflies,
+  createInteractables,
+  makeExclusionPredicate,
+} from './index';
 
-interface Interactable {
-  id: string;
-  mesh: AbstractMesh;
-  interact: () => void;
-  dispose: () => void;
-  alwaysActive?: boolean;
-}
+export { DUSK_INTERACTABLES };
 
-export function createDuskWorld(scene: Scene, eventBus: any, roleId: RoleId = 'boy', fromArea?: string): WorldResult & {
-  player: TransformNode;
-  playerEntity: Player;
+export function createDuskWorld(
+  scene: Scene,
+  eventBus: any,
+  roleId: RoleId = 'boy',
+  _fromArea?: string
+): WorldResult & {
   companion: Companion;
   interactables: Interactable[];
   dispose: () => void;
 } {
   console.log('[DuskWorld] Creating Firefly Dusk Meadow...');
 
-  // Apply Firefly Dusk sky, fog, and lighting via SkySystem
+  const disposers: Array<() => void> = [];
+  const addDispose = (fn: () => void) => disposers.push(fn);
+
+  // === SKY / ATMOSPHERE ======================================================
   const skySystem = new SkySystem(scene);
   void skySystem.apply('firefly', 0);
+  addDispose(() => skySystem.dispose());
 
-  // === LAYOUT: 110×110 open meadow ===
-  const meadowGround = MeshBuilder.CreateGround('dusk_meadow', { width: 110, height: 110 }, scene);
-  meadowGround.position = new Vector3(0, 0, 0);
-  meadowGround.isPickable = true;
-  meadowGround.checkCollisions = false;
-  meadowGround.metadata = { walkable: true };
-  const meadowMat = new StandardMaterial('duskMeadowMat', scene);
-  meadowMat.diffuseColor = new Color3(0.5, 0.6, 0.35); // Warm grass
-  meadowMat.specularColor = new Color3(0.2, 0.2, 0.1);
-  meadowGround.material = meadowMat;
+  scene.fogMode = Scene.FOGMODE_EXP2;
+  scene.fogDensity = DUSK.FOG_DENSITY;
+  scene.fogColor = new Color3(0.40, 0.34, 0.55);
 
-  // Determine spawn based on where player is coming from
-  // Default: south entry from Pine
-  // Dynamic spawn based on entry direction
-  let spawnPos: Vector3;
-  if (fromArea === 'night') {
-    // Coming from north gate (forward) - spawn near north
-    spawnPos = new Vector3(0, 0.9, -40);
-  } else {
-    // Coming from south gate (backward) or default - spawn near south
-    spawnPos = new Vector3(0, 0.9, 42);
+  const hemi = new HemisphericLight('dusk_hemi', new Vector3(0, 1, 0), scene);
+  hemi.intensity = DUSK.HEMI_INTENSITY;
+  hemi.diffuse = new Color3(0.45, 0.55, 0.75);
+  hemi.groundColor = new Color3(0.75, 0.55, 0.35);
+  addDispose(() => hemi.dispose());
+
+  const sun = new DirectionalLight('dusk_sun', DUSK.SUN_DIR, scene);
+  sun.intensity = DUSK.SUN_INTENSITY;
+  sun.diffuse = new Color3(1.0, 0.72, 0.40);
+  sun.specular = new Color3(0.25, 0.22, 0.18);
+  addDispose(() => sun.dispose());
+
+  // === SPAWN / PLAYERS =======================================================
+  const pending = consumePendingSpawn();
+  const spawn = getSpawnForWorld('dusk', pending?.entryGateId);
+
+  const { boyPlayer, girlPlayer } = createWorldPlayers(scene, spawn, roleId);
+
+  const companion = new Companion(scene, spawn.position.clone().add(new Vector3(3, 0, 2)), eventBus);
+
+  let currentActiveRole: RoleId = roleId;
+
+  // === TERRAIN & VEGETATION ==================================================
+  const meadowRoot = new TransformNode('dusk_meadow_root', scene);
+  addDispose(() => meadowRoot.dispose());
+
+  const meadowGround = createGround(scene);
+  addDispose(() => meadowGround.dispose());
+
+  const isInExclusion = makeExclusionPredicate();
+
+  const grassSystem = createTallGrass(scene, meadowRoot, isInExclusion);
+  addDispose(() => grassSystem.dispose());
+
+  const flowersSystem = createWildflowers(scene, meadowRoot, isInExclusion);
+  addDispose(() => flowersSystem.dispose());
+
+  const nestsSystem = createLingerNests(scene, meadowRoot);
+  addDispose(() => nestsSystem.dispose());
+
+  const fogTease = createFogWall(scene, meadowRoot);
+  addDispose(() => fogTease.dispose());
+
+  // === LANDMARKS =============================================================
+  const oak = createAncientOak(scene, meadowRoot);
+  addDispose(() => oak.dispose());
+
+  const swing = createRopeSwing(scene, meadowRoot, oak.swingAnchorWorld);
+  addDispose(() => swing.dispose());
+
+  // === PROPS =================================================================
+  const props = createProps(scene, meadowRoot);
+  addDispose(() => props.dispose());
+
+  // === FX: Fireflies =========================================================
+  const glow = new GlowLayer('dusk_glow', scene);
+  glow.intensity = DUSK.GLOW_INTENSITY;
+  glow.blurKernelSize = DUSK.GLOW_KERNEL;
+  addDispose(() => glow.dispose());
+
+  const fireflies = createFireflies(scene, meadowRoot);
+  addDispose(() => fireflies.dispose());
+
+  // === INTERACTABLES: Gates ==================================================
+  const interactables = createInteractables(scene, meadowRoot, eventBus);
+  for (const interactable of interactables) {
+    addDispose(() => interactable.dispose());
   }
-  
-  // Create BOTH players using shared helper
-  const { boyPlayer, girlPlayer, activePlayer } = createWorldPlayers(scene, spawnPos, roleId);
-  const player = activePlayer.mesh;
-  const playerEntity = activePlayer;
-  
-  const companion = new Companion(scene, new Vector3(3, 0.9, 44), eventBus);
 
-  // === INTERACTABLES ===
-  const interactables: Interactable[] = [];
+  // === UPDATE LOOP ============================================================
+  let t = 0;
+  const updateObs = scene.onBeforeRenderObservable.add(() => {
+    const dt = Math.min(scene.getEngine().getDeltaTime() / 1000, 0.05);
+    t += dt;
 
-  // North gate to Night Stars
-  const northGate = createGateInteractable(
-    scene,
-    INTERACTABLE_ID.DUSK_NIGHT_GATE,
-    new Vector3(0, 0, -50),
-    new Color3(0.7, 0.6, 0.4),
-    eventBus,
-    'night'
-  );
-  interactables.push(northGate);
+    swing.update(t);
+    fireflies.update(t, dt);
+  });
+  addDispose(() => {
+    scene.onBeforeRenderObservable.remove(updateObs);
+  });
 
-  // South gate back to Pine
-  const southGate = createGateInteractable(
-    scene,
-    INTERACTABLE_ID.DUSK_PINE_GATE,
-    new Vector3(0, 0, 52),
-    new Color3(0.6, 0.5, 0.3), // Pine brown
-    eventBus,
-    'pine'
-  );
-  interactables.push(southGate);
-
-  // Dispose function
+  // === DISPOSE ===============================================================
   const dispose = () => {
-    meadowGround.dispose();
-    meadowMat.dispose();
-    skySystem.dispose();
     boyPlayer.dispose();
     girlPlayer.dispose();
     companion.dispose();
-    interactables.forEach(i => i.dispose());
+
+    for (let i = disposers.length - 1; i >= 0; i--) {
+      try {
+        disposers[i]?.();
+      } catch (err) {
+        console.warn('[DuskWorld] dispose() error:', err);
+      }
+    }
   };
 
-  // Track current active role
-  let currentActiveRole: RoleId = roleId;
-
   return {
-    // WorldResult contract implementation
-    getActivePlayer: () => {
-      return currentActiveRole === 'boy' ? boyPlayer : girlPlayer;
-    },
-    getActiveMesh: () => {
-      return (currentActiveRole === 'boy' ? boyPlayer : girlPlayer).mesh;
-    },
+    getActivePlayer: () => (currentActiveRole === 'boy' ? boyPlayer : girlPlayer),
+    getActiveMesh: () => (currentActiveRole === 'boy' ? boyPlayer : girlPlayer).mesh,
     setActiveRole: (newRoleId: RoleId) => {
       currentActiveRole = newRoleId;
       boyPlayer.setActive(newRoleId === 'boy');
       girlPlayer.setActive(newRoleId === 'girl');
     },
+
     boyPlayer,
     girlPlayer,
-    
-    // Legacy fields for backward compatibility
-    player,
-    playerEntity,
+    spawnForward: spawn.forward.clone(),
+
     companion,
     interactables,
     dispose,
-  };
-}
-
-// === HELPER: Gate Interactable ===
-function createGateInteractable(
-  scene: Scene,
-  id: InteractableId,
-  position: Vector3,
-  color: Color3,
-  eventBus: any,
-  targetArea: string
-): Interactable {
-  const gate = MeshBuilder.CreateBox(id, { width: 8, height: 3, depth: 0.5 }, scene);
-  gate.position = position;
-  gate.isPickable = true;
-  gate.checkCollisions = false;
-  gate.metadata = { interactable: true, id };
-
-  const mat = new StandardMaterial(`${id}_mat`, scene);
-  mat.diffuseColor = color;
-  mat.emissiveColor = color.scale(0.2);
-  gate.material = mat;
-
-  return {
-    id,
-    mesh: gate,
-    alwaysActive: true,
-    interact: () => {
-      console.log(`[DuskWorld] Gate ${id} activated → ${targetArea}`);
-      eventBus.emit({ type: 'game/areaRequest', areaId: targetArea });
-    },
-    dispose: () => {
-      gate.dispose();
-      mat.dispose();
-    },
   };
 }

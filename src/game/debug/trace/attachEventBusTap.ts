@@ -34,7 +34,7 @@ export function attachEventBusTap(eventBus: EventBus): void {
     originalEmit(event);
   };
 
-  console.log('[attachEventBusTap] EventBus tap attached');
+  //console.log('[attachEventBusTap] EventBus tap attached');
 }
 
 /**

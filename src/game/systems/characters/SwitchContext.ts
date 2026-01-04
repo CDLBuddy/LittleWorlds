@@ -64,6 +64,6 @@ class SwitchContext {
 export const switchContext = new SwitchContext();
 
 // DEV-only confirmation
-if (import.meta.env.DEV) {
-  console.log('[SwitchContext] Transaction context initialized');
-}
+// if (import.meta.env.DEV) {
+//   console.log('[SwitchContext] Transaction context initialized');
+// }

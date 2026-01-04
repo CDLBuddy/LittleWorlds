@@ -67,7 +67,7 @@ export class AudioManager {
   }
 
   dispose(): void {
-    this.context.close();
+    void this.context.close();
     this.sounds.clear();
   }
 }

@@ -50,7 +50,7 @@ export class AutosaveSystem {
       this.triggerSave('interval');
     }, intervalMs);
     
-    console.log(`[AutosaveSystem] Autosave interval: ${intervalMs}ms`);
+    // console.log(`[AutosaveSystem] Autosave interval: ${intervalMs}ms`);
   }
 
   /**

@@ -15,7 +15,7 @@ class Trace {
   /**
    * Log info-level trace event
    */
-  info(cat: TraceEntry['cat'], msg: string, data?: unknown): void {
+ info(cat: TraceEntry['cat'], msg: string, data?: unknown): void {
     if (!DEV) return;
 
     const entry: TraceEntry = {
@@ -30,7 +30,7 @@ class Trace {
     
     // Also log to console in DEV (can be disabled via flag)
     if (this.shouldLogToConsole(cat)) {
-      console.log(`[Trace:${cat}] ${msg}`, data ?? '');
+      //console.log(`[Trace:${cat}] ${msg}`, data ?? '');
     }
   }
 
@@ -49,7 +49,7 @@ class Trace {
     };
 
     traceBuffer.push(entry);
-    console.warn(`[Trace:${cat}] ⚠️  ${msg}`, data ?? '');
+    //console.warn(`[Trace:${cat}] ⚠️  ${msg}`, data ?? '');
   }
 
   /**
@@ -67,7 +67,7 @@ class Trace {
     };
 
     traceBuffer.push(entry);
-    console.error(`[Trace:${cat}] 🔥 ${msg}`, data ?? '');
+    //console.error(`[Trace:${cat}] 🔥 ${msg}`, data ?? '');
   }
 
   /**
@@ -107,5 +107,5 @@ if (DEV) {
     system: false,  // System lifecycle (noisy)
     error: true,    // Errors (always show)
   };
-  console.log('[trace] Helpers initialized. Toggle logging via window.__traceConfig');
+  //console.log('[trace] Helpers initialized. Toggle logging via window.__traceConfig');
 }

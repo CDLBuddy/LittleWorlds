@@ -42,7 +42,7 @@ export type GameToUi =
   | { type: 'game/interact'; targetId: string }
   | { type: 'game/dwell'; id: string; progress: number } // Dwell progress 0..1
   | { type: 'game/dwellClear'; id: string } // Clear dwell for specific id
-  | { type: 'game/areaRequest'; areaId: string } // Request area transition (from gate)
+  | { type: 'game/areaRequest'; areaId: string; fromArea?: string; fromGateId?: string } // Request area transition (from gate)
   | { type: 'game/inventoryUpdate'; roleId: 'boy' | 'girl'; items: string[] } // Send current inventory to UI with role
   | { type: 'game/characterSwitch'; roleId: 'boy' | 'girl' } // Character switched
   | { type: 'game/collectionsUpdate'; shared: { findsByArea: Record<string, string[]>; trophiesByArea: Record<string, boolean>; postcardsByArea: Record<string, boolean>; audioByArea: Record<string, boolean>; campUpgrades: string[] } }; // Shared collections progress
@@ -74,6 +74,6 @@ class EventBus {
 export const eventBus = new EventBus();
 
 // DEV: Confirm singleton initialization
-if (import.meta.env.DEV) {
-  console.log('[eventBus] singleton created');
-}
+// if (import.meta.env.DEV) {
+//   console.log('[eventBus] singleton created');
+// }

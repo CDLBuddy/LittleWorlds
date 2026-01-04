@@ -36,10 +36,10 @@ export default function GameHost({ running, onReady }: GameHostProps) {
     if (!session.roleId) {
       const save = saveFacade.loadMain();
       actualRoleId = save.lastSelectedRole || 'boy';
-      console.log('[GameHost] Using fallback role from save:', actualRoleId);
+      // console.log('[GameHost] Using fallback role from save:', actualRoleId);
     }
 
-    console.log('[GameHost] Starting game with:', { roleId: actualRoleId, areaId: actualAreaId });
+    // console.log('[GameHost] Starting game with:', { roleId: actualRoleId, areaId: actualAreaId });
 
     // Initialize game with start params
     const game = new GameApp(canvasRef.current, eventBus, { roleId: actualRoleId, areaId: actualAreaId });
@@ -52,7 +52,7 @@ export default function GameHost({ running, onReady }: GameHostProps) {
       }
     });
 
-    game.start();
+    void game.start();
 
     // Cleanup on unmount or when session changes
     return () => {

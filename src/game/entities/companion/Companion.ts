@@ -87,7 +87,7 @@ export class Companion {
       console.error('[Companion] Failed to load dog model:', err);
     });
     
-    console.log('[Companion] Spawned at:', position);
+    // console.log('[Companion] Spawned at:', position);
   }
   
   private async loadDogModel(scene: Scene): Promise<void> {
@@ -135,7 +135,7 @@ export class Companion {
       // Setup animations if they exist
       this.setupAnimations(result.animationGroups);
       
-      console.log('[Companion] Dog model loaded successfully');
+      // console.log('[Companion] Dog model loaded successfully');
     } catch (error) {
       console.error('[Companion] Model load failed, keeping placeholder:', error);
     }

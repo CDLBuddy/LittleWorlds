@@ -11,14 +11,14 @@ import {
   MeshBuilder,
   StandardMaterial,
   AbstractMesh,
-  TransformNode,
 } from '@babylonjs/core';
-import { Player } from '@game/entities/player/Player';
 import { Companion } from '@game/entities/companion/Companion';
 import { SkySystem } from '@game/systems/sky/SkySystem';
 import type { RoleId } from '@game/content/areas';
 import type { WorldResult } from '../types';
 import { createWorldPlayers } from '../helpers';
+import { consumePendingSpawn } from '../spawnState';
+import { getSpawnForWorld } from '../spawnRegistry';
 import { INTERACTABLE_ID, type InteractableId } from '@game/content/interactableIds';
 
 export const BEACH_INTERACTABLES = [
@@ -35,8 +35,6 @@ interface Interactable {
 }
 
 export function createBeachWorld(scene: Scene, eventBus: any, roleId: RoleId = 'boy', _fromArea?: string): WorldResult & {
-  player: TransformNode;
-  playerEntity: Player;
   companion: Companion;
   interactables: Interactable[];
   dispose: () => void;
@@ -70,14 +68,14 @@ export function createBeachWorld(scene: Scene, eventBus: any, roleId: RoleId = '
   ocean.material = oceanMat;
 
   // === PLAYER & COMPANION ===
-  const spawnPos = new Vector3(0, 0.9, 27); // Beach only has one entry from Night (near south gate at z=37)
+  // Player spawn using registry (no fromArea branching)
+  const pending = consumePendingSpawn();
+  const spawn = getSpawnForWorld('beach', pending?.entryGateId);
   
-  // Create BOTH players using shared helper
-  const { boyPlayer, girlPlayer, activePlayer } = createWorldPlayers(scene, spawnPos, roleId);
-  const player = activePlayer.mesh;
-  const playerEntity = activePlayer;
+  // Create BOTH players using shared helper with spawn point
+  const { boyPlayer, girlPlayer } = createWorldPlayers(scene, spawn, roleId);
   
-  const companion = new Companion(scene, new Vector3(3, 0.9, 29), eventBus);
+  const companion = new Companion(scene, spawn.position.clone().add(new Vector3(3, 0, 2)), eventBus);
 
   // === INTERACTABLES ===
   const interactables: Interactable[] = [];
@@ -134,10 +132,9 @@ export function createBeachWorld(scene: Scene, eventBus: any, roleId: RoleId = '
     },
     boyPlayer,
     girlPlayer,
+    spawnForward: spawn.forward.clone(),
     
-    // Legacy fields for backward compatibility
-    player,
-    playerEntity,
+    // Required by GameApp
     companion,
     interactables,
     dispose,
@@ -204,7 +201,7 @@ function createGateInteractable(
     alwaysActive: true,
     interact: () => {
       console.log(`[BeachWorld] Gate ${id} activated → ${targetArea}`);
-      eventBus.emit({ type: 'game/areaRequest', areaId: targetArea });
+      eventBus.emit({ type: 'game/areaRequest', areaId: targetArea, fromGateId: id });
     },
     dispose: () => {
       gate.dispose();

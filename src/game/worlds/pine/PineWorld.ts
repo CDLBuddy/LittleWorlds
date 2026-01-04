@@ -13,8 +13,9 @@ import { Color3, type Scene } from '@babylonjs/core';
 import type { RoleId } from '@game/content/areas';
 import type { WorldResult } from '../types';
 import { createWorldPlayers } from '../helpers';
+import { consumePendingSpawn } from '../spawnState';
+import { getSpawnForWorld } from '../spawnRegistry';
 import { INTERACTABLE_ID } from '@game/content/interactableIds';
-import { Player } from '@game/entities/player/Player';
 import { Companion } from '@game/entities/companion/Companion';
 import { SkySystem } from '@game/systems/sky/SkySystem';
 import { BillboardCloudSystem } from '@game/systems/sky/BillboardCloudSystem';
@@ -48,10 +49,8 @@ export function createPineWorld(
   scene: Scene,
   eventBus: { emit: (event: any) => void },
   roleId: RoleId = 'boy',
-  fromArea?: string
+  _fromArea?: string
 ): WorldResult & {
-  player: any;
-  playerEntity: Player;
   companion: Companion;
   interactables: Interactable[];
   dispose: () => void;
@@ -124,16 +123,22 @@ export function createPineWorld(
   const markers = createMarkers(scene, bag, mats);
 
   // --- PLAYER & COMPANION ---
-  const spawnZ = fromArea === 'dusk' ? -50 : 60;
-  const spawnPos = atTerrain(0, spawnZ, PINE_TERRAIN.playerYOffset);
+  // Player spawn using registry (no fromArea branching)
+  const pending = consumePendingSpawn();
+  const spawn = getSpawnForWorld('pine', pending?.entryGateId);
+  
+  // Pine uses terrain-adjusted Y - keep XZ from registry, compute Y via atTerrain
+  const spawnPos = atTerrain(spawn.position.x, spawn.position.z, PINE_TERRAIN.playerYOffset);
+  const spawnWithTerrain = {
+    position: spawnPos,
+    forward: spawn.forward,
+  };
 
-  const { boyPlayer, girlPlayer, activePlayer } = createWorldPlayers(scene, spawnPos, roleId);
-  const player = activePlayer.mesh;
-  const playerEntity = activePlayer;
+  const { boyPlayer, girlPlayer } = createWorldPlayers(scene, spawnWithTerrain, roleId);
 
   const companion = new Companion(
     scene,
-    atTerrain(3, spawnZ + 2, PINE_TERRAIN.playerYOffset),
+    atTerrain(spawnPos.x + 3, spawnPos.z + 2, PINE_TERRAIN.playerYOffset),
     eventBus
   );
 
@@ -197,8 +202,7 @@ export function createPineWorld(
     },
     boyPlayer,
     girlPlayer,
-    player,
-    playerEntity,
+    spawnForward: spawn.forward.clone(),
     companion,
     interactables,
     dispose,

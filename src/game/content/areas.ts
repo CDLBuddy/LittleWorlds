@@ -7,7 +7,17 @@ import { CONTENT_VERSION } from './version';
 export { CONTENT_VERSION };
 
 export type RoleId = 'boy' | 'girl';
-export type AreaId = 'backyard' | 'woodline' | 'creek' | 'pine' | 'dusk' | 'night' | 'beach';
+
+export const AREA_IDS = ['backyard', 'woodline', 'creek', 'pine', 'dusk', 'night', 'beach'] as const;
+export type AreaId = typeof AREA_IDS[number];
+
+/**
+ * Runtime type guard for AreaId
+ * Use at boundaries to validate unknown/string values
+ */
+export function isAreaId(value: unknown): value is AreaId {
+  return typeof value === 'string' && (AREA_IDS as readonly string[]).includes(value);
+}
 
 export interface AreaDef {
   id: AreaId;

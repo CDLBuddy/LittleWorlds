@@ -13,15 +13,15 @@ export class CompanionDebugHelper {
     if (import.meta.env.PROD) return;
     
     this.setupKeyboardControls();
-    console.log('[CompanionDebug] Controls active:');
-    console.log('  [ / ] - Decrease/Increase scale (0.1)');
-    console.log('  ; / \' - Rotate left/right (5°)');
-    console.log('  i - Log current transform');
+    // console.log('[CompanionDebug] Controls active:');
+    // console.log('  [ / ] - Decrease/Increase scale (0.1)');
+    // console.log('  ; / \' - Rotate left/right (5°)');
+    // console.log('  i - Log current transform');
   }
   
   setCompanion(companion: Companion): void {
     this.companion = companion;
-    console.log('[CompanionDebug] Companion set for debugging');
+    // console.log('[CompanionDebug] Companion set for debugging');
   }
   
   private setupKeyboardControls(): void {

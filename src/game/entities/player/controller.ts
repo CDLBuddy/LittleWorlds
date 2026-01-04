@@ -169,11 +169,11 @@ export class PlayerController {
     this.engine = this.scene.getEngine() as Engine;
     this.canvas = this.engine.getRenderingCanvas();
 
-    console.log('[PlayerController] Constructing controller:', {
-      playerName: player.name,
-      sceneId: scene.uid,
-      canvas: !!this.canvas
-    });
+    // console.log('[PlayerController] Constructing controller:', {
+    //   playerName: player.name,
+    //   sceneId: scene.uid,
+    //   canvas: !!this.canvas
+    // });
 
     if (!this.canvas) {
       console.error('[PlayerController] No canvas found! Controller will not work. This may be React Strict Mode double-render.');
@@ -211,7 +211,7 @@ export class PlayerController {
     this.setupKeyboardObserver();
     this.setupPointerLockTracking();
     
-    console.log('[PlayerController] Controller initialized, enabled:', this.enabled);
+    // console.log('[PlayerController] Controller initialized, enabled:', this.enabled);
   }
 
   public setPlayerEntity(player: Player): void {
@@ -255,6 +255,27 @@ export class PlayerController {
     const delta = this.currentYaw - this.lastYaw;
     this.lastYaw = this.currentYaw;
     return delta;
+  }
+  
+  /**
+   * Reset yaw baseline to prevent stale delta on world load.
+   * Call this after world swap / spawn to ensure first frame delta = 0.
+   */
+  public resetYawBaseline(): void {
+    this.lastYaw = this.currentYaw;
+  }
+
+  /**
+   * Get player's movement intent for camera recenter logic.
+   * Returns forward amount: +1 = W key, -1 = S key, 0 = no input.
+   */
+  public getMoveIntent(): { isMoving: boolean; forwardAmount: number } {
+    const k = this.getKeyboardAxes();
+    const t = this.getTouchMoveAxes();
+    // Use keyboard if present, otherwise touch
+    const forwardAmount = k.x !== 0 || k.y !== 0 ? k.y : t.y;
+    const isMoving = Math.abs(forwardAmount) > 0.05 || this.velocity.length() > 0.1;
+    return { isMoving, forwardAmount };
   }
 
   // ---- Input + picking helpers ------------------------------------------------
@@ -319,12 +340,12 @@ export class PlayerController {
   }
 
   private setupKeyboardObserver(): void {
-    console.log('[PlayerController] Setting up keyboard observer on scene', this.scene.uid);
+    // console.log('[PlayerController] Setting up keyboard observer on scene', this.scene.uid);
     
     // Try Babylon's keyboard observable first
     this.keyboardObserver = this.scene.onKeyboardObservable.add((kbInfo) => {
       if (!this.enabled) {
-        console.log('[PlayerController] Keyboard event but controller disabled');
+        // console.log('[PlayerController] Keyboard event but controller disabled');
         return;
       }
 

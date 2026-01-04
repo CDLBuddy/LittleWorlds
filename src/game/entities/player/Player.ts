@@ -75,7 +75,7 @@ export class Player {
         return;
       }
       
-      console.log(`[Player] Loading ${this.roleId} model:`, modelUrl);
+      // console.log(`[Player] Loading ${this.roleId} model:`, modelUrl);
       
       const result = await loadGlb(this.scene, modelUrl, {
         name: `${this.roleId}_${Date.now()}`,
@@ -116,7 +116,7 @@ export class Player {
   }
 
   private setupAnimations(groups: AnimationGroup[]): void {
-    console.log('[Player] Animation groups found:', groups.length);
+    // console.log('[Player] Animation groups found:', groups.length);
     
     if (groups.length === 0) {
       console.warn(`[Player] ⚠️ No animations found in ${this.roleId}.glb`);
