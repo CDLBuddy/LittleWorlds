@@ -5,7 +5,8 @@
 
 import { Vector3, TransformNode, type Scene, type AbstractMesh, type Mesh } from '@babylonjs/core';
 import { loadContainer } from '../models/loadContainer';
-import { GRASS_CONFIG, GRASS_EXCLUSION_ZONES } from '../config/constants';
+import { GRASS_CONFIG, GRASS_EXCLUSION_ZONES, GRASS_WIND_CONFIG } from '../config/constants';
+import { applyGrassWindToMesh } from '@game/systems/fx/applyGrassWind';
 
 /**
  * Helper function to check if a position is in any exclusion zone
@@ -52,6 +53,36 @@ export async function createGrass(
     
     if (grassMesh) {
       // console.log(`[Backyard] Using grass mesh: ${grassMesh.name}`);
+      
+      // Apply wind animation to the grass material before creating instances
+      applyGrassWindToMesh(grassMesh, GRASS_WIND_CONFIG);
+      
+      // DEV: Verify shader compilation and catch errors
+      if (import.meta.env.DEV && grassMesh.material) {
+        const mat: any = grassMesh.material;
+        
+        // Listen for successful compilation
+        // eslint-disable-next-line @typescript-eslint/no-unsafe-member-access, @typescript-eslint/no-unsafe-call
+        mat.onCompiledObservable?.add((eff: any) => {
+          // eslint-disable-next-line @typescript-eslint/no-unsafe-assignment, @typescript-eslint/no-unsafe-member-access
+          const vs = eff?._vertexSourceCode ?? '';
+          console.log('[GrassWind] Shader compiled!');
+          // eslint-disable-next-line @typescript-eslint/no-unsafe-member-access, @typescript-eslint/no-unsafe-call
+          console.log('[GrassWind] Has uniforms:', vs.includes('grassWindTime'), vs.includes('grassWindAmplitude'));
+          // eslint-disable-next-line @typescript-eslint/no-unsafe-member-access
+          console.log('[GrassWind] Defines:', eff?.defines);
+        });
+        
+        // Listen for compilation errors
+        // eslint-disable-next-line @typescript-eslint/no-unsafe-member-access, @typescript-eslint/no-unsafe-call
+        mat.onErrorObservable?.add((_eff: any, errors: string) => {
+          console.error('[GrassWind] Shader compilation error:', errors);
+        });
+        
+        // Flush effect cache to force recompilation
+        scene.getEngine().releaseEffects();
+        console.log('[GrassWind] Effect cache flushed, forcing recompilation');
+      }
       
       // Disable the template (don't render it)
       grassMesh.setEnabled(false);
