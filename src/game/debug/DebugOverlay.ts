@@ -3,6 +3,7 @@
  */
 
 import { Vector3, Scene } from '@babylonjs/core';
+import type { AbstractMesh } from '@babylonjs/core/Meshes/abstractMesh';
 import { snapshotPerf } from './perfSnapshot';
 
 export class DebugOverlay {
@@ -14,6 +15,7 @@ export class DebugOverlay {
   private fpsHistory: number[] = [];
   private readonly FPS_SAMPLE_SIZE = 30;
   private scene: Scene | null = null;
+  private playerMesh: AbstractMesh | null = null;
   private perfUpdateTimer: ReturnType<typeof setInterval> | null = null;
 
   constructor(scene?: Scene) {
@@ -90,16 +92,19 @@ export class DebugOverlay {
     }
   }
 
+  setPlayerMesh(mesh: AbstractMesh) {
+    this.playerMesh = mesh;
+  }
+
   private updatePerfMetrics() {
     if (!this.scene) return;
 
-    const perf = snapshotPerf(this.scene);
-    const meshColor = perf.meshesActive > 100 ? '#f00' : perf.meshesActive > 50 ? '#ff0' : '#0f0';
+    const perf = snapshotPerf(this.scene, this.playerMesh || undefined);
+    const meshColor = perf.meshesActive > 200 ? '#f00' : perf.meshesActive > 100 ? '#ff0' : '#0f0';
     
     this.perfElement.innerHTML = `
-      <div>Meshes: <span style="color: ${meshColor}">${perf.meshesActive}</span>/${perf.meshesTotal}</div>
-      <div>Materials: ${perf.materials}</div>
-      <div>Textures: ${perf.textures}</div>
+      <div>Meshes: <span style="color: ${meshColor}">${perf.meshesRendered}</span>/${perf.meshesActive} (${perf.instanceCount} inst)</div>
+      <div>Materials: ${perf.materials} | Textures: ${perf.textures}</div>
     `;
   }
 

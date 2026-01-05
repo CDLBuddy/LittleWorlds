@@ -2,7 +2,8 @@
  * Backyard World - Constants and configuration
  */
 
-import { Vector3, Vector2, Color3 } from '@babylonjs/core';
+import { Vector3, Color3 } from '@babylonjs/core';
+import { GRASS_WIND_PRESET_DEFAULT } from '@game/terrain/grass/presets';
 
 // === TERRAIN ===
 export const BACKYARD_TERRAIN = {
@@ -13,20 +14,20 @@ export const BACKYARD_TERRAIN = {
 // === GRASS ===
 export const GRASS_CONFIG = {
   gridSize: 6,
-  spacing: 13,
+  spacing: 13,  // Adjust 10-16m to optimize coverage (eliminate gaps/overlaps)
   offset: -40,
   scaleY: 0.6, // Reduce grass height to 60%
+  jitter: {
+    position: 2,  // +/- 2m random offset (15% of 13m spacing)
+    rotationY: Math.PI * 2,  // Full random rotation (0-360°)
+  },
 } as const;
 
-// Grass wind animation settings
+// Grass wind animation settings (extends shared DEFAULT preset with Backyard-specific tuning)
 export const GRASS_WIND_CONFIG = {
-  windDir: new Vector2(1, 0.3), // Wind direction (x, z) - normalized by plugin
-  amplitude: 0.18, // Bend amount (world units) - subtle movement
-  speed: 1.2, // Animation speed multiplier - natural pace
-  frequency: 0.75, // Wave frequency (higher = more waves)
-  maskScale: 2.0, // Fallback height mask scale (accounts for scaleY: 0.6)
-  enabled: true,
-  debugForceMask: false, // Disable debug mode - use natural masking
+  ...GRASS_WIND_PRESET_DEFAULT,
+  // Backyard-specific overrides:
+  maskScale: 2.0, // Adjusted for scaleY: 0.6 grass scaling
 } as const;
 
 // Exclusion zones for structures (no grass)

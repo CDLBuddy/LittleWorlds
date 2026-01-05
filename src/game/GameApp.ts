@@ -575,6 +575,13 @@ export class GameApp {
       // === END TRACE HARNESS ===
       
       this.debugOverlay = new DebugOverlay(this.scene);
+      // Set player mesh for position tracking in perf overlay
+      if (this.currentWorld) {
+        const activePlayer = this.getActivePlayerEntity();
+        if (activePlayer?.mesh && 'sourceMesh' in activePlayer.mesh) {
+          this.debugOverlay.setPlayerMesh(activePlayer.mesh as any);
+        }
+      }
       this.companionDebugHelper = new CompanionDebugHelper();
       if (this.companion) {
         this.companionDebugHelper.setCompanion(this.companion);

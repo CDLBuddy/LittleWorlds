@@ -8,6 +8,8 @@ import { Scene } from '@babylonjs/core';
 import '@babylonjs/loaders/glTF';
 import { SkySystem } from '@game/systems/sky/SkySystem';
 import { Companion } from '@game/entities/companion/Companion';
+import { disposeGrassField } from '@game/terrain/grass/disposeGrassField';
+import type { GrassFieldResult } from '@game/terrain/grass/types';
 import type { RoleId } from '@game/content/areas';
 import type { AppEvent } from '@game/shared/events';
 import { snapshotPerf, logPerfSnapshot } from '@game/debug/perfSnapshot';
@@ -50,10 +52,15 @@ export function createBackyardWorld(
   // === TERRAIN ===
   const { ground, groundMat } = createGround(scene);
 
-  // Load grass asynchronously (fire-and-forget)
-  void createGrass(scene, ground, () => isAlive).catch((error) => {
-    console.error('[Backyard] Failed to create grass:', error);
-  });
+  // Load grass asynchronously (track result for disposal)
+  let grassField: GrassFieldResult | undefined;
+  createGrass(scene, ground, () => isAlive)
+    .then((field) => {
+      grassField = field;
+    })
+    .catch((error) => {
+      console.error('[Backyard] Failed to create grass:', error);
+    });
 
   // === MODELS ===
   // Load house asynchronously (fire-and-forget)
@@ -114,6 +121,9 @@ export function createBackyardWorld(
     
     // Dispose sky system
     skySystem.dispose();
+    
+    // Dispose grass field
+    disposeGrassField(grassField, { debug: { log: import.meta.env.DEV } });
     
     // Dispose terrain
     ground.dispose();

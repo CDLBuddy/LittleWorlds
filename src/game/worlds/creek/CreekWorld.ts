@@ -21,6 +21,9 @@ import { getSpawnForWorld } from '../spawnRegistry';
 import { INTERACTABLE_ID, type InteractableId } from '@game/content/interactableIds';
 import { SkySystem } from '@game/systems/sky/SkySystem';
 import { saveFacade } from '@game/systems/saves/saveFacade';
+import { createGrass } from './terrain/createGrass';
+import { disposeGrassField } from '@game/terrain/grass/disposeGrassField';
+import type { GrassFieldResult } from '@game/terrain/grass/types';
 
 export const CREEK_INTERACTABLES = [
   INTERACTABLE_ID.CREEK_FILTER_STATION,
@@ -193,6 +196,23 @@ export function createCreekWorld(scene: Scene, eventBus: any, roleId: RoleId = '
   // Companion spawn relative to player
   const companion = new Companion(scene, spawn.position.clone().add(new Vector3(3, 0, 2)), eventBus);
 
+  // Create grass field (async, non-blocking)
+  let grassField: GrassFieldResult | undefined;
+  let isWorldAlive = true;
+  const getIsAlive = () => isWorldAlive;
+  
+  createGrass(scene, getIsAlive)
+    .then((field) => {
+      grassField = field;
+      // Ground planes visible (grass on top)
+      if (import.meta.env.DEV) {
+        console.log('[Creek] Grass field created successfully');
+      }
+    })
+    .catch((err) => {
+      console.error('[Creek] Failed to create grass:', err);
+    });
+
   // Position check observer for water splash
   const positionObserver = scene.onBeforeRenderObservable.add(() => {
     const playerPos = activePlayer.mesh.position;
@@ -252,8 +272,14 @@ export function createCreekWorld(scene: Scene, eventBus: any, roleId: RoleId = '
   const dispose = () => {
     console.log('[CreekWorld] Disposing Creek world...');
     
+    // Mark world as dead to prevent ghost meshes
+    isWorldAlive = false;
+    
     // Remove observers
     scene.onBeforeRenderObservable.remove(positionObserver);
+    
+    // Dispose grass field
+    disposeGrassField(grassField, { debug: { log: import.meta.env.DEV } });
     
     // Dispose interactables (they own their meshes/materials)
     interactables.forEach(i => i.dispose());

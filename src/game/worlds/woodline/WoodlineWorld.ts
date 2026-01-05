@@ -27,6 +27,9 @@ import type { WorldResult } from '../types';
 import { createWorldPlayers } from '../helpers';
 import { consumePendingSpawn } from '../spawnState';
 import { getSpawnForWorld } from '../spawnRegistry';
+import { createGrass } from './terrain/createGrass';
+import { disposeGrassField } from '@game/terrain/grass/disposeGrassField';
+import type { GrassFieldResult } from '@game/terrain/grass/types';
 
 export const WOODLINE_INTERACTABLES = [
   INTERACTABLE_ID.WOODLINE_CAMPFIRE,
@@ -62,7 +65,7 @@ export function createWoodlineWorld(scene: Scene, eventBus: any, roleId: RoleId 
   void skySystem.apply('woodline', 0);
 
   // Forest floor ground (larger map)
-  const ground = MeshBuilder.CreateGround('ground', { width: 120, height: 120 }, scene);
+  const ground = MeshBuilder.CreateGround('ground', { width: 121, height: 121 }, scene);
   ground.isPickable = true;
   ground.checkCollisions = false; // Controller handles collision
   const groundMat = new StandardMaterial('groundMat', scene);
@@ -73,7 +76,7 @@ export function createWoodlineWorld(scene: Scene, eventBus: any, roleId: RoleId 
 
   // Clearing around campfire (lighter circle)
   const clearing = MeshBuilder.CreateDisc('clearing', { radius: 8 }, scene);
-  clearing.position.y = 0.01; // Slightly above ground to avoid z-fighting
+  clearing.position.y = 0.05; // Above ground to prevent z-fighting (increased from 0.01)
   clearing.rotation.x = Math.PI / 2;
   const clearingMat = new StandardMaterial('clearingMat', scene);
   clearingMat.diffuseColor = new Color3(0.6, 0.75, 0.45); // Brighter grass for late morning
@@ -226,6 +229,25 @@ export function createWoodlineWorld(scene: Scene, eventBus: any, roleId: RoleId 
   // Companion spawn relative to player
   const companion = new Companion(scene, spawn.position.clone().add(new Vector3(3, 0, 2)), eventBus);
 
+  // Create grass field (async, but don't block world creation)
+  let grassField: GrassFieldResult | undefined;
+  let isWorldAlive = true;
+  const getIsAlive = () => isWorldAlive;
+  
+  createGrass(scene, getIsAlive)
+    .then((field) => {
+      grassField = field;
+      // Hide ground plane since grass covers it (prevents z-fighting)
+      ground.visibility = 0;
+      ground.setEnabled(false);
+      if (import.meta.env.DEV) {
+        console.log('[Woodline] Grass field created successfully');
+      }
+    })
+    .catch((err) => {
+      console.error('[Woodline] Failed to create grass:', err);
+    });
+
   // === INTERACTABLES ===
 
   // Campfire (center, both roles interact with it eventually)
@@ -327,6 +349,9 @@ export function createWoodlineWorld(scene: Scene, eventBus: any, roleId: RoleId 
 
   // Dispose function
   const dispose = () => {
+    // Mark world as dead to prevent late-arriving async operations
+    isWorldAlive = false;
+    
     // Observer cleanup now handled in individual interactable dispose methods
     if (import.meta.env.DEV) {
       console.log('[WoodlineWorld] Disposing world resources');
@@ -345,6 +370,9 @@ export function createWoodlineWorld(scene: Scene, eventBus: any, roleId: RoleId 
     companion.dispose();
     interactables.forEach(i => i.dispose());
     skySystem.dispose();
+    
+    // Dispose grass field if created
+    disposeGrassField(grassField, { debug: { log: import.meta.env.DEV } });
   };
 
   // Track current active role

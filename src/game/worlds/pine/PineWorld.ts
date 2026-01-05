@@ -37,6 +37,7 @@ import {
   atTerrain,
   type Interactable,
 } from './index';
+import { createGrass } from './terrain/createGrass';
 
 // Re-export for worldManifest
 export { PINE_INTERACTABLES } from './index';
@@ -142,6 +143,22 @@ export function createPineWorld(
     eventBus
   );
 
+  // Create grass field (async, tracked in DisposableBag)
+  let isWorldAlive = true;
+  const getIsAlive = () => isWorldAlive;
+  
+  createGrass(scene, bag, getIsAlive)
+    .then((_field) => {
+      // Hide terrain ground since grass covers it (prevents z-fighting)
+      // Note: Pine uses terrain ribbons, may not need hiding depending on setup
+      if (import.meta.env.DEV) {
+        console.log('[Pine] Grass field created successfully');
+      }
+    })
+    .catch((err) => {
+      console.error('[Pine] Failed to create grass:', err);
+    });
+
   // --- INTERACTABLES ---
   const interactables: Interactable[] = [];
 
@@ -177,11 +194,12 @@ export function createPineWorld(
   let currentActiveRole: RoleId = roleId;
 
   const dispose = () => {
+    isWorldAlive = false;  // Prevent ghost meshes from async grass
     boyPlayer.dispose();
     girlPlayer.dispose();
     companion.dispose();
     interactables.forEach((i) => i.dispose());
-    bag.dispose();
+    bag.dispose();  // DisposableBag handles grass cleanup
     
     // Quiet unused warnings
     void clouds;

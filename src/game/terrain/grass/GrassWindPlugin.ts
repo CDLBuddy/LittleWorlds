@@ -1,4 +1,9 @@
-// src/game/systems/fx/GrassWindPlugin.ts
+/**
+ * Grass wind material plugin
+ * Adds vertex-based wind animation to grass materials using MaterialPluginBase
+ * Compatible with PBRMaterial and instancing
+ */
+
 import {
   Material,
   MaterialDefines,
@@ -7,16 +12,7 @@ import {
   UniformBuffer,
   Vector2,
 } from '@babylonjs/core';
-
-export type GrassWindOptions = {
-  enabled?: boolean;
-  windDir?: Vector2;
-  amplitude?: number;
-  speed?: number;
-  frequency?: number;
-  maskScale?: number;
-  debugForceMask?: boolean;
-};
+import type { GrassWindOptions } from './types';
 
 export class GrassWindPlugin extends MaterialPluginBase {
   private _start = performance.now();
@@ -48,7 +44,9 @@ export class GrassWindPlugin extends MaterialPluginBase {
     return 'GrassWindPlugin';
   }
 
-  // If you ever switch to WebGPU, you’ll need WGSL too.
+  /**
+   * Plugin is compatible with GLSL only (WebGPU WGSL support can be added in future phase)
+   */
   isCompatible(shaderLanguage: ShaderLanguage) {
     return shaderLanguage === ShaderLanguage.GLSL;
   }
@@ -57,7 +55,10 @@ export class GrassWindPlugin extends MaterialPluginBase {
     defines['GRASSWIND'] = this._enabled;
   }
 
-  // ✅ Correct place to DECLARE uniforms for a plugin (UBO wiring)
+  /**
+   * Declare uniforms for the plugin
+   * These are automatically wired into the UBO and shader
+   */
   getUniforms() {
     return {
       ubo: [
