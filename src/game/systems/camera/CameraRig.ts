@@ -390,7 +390,7 @@ export class CameraRig {
     if (!this.aimMode && !userRecentlyOriented && moveIntent?.isMoving) {
       // Only recenter when moving forward enough (not backing up or strafing)
       const forward = Math.max(0, moveIntent.forwardAmount ?? 0);
-      if (forward > 0.15) {
+      if (forward > 0.5) {
         // Strength scales with forward input so it feels "earned"
         const k = this.recenterStrength * forward;
         const a = 1 - Math.exp(-k * 60 * dt);
