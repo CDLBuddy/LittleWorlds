@@ -3,7 +3,7 @@ import { Vector3 } from '@babylonjs/core';
 export const DUSK = {
   SIZE: 110,
   HALF: 55,
-  GROUND_Y: 0,
+  GROUND_Y: -0.15,  // Lower ground to prevent z-fighting with grass
 
   // Grass / meadow visuals
   PERIMETER_BAND: 14, // tall grass thickness from edges inward

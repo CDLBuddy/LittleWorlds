@@ -35,6 +35,9 @@ import { createWorldPlayers } from '../helpers';
 import { consumePendingSpawn } from '../spawnState';
 import { getSpawnForWorld } from '../spawnRegistry';
 import { INTERACTABLE_ID, type InteractableId } from '@game/content/interactableIds';
+import { createGrass } from './terrain/createGrass';
+import { disposeGrassField } from '@game/terrain/grass/disposeGrassField';
+import type { GrassFieldResult } from '@game/terrain/grass/types';
 
 export const NIGHT_INTERACTABLES = [
   INTERACTABLE_ID.NIGHT_BEACH_GATE,
@@ -87,7 +90,7 @@ export function createNightWorld(scene: Scene, eventBus: any, roleId: RoleId = '
 
   // === TERRAIN: 120×100 clearing ===
   const clearingGround = MeshBuilder.CreateGround('night_clearing', { width: 120, height: 100, subdivisions: 4 }, scene);
-  clearingGround.position.set(0, 0, 0);
+  clearingGround.position.set(0, -0.15, 0);  // Lower ground to prevent z-fighting with grass
   clearingGround.isPickable = true;
   clearingGround.checkCollisions = false;
   clearingGround.metadata = { walkable: true };
@@ -116,6 +119,28 @@ export function createNightWorld(scene: Scene, eventBus: any, roleId: RoleId = '
   // === LANDMARKS & POINTS OF INTEREST ===
   const root = new TransformNode('night_root', scene);
   addDispose(() => root.dispose());
+
+  // Phase D+E grass system (hex placement + raycast allowlist)
+  let grassField: GrassFieldResult | null = null;
+  let isAlive = true;
+  const getIsAlive = () => isAlive;
+
+  console.log('[NightWorld] Starting grass creation...');
+  createGrass(scene, clearingGround, getIsAlive)
+    .then((field) => {
+      console.log('[NightWorld] Grass promise resolved, field:', field);
+      if (!isAlive) {
+        console.log('[NightWorld] World no longer alive, disposing grass');
+        disposeGrassField(field);
+        return;
+      }
+      grassField = field;
+      if (field.parent) field.parent.parent = root;
+      console.log('[NightWorld] Grass successfully attached to scene');
+    })
+    .catch((err) => {
+      console.error('[NightWorld] Failed to create grass:', err);
+    });
 
   // 1. Stargazing Stone (Center) - Flat boulder for sky viewing
   const starStone = createStargazingStone(scene, root);
@@ -178,6 +203,8 @@ export function createNightWorld(scene: Scene, eventBus: any, roleId: RoleId = '
 
   // === DISPOSE ===
   const dispose = () => {
+    isAlive = false; // Signal lifecycle end
+    if (grassField) disposeGrassField(grassField);
     boyPlayer.dispose();
     girlPlayer.dispose();
     companion.dispose();

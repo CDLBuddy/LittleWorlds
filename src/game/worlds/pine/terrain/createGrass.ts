@@ -7,9 +7,9 @@ import type { Scene } from '@babylonjs/core';
 import { SceneLoader } from '@babylonjs/core/Loading/sceneLoader';
 import { createGrassField } from '@game/terrain/grass/createGrassField';
 import type { GrassFieldResult } from '@game/terrain/grass/types';
+import type { TerrainSamplerWithBounds } from '@game/terrain/terrainSampler';
 import type { DisposableBag } from '../utils/DisposableBag';
 import { PINE_GRASS_CONFIG } from './grassConfig';
-import { heightAtXZ } from '../utils/terrain';
 import { buildSwitchbackCenterline } from '../trail/buildCenterline';
 
 /**
@@ -34,16 +34,18 @@ async function loadContainer(params: { scene: Scene; url: string; getIsAlive: ()
  * Create Pine forest grass field
  * @param scene - Babylon scene
  * @param bag - DisposableBag for resource tracking
+ * @param sampler - Terrain sampler with bounds and height queries
  * @param getIsAlive - Lifecycle guard callback
  * @returns Grass field result (tracked in DisposableBag)
  */
 export async function createGrass(
   scene: Scene,
   bag: DisposableBag,
+  sampler: TerrainSamplerWithBounds,
   getIsAlive: () => boolean
 ): Promise<GrassFieldResult> {
   // Build trail centerline for corridor exclusion
-  const centerline = buildSwitchbackCenterline();
+  const centerline = buildSwitchbackCenterline(sampler.heightAt);
   const trailPoints = centerline.map((v) => ({ x: v.x, z: v.z }));
 
   const result = await createGrassField(
@@ -77,10 +79,10 @@ export async function createGrass(
           width: 14, // 14m wide corridor (accounts for variable trail width + margins)
         },
       ],
-      // Phase D: Enable terrain conforming with Phase E polish
+      // Phase 8: Use sampler.heightAt instead of legacy heightAtXZ
       terrain: {
         mode: 'heightFn',
-        heightAt: heightAtXZ,
+        heightAt: sampler.heightAt,
         sampleEps: 0.5,
         alignToNormal: true,
         yOffset: -0.05,      // Sink 5cm into terrain for grounding

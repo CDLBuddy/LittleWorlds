@@ -4,6 +4,7 @@
  */
 
 import type { Vector2, Vector3, AbstractMesh, TransformNode, AssetContainer } from '@babylonjs/core';
+import type { HexBounds } from './placement/hex';
 
 /**
  * Configuration options for grass wind animation
@@ -101,6 +102,23 @@ export type GrassTerrainConform =
       maxTiltDeg?: number;
       /** Normal blend factor 0..1 (default: 1 = full normal, 0 = vertical) */
       normalBlend?: number;
+    }
+  | {
+      mode: 'raycastAllowlist';
+      /** Array of allowed ground meshes to raycast against */
+      groundMeshes: AbstractMesh[];
+      /** Starting Y position for raycasts (default: 50) */
+      rayStartY?: number;
+      /** Maximum raycast length (default: 200) */
+      rayLength?: number;
+      /** Whether to align grass to terrain normal (default: true) */
+      alignToNormal?: boolean;
+      /** Y-axis offset to apply after sampling terrain height (default: 0) */
+      yOffset?: number;
+      /** Maximum tilt angle in degrees (default: undefined = no clamp) */
+      maxTiltDeg?: number;
+      /** Normal blend factor 0..1 (default: 1 = full normal, 0 = vertical) */
+      normalBlend?: number;
     };
 
 // ============================================================================
@@ -139,14 +157,43 @@ export type GrassBudget = {
 };
 
 /**
+ * Placement mode selector for grass distribution
+ */
+export type GrassPlacementMode =
+  | { kind: 'grid' }
+  | { kind: 'staggered' } // Grid with odd rows offset by half spacing
+  | { kind: 'hex'; bounds: HexBounds };
+
+/**
+ * Auto-spacing configuration (Phase C)
+ * Derives spacing from template mesh footprint
+ */
+export type GrassAutoSpacing = {
+  /** Enable auto-spacing from mesh bounds */
+  enabled: true;
+  /** Overlap factor 0..1 (0 = touching, 0.2 = 20% overlap, default: 0.18) */
+  overlap?: number;
+  /** Which diameter to use: 'min' (tighter) | 'max' (looser) | 'x' | 'z' (default: 'min') */
+  axis?: 'min' | 'max' | 'x' | 'z';
+};
+
+/**
  * Grid-based placement configuration for grass instances
  */
 export type GrassGridPlacement = {
-  /** Grid size (NxN) */
-  gridSize: number;
-  /** Spacing between instances in meters */
+  /** Placement mode (default: grid for backward compatibility) */
+  mode?: GrassPlacementMode;
+  /** Grid size (NxN) - only used in grid mode */
+  gridSize?: number;
+  /** Spacing between instances in meters (ignored if autoSpacing enabled) */
   spacing: number;
-  /** World offset for grid origin (applied to both X and Z) */
+  /** Phase C: Explicit X-axis spacing (optional, overrides spacing for X) */
+  spacingX?: number;
+  /** Phase C: Explicit Z-axis spacing (optional, overrides spacing for Z) */
+  spacingZ?: number;
+  /** Phase C: Auto-spacing from mesh footprint (optional) */
+  autoSpacing?: GrassAutoSpacing;
+  /** World offset for grid origin (applied to both X and Z) - only used in grid mode */
   offset?: number;
   /** Y-axis scaling factor for instances (e.g., 0.6 for 60% height) */
   scaleY?: number;

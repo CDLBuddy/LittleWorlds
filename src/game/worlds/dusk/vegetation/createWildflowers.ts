@@ -7,9 +7,18 @@ import {
   Scalar,
   Mesh,
   type AbstractMesh,
+  Vector3,
 } from '@babylonjs/core';
 import { DUSK } from '../config/constants';
 import { createRng } from '../utils/rng';
+import {
+  applyThinInstances,
+  createYawTransform,
+  type ThinInstanceTransform,
+} from '../../../shared/thinInstances';
+
+// Phase 2: Enable thin instances for wildflowers
+const USE_THIN_INSTANCES = true;
 
 export function createWildflowers(
   scene: Scene,
@@ -53,44 +62,87 @@ export function createWildflowers(
   for (let typeIndex = 0; typeIndex < bases.length; typeIndex++) {
     const group = bases[typeIndex];
 
-    for (let i = 0; i < DUSK.FLOWER_COUNT_PER_TYPE; i++) {
-      let x = 0;
-      let z = 0;
+    if (USE_THIN_INSTANCES) {
+      // Phase 2: Thin instance path
+      const transforms: ThinInstanceTransform[] = [];
 
-      // attempt placements
-      for (let k = 0; k < 10; k++) {
-        x = Scalar.Lerp(-safeInner, safeInner, rng());
-        z = Scalar.Lerp(-safeInner, safeInner, rng());
+      for (let i = 0; i < DUSK.FLOWER_COUNT_PER_TYPE; i++) {
+        let x = 0;
+        let z = 0;
+
+        // attempt placements
+        for (let k = 0; k < 10; k++) {
+          x = Scalar.Lerp(-safeInner, safeInner, rng());
+          z = Scalar.Lerp(-safeInner, safeInner, rng());
+          if (isExcluded(x, z)) continue;
+
+          // cluster bias: more flowers around edges of clearing
+          const r = Math.sqrt(x * x + z * z);
+          if (r < 9 && rng() < 0.85) continue; // keep oak base cleaner
+
+          break;
+        }
+
         if (isExcluded(x, z)) continue;
 
-        // cluster bias: more flowers around edges of clearing
-        const r = Math.sqrt(x * x + z * z);
-        if (r < 9 && rng() < 0.85) continue; // keep oak base cleaner
+        const yaw = rng() * Math.PI * 2;
+        const s = Scalar.Lerp(0.75, 1.35, rng());
+        const scaleY = Scalar.Lerp(0.85, 1.65, rng());
+        const scale = new Vector3(s, scaleY, s);
 
-        break;
+        transforms.push(createYawTransform(x, 0.0, z, yaw, scale));
       }
 
-      if (isExcluded(x, z)) continue;
+      // Apply all transforms in one batch
+      applyThinInstances(group.base, transforms);
+      // CRITICAL: Must be visible for thin instances to render
+      group.base.isVisible = true;
+      group.base.parent = parent;
+      group.base.isPickable = false;
+      group.base.checkCollisions = false;
+    } else {
+      // Legacy instance path (kept for rollback if needed)
+      for (let i = 0; i < DUSK.FLOWER_COUNT_PER_TYPE; i++) {
+        let x = 0;
+        let z = 0;
 
-      const inst = group.base.createInstance(`dusk_flower_${typeIndex}_${i}`);
-      inst.isPickable = false;
-      inst.checkCollisions = false;
-      inst.parent = parent;
-      inst.position.set(x, 0.0, z);
-      inst.rotation.y = rng() * Math.PI * 2;
+        // attempt placements
+        for (let k = 0; k < 10; k++) {
+          x = Scalar.Lerp(-safeInner, safeInner, rng());
+          z = Scalar.Lerp(-safeInner, safeInner, rng());
+          if (isExcluded(x, z)) continue;
 
-      const s = Scalar.Lerp(0.75, 1.35, rng());
-      inst.scaling.set(s, Scalar.Lerp(0.85, 1.65, rng()), s);
+          // cluster bias: more flowers around edges of clearing
+          const r = Math.sqrt(x * x + z * z);
+          if (r < 9 && rng() < 0.85) continue; // keep oak base cleaner
 
-      group.inst.push(inst);
-      inst.freezeWorldMatrix();
+          break;
+        }
+
+        if (isExcluded(x, z)) continue;
+
+        const inst = group.base.createInstance(`dusk_flower_${typeIndex}_${i}`);
+        inst.isPickable = false;
+        inst.checkCollisions = false;
+        inst.parent = parent;
+        inst.position.set(x, 0.0, z);
+        inst.rotation.y = rng() * Math.PI * 2;
+
+        const s = Scalar.Lerp(0.75, 1.35, rng());
+        inst.scaling.set(s, Scalar.Lerp(0.85, 1.65, rng()), s);
+
+        group.inst.push(inst);
+        inst.freezeWorldMatrix();
+      }
     }
   }
 
   return {
     dispose: () => {
       for (const g of bases) {
-        for (const inst of g.inst) inst.dispose();
+        if (!USE_THIN_INSTANCES) {
+          for (const inst of g.inst) inst.dispose();
+        }
         g.base.dispose();
         g.mat.dispose();
       }

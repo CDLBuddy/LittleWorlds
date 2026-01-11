@@ -6,6 +6,7 @@ export { createRng } from './utils/rng';
 export { makeExclusionPredicate } from './utils/exclusionPredicates';
 export { createGround } from './terrain/createGround';
 export { createFogWall } from './terrain/createFogWall';
+export { createGrass } from './terrain/createGrass';
 export { createTallGrass } from './vegetation/createTallGrass';
 export { createWildflowers } from './vegetation/createWildflowers';
 export { createLingerNests } from './vegetation/createLingerNests';

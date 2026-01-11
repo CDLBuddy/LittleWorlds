@@ -4,22 +4,25 @@
  */
 
 import { Color3, MeshBuilder, type Scene, StandardMaterial, Vector3 } from '@babylonjs/core';
-import { X_MIN, X_MAX } from '../config/constants';
+import { snapMeshBaseToGround } from '../../../terrain/snapToTerrain';
+import type { TerrainSamplerWithBounds } from '../../../terrain/terrainSampler';
 import type { DisposableBag } from '../utils/DisposableBag';
 import type { MaterialCache } from '../utils/MaterialCache';
 import { mulberry32, seededFromString } from '../utils/math';
-import { heightAtXZ } from '../utils/terrain';
+import { isSlopeOk } from '../utils/placement';
 import { getTrailWidthAt } from './buildCenterline';
 
 /**
  * Scatter realistic rocks along trail edges for definition
  * Uses seeded random for consistent placement across reloads
+ * Phase 8: Added slope checking to prevent rocks on steep terrain
  */
 export function scatterTrailEdgeRocks(
   scene: Scene,
   bag: DisposableBag,
   mats: MaterialCache,
-  centerline: Vector3[]
+  centerline: Vector3[],
+  sampler: TerrainSamplerWithBounds
 ) {
   const rand = mulberry32(seededFromString('pine_trail_rocks_v2'));
 
@@ -34,6 +37,8 @@ export function scatterTrailEdgeRocks(
   });
 
   const count = 48; // More rocks for better definition
+  let placed = 0;
+  let skipped = 0;
 
   for (let i = 0; i < count; i++) {
     const idx = Math.floor(rand() * centerline.length);
@@ -51,10 +56,18 @@ export function scatterTrailEdgeRocks(
     // Slight longitudinal variation
     const z = p.z + (rand() - 0.5) * 3.0;
 
-    // Bounds check
-    if (x < X_MIN || x > X_MAX) continue;
+    // Phase 8: Bounds check using sampler
+    if (!sampler.inBounds(x, z)) {
+      skipped++;
+      continue;
+    }
 
-    const y = heightAtXZ(x, z);
+    // Phase 8: Slope check - skip if too steep (rocks would float/clip)
+    const normal = sampler.normalAt(x, z);
+    if (!isSlopeOk(normal.y, 0.7)) { // Allow slightly steeper slopes (0.7 = ~45°)
+      skipped++;
+      continue;
+    }
 
     // Create more realistic rock shapes (ellipsoid, not sphere)
     const baseSize = 0.5 + rand() * 1.1;
@@ -71,8 +84,9 @@ export function scatterTrailEdgeRocks(
       )
     );
 
-    // Partially embed in terrain (looks more natural)
-    rock.position.set(x, y - baseSize * 0.15, z);
+    // Position in XZ, then snap to terrain by base
+    rock.position.set(x, 0, z);
+    snapMeshBaseToGround(rock, sampler.heightAt, -baseSize * 0.15); // Partially embed
     
     // Random rotation for organic look
     rock.rotation.set(
@@ -101,5 +115,12 @@ export function scatterTrailEdgeRocks(
       rock.material = rockMatVariant;
       bag.trackOther(rockMatVariant);
     }
+
+    placed++;
+  }
+
+  if (import.meta.env.DEV) {
+    console.log(`[Pine] Trail edge rocks: ${placed} placed, ${skipped} skipped (OOB or steep)`);
   }
 }
+

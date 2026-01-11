@@ -5,13 +5,23 @@
 
 import { Color3, Mesh, MeshBuilder, type Scene, StandardMaterial, Vector3, Vector4 } from '@babylonjs/core';
 import { TRAIL_Y_OFFSET } from '../config/constants';
+import { projectPathToGround } from '../../../terrain/snapToTerrain';
+import type { TerrainSamplerWithBounds } from '../../../terrain/terrainSampler';
 import type { DisposableBag } from '../utils/DisposableBag';
 import type { MaterialCache } from '../utils/MaterialCache';
 import { buildSwitchbackCenterline, getTrailWidthAt } from './buildCenterline';
 import { scatterTrailEdgeRocks } from './scatterEdgeRocks';
 
-export function createTrailRibbon(scene: Scene, bag: DisposableBag, mats: MaterialCache) {
-  const centerline = buildSwitchbackCenterline();
+export function createTrailRibbon(
+  scene: Scene,
+  bag: DisposableBag,
+  mats: MaterialCache,
+  sampler: TerrainSamplerWithBounds
+) {
+  const centerlineFlat = buildSwitchbackCenterline(sampler.heightAt);
+  
+  // Project centerline onto terrain before building edges
+  const centerline = projectPathToGround(centerlineFlat, sampler.heightAt, TRAIL_Y_OFFSET);
 
   // Convert centerline into left/right edges with variable width
   const left: Vector3[] = [];
@@ -39,7 +49,7 @@ export function createTrailRibbon(scene: Scene, bag: DisposableBag, mats: Materi
     const t = i / (centerline.length - 1);
     const halfWidth = getTrailWidthAt(t);
 
-    // Create edge points slightly above terrain to prevent z-fighting
+    // Create edge points - they'll already be at terrain height from projection
     const leftPt = p.add(perp.scale(halfWidth));
     const rightPt = p.add(perp.scale(-halfWidth));
 
@@ -93,7 +103,7 @@ export function createTrailRibbon(scene: Scene, bag: DisposableBag, mats: Materi
     ribbon.setVerticesData('uv', uvData, false);
   }
 
-  ribbon.position.y += TRAIL_Y_OFFSET;
+  // Y position already set by terrain projection - no additional offset needed
   ribbon.isPickable = false;
   ribbon.receiveShadows = true;
 
@@ -110,8 +120,8 @@ export function createTrailRibbon(scene: Scene, bag: DisposableBag, mats: Materi
 
   ribbon.material = mat;
 
-  // Add edge rocks for definition
-  scatterTrailEdgeRocks(scene, bag, mats, centerline);
+  // Add edge rocks for definition (rocks will snap to terrain)
+  scatterTrailEdgeRocks(scene, bag, mats, centerline, sampler);
 
   return ribbon;
 }

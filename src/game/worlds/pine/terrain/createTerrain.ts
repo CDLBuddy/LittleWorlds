@@ -1,46 +1,38 @@
 /**
  * Pine World - Terrain creation
- * Creates the main Pine Trails terrain mesh, visually sloped from south→north (0→+12 units)
+ * Creates the main Pine Trails terrain mesh using heightmap-based system
  */
 
 import {
   Color3,
-  MeshBuilder,
   type Scene,
   StandardMaterial,
+  type GroundMesh,
 } from '@babylonjs/core';
-import { PINE_TERRAIN } from '../config/constants';
-import { heightAtXZ } from '../utils/terrain';
+import { createTerrain as createTerrainShared } from '../../../terrain/createTerrain';
+import { createGroundSampler, type TerrainSamplerWithBounds } from '../../../terrain/terrainSampler';
+import { PINE_TERRAIN_CONFIG } from './terrainConfig';
 import type { DisposableBag } from '../utils/DisposableBag';
 import type { MaterialCache } from '../utils/MaterialCache';
 
-export function createTerrain(scene: Scene, bag: DisposableBag, mats: MaterialCache) {
-  const { width, depth } = PINE_TERRAIN;
+export interface PineTerrainResult {
+  ground: GroundMesh;
+  /** Promise that resolves when terrain is ready for height queries */
+  onReady: Promise<TerrainSamplerWithBounds>;
+}
 
-  const ground = bag.trackMesh(
-    MeshBuilder.CreateGround(
-      'pine_terrain',
-      {
-        width,
-        height: depth,
-        subdivisionsX: 40,
-        subdivisionsY: 70,
-        updatable: true, // ✅ Critical: allows vertex deformation
-      },
-      scene
-    )
-  );
+export function createTerrain(scene: Scene, bag: DisposableBag, mats: MaterialCache): PineTerrainResult {
+  // Use shared heightmap-based terrain system
+  const terrainHandle = createTerrainShared(scene, PINE_TERRAIN_CONFIG);
+  
+  const ground = bag.trackMesh(terrainHandle.mesh) as GroundMesh;
+  
+  // Store sampler for player/grass height queries
+  bag.trackOther({
+    dispose: () => terrainHandle.dispose(),
+  });
 
-  // ✅ Actually deform the ground to match getElevationAtZ()
-  ground.updateMeshPositions((positions) => {
-    for (let i = 0; i < positions.length; i += 3) {
-      const x = positions[i + 0];
-      const z = positions[i + 2];
-      positions[i + 1] = heightAtXZ(x, z);
-    }
-  }, true); // true => recompute normals
-
-  ground.refreshBoundingInfo(true);
+  // Configure mesh properties
   ground.isPickable = true;
   ground.checkCollisions = true;
   ground.receiveShadows = true;
@@ -57,5 +49,21 @@ export function createTerrain(scene: Scene, bag: DisposableBag, mats: MaterialCa
 
   ground.material = mat;
 
-  return ground;
+  // Create sampler once ground is ready (critical for correct height queries)
+  const onReady = new Promise<TerrainSamplerWithBounds>((resolve) => {
+    // For heightmap terrain, must wait for mesh to be fully ready
+    // Use scene's next render to ensure bounding box is computed
+    scene.onAfterRenderObservable.addOnce(() => {
+      const sampler = createGroundSampler(ground);
+      console.log('[Pine] Terrain sampler ready:', {
+        bounds: {
+          min: sampler.bounds.min,
+          max: sampler.bounds.max,
+        },
+      });
+      resolve(sampler);
+    });
+  });
+
+  return { ground, onReady };
 }

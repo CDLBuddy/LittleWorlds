@@ -20,6 +20,9 @@ import { createWorldPlayers } from '../helpers';
 import { consumePendingSpawn } from '../spawnState';
 import { getSpawnForWorld } from '../spawnRegistry';
 import { INTERACTABLE_ID, type InteractableId } from '@game/content/interactableIds';
+import { createGrass } from './terrain/createGrass';
+import { disposeGrassField } from '@game/terrain/grass/disposeGrassField';
+import type { GrassFieldResult } from '@game/terrain/grass/types';
 
 export const BEACH_INTERACTABLES = [
   INTERACTABLE_ID.BEACH_CAMPFIRE,
@@ -48,7 +51,7 @@ export function createBeachWorld(scene: Scene, eventBus: any, roleId: RoleId = '
   // === LAYOUT: 140×80 shoreline ===
   // Sandy beach
   const beachGround = MeshBuilder.CreateGround('beach_sand', { width: 140, height: 80 }, scene);
-  beachGround.position = new Vector3(0, 0, 0);
+  beachGround.position = new Vector3(0, -0.15, 0);  // Lower ground to prevent z-fighting with grass
   beachGround.isPickable = true;
   beachGround.checkCollisions = false;
   beachGround.metadata = { walkable: true };
@@ -77,6 +80,27 @@ export function createBeachWorld(scene: Scene, eventBus: any, roleId: RoleId = '
   
   const companion = new Companion(scene, spawn.position.clone().add(new Vector3(3, 0, 2)), eventBus);
 
+  // Phase D+E grass system
+  let grassField: GrassFieldResult | null = null;
+  let isAlive = true;
+  const getIsAlive = () => isAlive;
+
+  console.log('[BeachWorld] Starting grass creation...');
+  createGrass(scene, getIsAlive)
+    .then((field) => {
+      console.log('[BeachWorld] Grass promise resolved, field:', field);
+      if (!isAlive) {
+        console.log('[BeachWorld] World no longer alive, disposing grass');
+        disposeGrassField(field);
+        return;
+      }
+      grassField = field;
+      console.log('[BeachWorld] Grass successfully attached to scene');
+    })
+    .catch((err) => {
+      console.error('[BeachWorld] Failed to create grass:', err);
+    });
+
   // === INTERACTABLES ===
   const interactables: Interactable[] = [];
 
@@ -103,6 +127,8 @@ export function createBeachWorld(scene: Scene, eventBus: any, roleId: RoleId = '
 
   // Dispose function
   const dispose = () => {
+    isAlive = false; // Signal lifecycle end
+    if (grassField) disposeGrassField(grassField);
     beachGround.dispose();
     beachMat.dispose();
     ocean.dispose();

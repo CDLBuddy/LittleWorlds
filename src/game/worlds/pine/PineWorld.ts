@@ -39,6 +39,12 @@ import {
 } from './index';
 import { createGrass } from './terrain/createGrass';
 
+// Phase 7: Bounds, envelope, debug
+import { createWorldBoundsGuard } from './bounds/WorldBoundsGuard';
+import { createTerrainEnvelope } from './terrain/createTerrainEnvelope';
+import { PineDebugToggles } from './debug/pineDebugToggles';
+import { TreeGroundingDebug } from './debug/treeGroundingDebug';
+
 // Re-export for worldManifest
 export { PINE_INTERACTABLES } from './index';
 
@@ -108,20 +114,8 @@ export function createPineWorld(
   );
 
   // --- TERRAIN ---
-  const terrain = createTerrain(scene, bag, mats);
+  const { ground: terrain, onReady: terrainReady } = createTerrain(scene, bag, mats);
   createTerrainGuards(scene, bag);
-
-  // --- TRAIL RIBBON ---
-  const trail = createTrailRibbon(scene, bag, mats);
-
-  // --- FOREST ---
-  const forest = createForest(scene, bag, mats);
-
-  // --- PROPS / LANDMARKS ---
-  const props = createProps(scene, bag, mats);
-
-  // --- MARKERS ---
-  const markers = createMarkers(scene, bag, mats);
 
   // --- PLAYER & COMPANION ---
   // Player spawn using registry (no fromArea branching)
@@ -147,17 +141,75 @@ export function createPineWorld(
   let isWorldAlive = true;
   const getIsAlive = () => isWorldAlive;
   
-  createGrass(scene, bag, getIsAlive)
-    .then((_field) => {
-      // Hide terrain ground since grass covers it (prevents z-fighting)
-      // Note: Pine uses terrain ribbons, may not need hiding depending on setup
-      if (import.meta.env.DEV) {
-        console.log('[Pine] Grass field created successfully');
-      }
-    })
-    .catch((err) => {
-      console.error('[Pine] Failed to create grass:', err);
+  let trail: any;
+  let forest: any;
+  let props: any;
+  let markers: any;
+  let boundsGuard: any;
+  let boundsObserver: any;  // Phase 7: observer reference for cleanup
+  let debugToggles: any;
+  let treeMeshes: any[] = [];
+  let treeGroundingDebug: TreeGroundingDebug | null = null; // Phase 9: tree grounding debug
+
+  void terrainReady.then((sampler) => {
+    // Place all world objects after terrain is ready
+    trail = createTrailRibbon(scene, bag, mats, sampler);
+    
+    // Phase 9: createForest now returns { meshes, placementData }
+    const forestResult = createForest(scene, bag, mats, sampler);
+    forest = forestResult.meshes;
+    
+    // Phase 9: Setup tree grounding debug in DEV mode
+    if (import.meta.env.DEV) {
+      treeGroundingDebug = new TreeGroundingDebug(scene);
+      treeGroundingDebug.setData(forestResult.placementData);
+    }
+
+    props = createProps(scene, bag, mats, sampler);
+    markers = createMarkers(scene, bag, mats, sampler);
+
+    // Phase 7: Terrain envelope (visual-only ground + skirt)
+    createTerrainEnvelope(scene, bag, mats, sampler);
+
+    // Phase 7: Bounds guard (prevent OOB)
+    boundsGuard = createWorldBoundsGuard({
+      sampler,
+      margin: 2,
     });
+
+    // Phase 7: Bounds guard update loop (MUST be after boundsGuard created)
+    boundsObserver = scene.onBeforeRenderObservable.add(() => {
+      if (boundsGuard && isWorldAlive) {
+        const activeMesh = currentActiveRole === 'boy' ? boyPlayer.mesh : girlPlayer.mesh;
+        boundsGuard.update(activeMesh, companion.mesh);
+      }
+    });
+
+    // Phase 7: Debug toggles (Shift+T, Shift+B, Shift+G)
+    if (import.meta.env.DEV) {
+      debugToggles = new PineDebugToggles({
+        scene,
+        sampler,
+        getTreeMeshes: () => treeMeshes,
+        treeGroundingDebug: treeGroundingDebug || undefined,
+      });
+    }
+
+    // Store tree meshes for debug toggles
+    treeMeshes = forest || [];
+
+    createGrass(scene, bag, sampler, getIsAlive)
+      .then((_field) => {
+        // Hide terrain ground since grass covers it (prevents z-fighting)
+        // Note: Pine uses terrain ribbons, may not need hiding depending on setup
+        if (import.meta.env.DEV) {
+          console.log('[Pine] Grass field created successfully');
+        }
+      })
+      .catch((err) => {
+        console.error('[Pine] Failed to create grass:', err);
+      });
+  });
 
   // --- INTERACTABLES ---
   const interactables: Interactable[] = [];
@@ -195,6 +247,22 @@ export function createPineWorld(
 
   const dispose = () => {
     isWorldAlive = false;  // Prevent ghost meshes from async grass
+    
+    // Phase 7: Dispose bounds guard and debug toggles
+    if (boundsObserver) {
+      scene.onBeforeRenderObservable.remove(boundsObserver);
+    }
+    if (boundsGuard) {
+      boundsGuard.dispose();
+    }
+    if (debugToggles) {
+      debugToggles.dispose();
+    }
+    // Phase 9: Dispose tree grounding debug
+    if (treeGroundingDebug) {
+      treeGroundingDebug.cleanup();
+    }
+    
     boyPlayer.dispose();
     girlPlayer.dispose();
     companion.dispose();

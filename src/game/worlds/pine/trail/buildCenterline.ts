@@ -4,18 +4,21 @@
  */
 
 import { Vector3 } from '@babylonjs/core';
-import { heightAtXZ } from '../utils/terrain';
 import { subdividePolyline } from './subdividePolyline';
 
 /**
  * Build the main trail centerline
  * Returns high-resolution point array for ribbon + grass exclusion
+ * 
+ * @param heightAt - Function to get terrain height at (x, z) coordinates
  */
-export function buildSwitchbackCenterline(): Vector3[] {
+export function buildSwitchbackCenterline(
+  heightAt: (x: number, z: number) => number
+): Vector3[] {
   const pts: Vector3[] = [];
 
   const add = (x: number, z: number) => {
-    const y = heightAtXZ(x, z);
+    const y = heightAt(x, z);
     pts.push(new Vector3(x, y, z));
   };
 

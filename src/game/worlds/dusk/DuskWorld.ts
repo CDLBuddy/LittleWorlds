@@ -39,7 +39,7 @@ import {
   type Interactable,
   createGround,
   createFogWall,
-  createTallGrass,
+  createGrass,
   createWildflowers,
   createLingerNests,
   createAncientOak,
@@ -49,6 +49,8 @@ import {
   createInteractables,
   makeExclusionPredicate,
 } from './index';
+import { disposeGrassField } from '@game/terrain/grass/disposeGrassField';
+import type { GrassFieldResult } from '@game/terrain/grass/types';
 
 export { DUSK_INTERACTABLES };
 
@@ -107,8 +109,27 @@ export function createDuskWorld(
 
   const isInExclusion = makeExclusionPredicate();
 
-  const grassSystem = createTallGrass(scene, meadowRoot, isInExclusion);
-  addDispose(() => grassSystem.dispose());
+  // Phase D+E grass system (replaces old tall grass)
+  let grassField: GrassFieldResult | null = null;
+  let isAlive = true;
+  const getIsAlive = () => isAlive;
+
+  console.log('[DuskWorld] Starting grass creation...');
+  createGrass(scene, getIsAlive)
+    .then((field) => {
+      console.log('[DuskWorld] Grass promise resolved, field:', field);
+      if (!isAlive) {
+        console.log('[DuskWorld] World no longer alive, disposing grass');
+        disposeGrassField(field);
+        return;
+      }
+      grassField = field;
+      if (field.parent) field.parent.parent = meadowRoot;
+      console.log('[DuskWorld] Grass successfully attached to scene');
+    })
+    .catch((err) => {
+      console.error('[DuskWorld] Failed to create grass:', err);
+    });
 
   const flowersSystem = createWildflowers(scene, meadowRoot, isInExclusion);
   addDispose(() => flowersSystem.dispose());
@@ -160,6 +181,8 @@ export function createDuskWorld(
 
   // === DISPOSE ===============================================================
   const dispose = () => {
+    isAlive = false; // Signal lifecycle end
+    if (grassField) disposeGrassField(grassField);
     boyPlayer.dispose();
     girlPlayer.dispose();
     companion.dispose();

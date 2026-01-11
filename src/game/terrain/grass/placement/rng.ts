@@ -44,3 +44,31 @@ export function mulberry32(seed: number): () => number {
     return ((t ^ (t >>> 14)) >>> 0) / 4294967296;
   };
 }
+
+/**
+ * Hash two integers and a seed into a uint32
+ * Useful for per-grid-cell seeded RNG
+ * @param i - First integer (e.g., grid row)
+ * @param j - Second integer (e.g., grid column)
+ * @param seed - Base seed value
+ * @returns uint32 hash
+ */
+export function hash2(i: number, j: number, seed: number): number {
+  let hash = seed >>> 0;
+  hash ^= (i >>> 0);
+  hash = Math.imul(hash, 0x85EBCA6B);
+  hash ^= (j >>> 0);
+  hash = Math.imul(hash, 0xC2B2AE35);
+  return hash >>> 0;
+}
+
+/**
+ * Generate random value in range [min, max) using provided RNG
+ * @param rng - Random number generator function
+ * @param min - Minimum value (inclusive)
+ * @param max - Maximum value (exclusive)
+ * @returns Random value in range
+ */
+export function randRange(rng: () => number, min: number, max: number): number {
+  return min + rng() * (max - min);
+}

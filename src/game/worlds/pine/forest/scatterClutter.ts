@@ -1,15 +1,17 @@
 /**
  * Pine World - Forest clutter (stumps, logs, rocks)
+ * Phase 8: Added slope checking to prevent clutter on steep terrain
  */
 
 import { Color3, MeshBuilder, type Scene, StandardMaterial } from '@babylonjs/core';
-import { PINE_TERRAIN, TRAIL_HALF_WIDTH, X_MIN, X_MAX, Z_NORTH, Z_SOUTH } from '../config/constants';
+import { PINE_TERRAIN, TRAIL_HALF_WIDTH, Z_NORTH, Z_SOUTH } from '../config/constants';
+import type { TerrainSamplerWithBounds } from '../../../terrain/terrainSampler';
 import type { DisposableBag } from '../utils/DisposableBag';
 import type { MaterialCache } from '../utils/MaterialCache';
 import { clamp, mulberry32, seededFromString } from '../utils/math';
-import { heightAtXZ } from '../utils/terrain';
+import { isSlopeOk } from '../utils/placement';
 
-export function scatterForestClutter(scene: Scene, bag: DisposableBag, mats: MaterialCache) {
+export function scatterForestClutter(scene: Scene, bag: DisposableBag, mats: MaterialCache, sampler: TerrainSamplerWithBounds) {
   const rand = mulberry32(seededFromString('pine_clutter'));
 
   const stumpMat = mats.get('pineStumpMat', () => {
@@ -38,14 +40,32 @@ export function scatterForestClutter(scene: Scene, bag: DisposableBag, mats: Mat
 
   // Scatter outside trail corridor
   const corridor = TRAIL_HALF_WIDTH + 8;
+  const bounds = sampler.bounds;
+  const xMin = bounds.min.x;
+  const xMax = bounds.max.x;
 
+  let stumpPlaced = 0;
+  let stumpSkipped = 0;
   const stumps = 24;
   for (let i = 0; i < stumps; i++) {
     const z = Z_NORTH + rand() * (Z_SOUTH - Z_NORTH);
     const side = rand() < 0.5 ? -1 : 1;
 
-    const x = clamp((corridor + rand() * (PINE_TERRAIN.width * 0.5 - corridor - 2)) * side, X_MIN, X_MAX);
-    const y = heightAtXZ(x, z);
+    const x = clamp((corridor + rand() * (PINE_TERRAIN.width * 0.5 - corridor - 2)) * side, xMin, xMax);
+
+    // Phase 8: Bounds and slope checks
+    if (!sampler.inBounds(x, z)) {
+      stumpSkipped++;
+      continue;
+    }
+
+    const normal = sampler.normalAt(x, z);
+    if (!isSlopeOk(normal.y, 0.75)) { // 0.75 = ~41° max slope
+      stumpSkipped++;
+      continue;
+    }
+
+    const y = sampler.heightAt(x, z);
 
     const stump = bag.trackMesh(
       MeshBuilder.CreateCylinder(`stump_${i}`, { height: 0.6 + rand() * 0.6, diameter: 0.5 + rand() * 0.6, tessellation: 10 }, scene)
@@ -54,15 +74,31 @@ export function scatterForestClutter(scene: Scene, bag: DisposableBag, mats: Mat
     stump.rotation.y = rand() * Math.PI * 2;
     stump.material = stumpMat;
     stump.receiveShadows = true;
+    stumpPlaced++;
   }
 
+  let logPlaced = 0;
+  let logSkipped = 0;
   const logs = 16;
   for (let i = 0; i < logs; i++) {
     const z = Z_NORTH + rand() * (Z_SOUTH - Z_NORTH);
     const side = rand() < 0.5 ? -1 : 1;
 
-    const x = clamp((corridor + rand() * (PINE_TERRAIN.width * 0.5 - corridor - 2)) * side, X_MIN, X_MAX);
-    const y = heightAtXZ(x, z);
+    const x = clamp((corridor + rand() * (PINE_TERRAIN.width * 0.5 - corridor - 2)) * side, xMin, xMax);
+
+    // Phase 8: Bounds and slope checks
+    if (!sampler.inBounds(x, z)) {
+      logSkipped++;
+      continue;
+    }
+
+    const normal = sampler.normalAt(x, z);
+    if (!isSlopeOk(normal.y, 0.75)) {
+      logSkipped++;
+      continue;
+    }
+
+    const y = sampler.heightAt(x, z);
 
     const log = bag.trackMesh(
       MeshBuilder.CreateCylinder(`log_${i}`, { height: 2.2 + rand() * 2.2, diameter: 0.35 + rand() * 0.35, tessellation: 12 }, scene)
@@ -72,15 +108,31 @@ export function scatterForestClutter(scene: Scene, bag: DisposableBag, mats: Mat
     log.rotation.y = rand() * Math.PI * 2;
     log.material = logMat;
     log.receiveShadows = true;
+    logPlaced++;
   }
 
+  let rockPlaced = 0;
+  let rockSkipped = 0;
   const rocks = 40;
   for (let i = 0; i < rocks; i++) {
     const z = Z_NORTH + rand() * (Z_SOUTH - Z_NORTH);
     const side = rand() < 0.5 ? -1 : 1;
 
-    const x = clamp((corridor + rand() * (PINE_TERRAIN.width * 0.5 - corridor - 2)) * side, X_MIN, X_MAX);
-    const y = heightAtXZ(x, z);
+    const x = clamp((corridor + rand() * (PINE_TERRAIN.width * 0.5 - corridor - 2)) * side, xMin, xMax);
+
+    // Phase 8: Bounds and slope checks
+    if (!sampler.inBounds(x, z)) {
+      rockSkipped++;
+      continue;
+    }
+
+    const normal = sampler.normalAt(x, z);
+    if (!isSlopeOk(normal.y, 0.7)) { // Rocks can tolerate slightly steeper slopes
+      rockSkipped++;
+      continue;
+    }
+
+    const y = sampler.heightAt(x, z);
 
     const r = bag.trackMesh(MeshBuilder.CreateSphere(`clutterRock_${i}`, { diameter: 0.3 + rand() * 0.9, segments: 8 }, scene));
     r.position.set(x, y + 0.15, z);
@@ -88,5 +140,10 @@ export function scatterForestClutter(scene: Scene, bag: DisposableBag, mats: Mat
     r.rotation.y = rand() * Math.PI * 2;
     r.material = rockMat;
     r.receiveShadows = true;
+    rockPlaced++;
+  }
+
+  if (import.meta.env.DEV) {
+    console.log(`[Pine] Forest clutter: stumps ${stumpPlaced}/${stumps}, logs ${logPlaced}/${logs}, rocks ${rockPlaced}/${rocks} (skipped: ${stumpSkipped + logSkipped + rockSkipped} total)`);
   }
 }

@@ -110,9 +110,9 @@ export class PlayerController {
   private actions: ActionHandlers = {};
 
   // Movement parameters
-  private maxSpeed = 6.0;
-  private acceleration = 18.0;
-  private deceleration = 22.0;
+  private maxSpeed = 20.0;
+  private acceleration = 20.0;
+  private deceleration = 24.0;
   private stopDistance = 0.25;
   private arriveRadius = 2.0;
   private turnSmoothness = 12.0;
@@ -129,8 +129,8 @@ export class PlayerController {
   private interactRange = 3.0;
 
   // Look tuning
-  private mouseSensitivity = 0.0022;
-  private touchLookSensitivity = 0.008;
+  private mouseSensitivity = 0.02;
+  private touchLookSensitivity = 0.08;
   private pitchMin = -1.1;
   private pitchMax = 0.9;
 
