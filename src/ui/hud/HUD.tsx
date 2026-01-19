@@ -1,3 +1,4 @@
+// src/ui/hud/HUD.tsx
 import { useEffect } from 'react';
 import { eventBus } from '@game/shared/events';
 import { useUiStore } from '@ui/state/useUiStore';
@@ -6,32 +7,26 @@ import HintPulse from './widgets/HintPulse';
 import { InventoryHUD } from '@ui/inventory/InventoryHUD';
 import CompanionCallButton from './widgets/CompanionCallButton';
 import ToastOverlay from './widgets/ToastOverlay';
+import DualStickControls from './widgets/DualStickControls';
 
 export default function HUD() {
-  const { 
-    addPrompt, 
-    removePrompt, 
-    setCompanionState, 
-    setDwellProgress, 
-    clearDwell, 
+  const {
+    addPrompt,
+    removePrompt,
+    setCompanionState,
+    setDwellProgress,
+    clearDwell,
     activePrompts,
   } = useUiStore();
-  
+
   const { pushToast } = useToastStore();
 
   useEffect(() => {
-    // Subscribe to game events
     const unsub = eventBus.on((event) => {
       if (event.type === 'game/prompt') {
-        addPrompt({
-          id: event.id,
-          icon: event.icon,
-          worldPos: event.worldPos,
-        });
+        addPrompt({ id: event.id, icon: event.icon, worldPos: event.worldPos });
       } else if (event.type === 'game/promptClear') {
-        if (event.id) {
-          removePrompt(event.id);
-        }
+        if (event.id) removePrompt(event.id);
       } else if (event.type === 'game/companion/state') {
         setCompanionState(event.state);
       } else if (event.type === 'game/dwell') {
@@ -39,10 +34,8 @@ export default function HUD() {
       } else if (event.type === 'game/dwellClear') {
         clearDwell(event.id);
       } else if (event.type === 'game/taskComplete') {
-        // Show completion toast
         pushToast('info', '🎉 Task Complete!');
       } else if (event.type === 'ui/toast') {
-        // Handle toast events
         pushToast(event.level, event.message);
       }
     });
@@ -51,17 +44,27 @@ export default function HUD() {
   }, [addPrompt, removePrompt, setCompanionState, setDwellProgress, clearDwell, pushToast]);
 
   return (
-    <div className="hud" style={{ position: 'fixed', width: '100%', height: '100%', pointerEvents: 'none' }}>
-      {/* Icon prompts - top center */}
-      <div style={{
-        position: 'absolute',
-        top: '20px',
-        left: '50%',
-        transform: 'translateX(-50%)',
-        display: 'flex',
-        gap: '20px',
+    <div
+      className="hud"
+      style={{
+        position: 'fixed',
+        inset: 0,
         pointerEvents: 'none',
-      }}>
+        zIndex: 40,
+      }}
+    >
+      {/* Icon prompts - top center */}
+      <div
+        style={{
+          position: 'absolute',
+          top: '16px',
+          left: '50%',
+          transform: 'translateX(-50%)',
+          display: 'flex',
+          gap: '16px',
+          pointerEvents: 'none',
+        }}
+      >
         {Array.from(activePrompts.values()).map((prompt) => (
           <HintPulse key={prompt.id} icon={prompt.icon} dwellProgress={prompt.dwellProgress} />
         ))}
@@ -70,11 +73,27 @@ export default function HUD() {
       {/* Inventory display - top right */}
       <InventoryHUD />
 
-      {/* Bottom UI */}
-      <div style={{ position: 'absolute', bottom: '20px', width: '100%', pointerEvents: 'auto' }}>
-        <CompanionCallButton />
+      {/* Dual sticks (mobile/tablet) */}
+      <DualStickControls />
+
+      {/* Bottom center call button (won't overlap sticks) */}
+      <div
+        style={{
+          position: 'fixed',
+          left: 0,
+          right: 0,
+          bottom: 'calc(env(safe-area-inset-bottom, 0px) + 18px)',
+          display: 'flex',
+          justifyContent: 'center',
+          pointerEvents: 'none',
+          zIndex: 60,
+        }}
+      >
+        <div style={{ pointerEvents: 'auto' }}>
+          <CompanionCallButton />
+        </div>
       </div>
-      
+
       {/* Toast Overlay */}
       <ToastOverlay />
     </div>

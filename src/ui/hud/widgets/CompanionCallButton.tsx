@@ -1,3 +1,4 @@
+// src/ui/hud/widgets/CompanionCallButton.tsx
 import { eventBus } from '@game/shared/events';
 
 export default function CompanionCallButton() {
@@ -11,22 +12,38 @@ export default function CompanionCallButton() {
       className="companion-call-button"
       onClick={handleCall}
       style={{
-        position: 'fixed',
-        bottom: '30px',
-        right: '30px',
-        fontSize: '2rem',
-        padding: '15px 25px',
-        borderRadius: '50px',
-        border: '3px solid #fff',
-        backgroundColor: '#4a90e2',
+        // Layout
+        display: 'inline-flex',
+        alignItems: 'center',
+        justifyContent: 'center',
+        gap: '10px',
+
+        // Sizing (mobile friendly)
+        fontSize: '1.25rem',
+        padding: '14px 18px',
+        borderRadius: '999px',
+        minHeight: '52px',
+
+        // Visual polish
+        border: '2px solid rgba(255,255,255,0.9)',
+        background: 'linear-gradient(180deg, rgba(255,126,190,0.95), rgba(255,88,160,0.95))',
         color: 'white',
         cursor: 'pointer',
-        boxShadow: '0 4px 12px rgba(0, 0, 0, 0.3)',
-        fontWeight: 'bold',
+        boxShadow: '0 10px 24px rgba(0, 0, 0, 0.35)',
+        fontWeight: 800,
+        letterSpacing: '0.2px',
+
+        // Touch ergonomics
+        touchAction: 'manipulation',
+        WebkitTapHighlightColor: 'transparent',
         pointerEvents: 'auto',
+
+        // Avoid iOS double-tap zoom weirdness
+        userSelect: 'none',
       }}
     >
-      🐾 Call
+      <span aria-hidden="true" style={{ fontSize: '1.35em', lineHeight: 1 }}>🐾</span>
+      <span>Call</span>
     </button>
   );
 }
