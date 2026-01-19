@@ -447,6 +447,14 @@ export class GameApp {
     // Create player controller
     this.playerController = new PlayerController(this.scene, this.getActivePlayerMesh());
     this.playerController.setPlayerEntity(this.getActivePlayerEntity());
+    
+    // Wire controller look into CameraRig (mouse-look + right stick share same pipeline)
+this.playerController.setActionHandlers({
+  onLook: (yaw, pitch) => this.cameraRig?.applyLook(yaw, pitch),
+});
+
+// On mobile, movement should be camera-facing by default when sticks are available
+this.playerController.setVirtualInput({ isAiming: this.uiSticksEnabled });
 
     // If UI sticks already enabled (HUD mounted early), inform controller
     (this.playerController as any)?.setVirtualControlsEnabled?.(this.uiSticksEnabled);
@@ -766,10 +774,6 @@ export class GameApp {
       const interestPos = (this.companion && this.cameraRig) ? undefined : undefined;
 
       this.cameraRig.update(activePlayer.position, interestPos, dt, yawDelta, moveIntent);
-
-      // Apply right-stick orbit AFTER rig update so it "wins" each frame.
-      if (this.uiSticksEnabled && this.uiLookActive && this.uiLook.active) {
-        const cam = this.cameraRig.getCamera();
 
         // Yaw: right stick x rotates around target
         cam.alpha -= this.uiLook.x * this.uiLookYawSpeed * dt;
