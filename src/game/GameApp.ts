@@ -116,42 +116,63 @@ export class GameApp {
       } else if (event.type === 'ui/restart') {
         this.onRestart();
 
-        // --- UI sticks wiring (safe / no-breaking) ----------------------------
+      // --- UI sticks wiring (robust / no-breaking) ----------------------------
       } else if ((event as any).type === 'ui/stick/enabled') {
         const enabled = !!(event as any).enabled;
         this.uiSticksEnabled = enabled;
 
-        // Reset stick state when disabled
+        // Let CameraRig know whether an external look driver exists.
+        // This prevents ArcRotate pointer rotation fighting the right-stick.
+        this.cameraRig?.setExternalLookEnabled(enabled);
+
+        // Keep controller movement "camera-facing" while sticks are enabled (good mobile feel).
+        this.playerController?.setVirtualInput({ isAiming: enabled });
+
         if (!enabled) {
+          // hard reset
           this.uiMove = { x: 0, y: 0, active: false };
           this.uiLook = { x: 0, y: 0, active: false };
           this.uiLookActive = false;
 
-          // Restore camera control if it was detached during look-stick usage
-          this.cameraRig?.setUserControlEnabled(true);
+          // Clear controller virtual input so nothing can get stuck.
+          this.playerController?.setVirtualInput({
+            move: { x: 0, y: 0, active: false },
+            look: { x: 0, y: 0, active: false },
+            isAiming: false,
+          });
         }
 
-        // If the controller supports virtual sticks, enable it
-        (this.playerController as any)?.setVirtualControlsEnabled?.(enabled);
       } else if ((event as any).type === 'ui/stick/move') {
         const e = event as any;
+
         this.uiMove = {
           x: Number.isFinite(e.x) ? e.x : 0,
           y: Number.isFinite(e.y) ? e.y : 0,
           active: !!e.active,
         };
 
-        (this.playerController as any)?.setVirtualMoveAxes?.(this.uiMove.x, this.uiMove.y, this.uiMove.active);
+        this.playerController?.setVirtualInput({
+          move: { x: this.uiMove.x, y: this.uiMove.y, active: this.uiMove.active },
+        });
+
       } else if ((event as any).type === 'ui/stick/look') {
         const e = event as any;
+
         this.uiLook = {
           x: Number.isFinite(e.x) ? e.x : 0,
           y: Number.isFinite(e.y) ? e.y : 0,
           active: !!e.active,
         };
 
-        (this.playerController as any)?.setVirtualLookAxes?.(this.uiLook.x, this.uiLook.y, this.uiLook.active);
+        this.uiLookActive = this.uiSticksEnabled && this.uiLook.active;
 
+        // Feed controller look input. Controller will integrate into yaw/pitch,
+        // rotate the player, and call actions.onLook(yaw,pitch).
+        this.playerController?.setVirtualInput({
+          look: { x: this.uiLook.x, y: this.uiLook.y, active: this.uiLook.active },
+          isAiming: this.uiLookActive, // while actively looking, keep move camera-facing
+        });
+      // ---------------------------------------------------------------------
         // Detach ArcRotate pointer controls while right-stick is active
         // so the camera doesn't fight itself.
         const nextActive = this.uiSticksEnabled && this.uiLook.active;
