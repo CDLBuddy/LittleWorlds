@@ -1,5 +1,5 @@
 // src/ui/hud/widgets/DualStickControls.tsx
-import React, { useEffect, useMemo, useRef } from 'react';
+import React, { useEffect, useMemo, useRef, useState } from 'react';
 import { eventBus } from '@game/shared/events';
 
 type StickKind = 'move' | 'look';
@@ -9,7 +9,6 @@ type StickState = {
   pointerId: number | null;
   centerX: number;
   centerY: number;
-  // current displacement in px
   dx: number;
   dy: number;
 };
@@ -23,16 +22,6 @@ function normStick(dx: number, dy: number, max: number) {
   return { x: nx, y: ny, mag: clamped / max };
 }
 
-/**
- * DualStickControls
- * - Left stick: movement (x=strife/turn? you currently ignore strafe; y=forward/back)
- * - Right stick: camera/look (x=yaw, y=pitch)
- *
- * Emits:
- * - ui/stick/enabled { enabled: boolean }
- * - ui/stick/move { x, y, active }
- * - ui/stick/look { x, y, active }
- */
 export default function DualStickControls() {
   const moveRef = useRef<HTMLDivElement | null>(null);
   const lookRef = useRef<HTMLDivElement | null>(null);
@@ -55,42 +44,49 @@ export default function DualStickControls() {
     dy: 0,
   });
 
+  // Mirror dx/dy into state so the knob animates (refs alone don't re-render)
+  const [moveKnob, setMoveKnob] = useState({ dx: 0, dy: 0 });
+  const [lookKnob, setLookKnob] = useState({ dx: 0, dy: 0 });
+
   // Tuning (px)
   const cfg = useMemo(
     () => ({
-      radius: 62, // base visual radius (visual only)
       max: 56, // clamp travel
       deadzone: 0.12, // normalized
+      // Lift sticks slightly so they're never under iOS Safari bottom chrome.
+      bottomOffset: 28,
     }),
     []
   );
 
   useEffect(() => {
-    // Tell game we have UI sticks (so controller can ignore canvas-touch splitting)
     (eventBus as any).emit({ type: 'ui/stick/enabled', enabled: true });
 
     return () => {
       (eventBus as any).emit({ type: 'ui/stick/enabled', enabled: false });
-      // Ensure we end any stuck state
       (eventBus as any).emit({ type: 'ui/stick/move', x: 0, y: 0, active: false });
       (eventBus as any).emit({ type: 'ui/stick/look', x: 0, y: 0, active: false });
     };
   }, []);
 
   const emit = (kind: StickKind, x: number, y: number, active: boolean) => {
-    const payload =
+    (eventBus as any).emit(
       kind === 'move'
         ? { type: 'ui/stick/move', x, y, active }
-        : { type: 'ui/stick/look', x, y, active };
+        : { type: 'ui/stick/look', x, y, active }
+    );
+  };
 
-    (eventBus as any).emit(payload);
+  const syncKnob = (kind: StickKind) => {
+    const s = kind === 'move' ? move.current : look.current;
+    if (kind === 'move') setMoveKnob({ dx: s.dx, dy: s.dy });
+    else setLookKnob({ dx: s.dx, dy: s.dy });
   };
 
   const begin = (kind: StickKind, e: React.PointerEvent<HTMLDivElement>) => {
     const el = kind === 'move' ? moveRef.current : lookRef.current;
     if (!el) return;
 
-    // Prevent browser gestures (scroll / double-tap zoom / etc)
     e.preventDefault();
 
     const rect = el.getBoundingClientRect();
@@ -103,13 +99,13 @@ export default function DualStickControls() {
     s.dx = 0;
     s.dy = 0;
 
-    // Capture so we keep receiving move/up events even if finger slides off the stick
     try {
       el.setPointerCapture(e.pointerId);
     } catch {
-      // ignore (some browsers can throw)
+      // ignore
     }
 
+    syncKnob(kind);
     emit(kind, 0, 0, true);
   };
 
@@ -133,19 +129,17 @@ export default function DualStickControls() {
       s.dy = dy;
     }
 
+    syncKnob(kind);
+
     const n = normStick(s.dx, s.dy, cfg.max);
 
     // deadzone
     const ax = Math.abs(n.x) < cfg.deadzone ? 0 : n.x;
     const ay = Math.abs(n.y) < cfg.deadzone ? 0 : n.y;
 
-    // NOTE:
-    // - For MOVE: screen up should mean forward => invert y
-    // - For LOOK: screen up should mean pitch up => invert y too
-    const outX = ax;
-    const outY = -ay;
-
-    emit(kind, outX, outY, true);
+    // MOVE: screen up => forward => invert y
+    // LOOK: screen up => pitch up => invert y
+    emit(kind, ax, -ay, true);
   };
 
   const end = (kind: StickKind, e: React.PointerEvent<HTMLDivElement>) => {
@@ -166,10 +160,11 @@ export default function DualStickControls() {
       // ignore
     }
 
+    syncKnob(kind);
     emit(kind, 0, 0, false);
   };
 
-  // Extra safety: if React/DOM misses a pointerup (rare but real), reset on window blur.
+  // Hard failsafe: if browser drops pointerup/cancel, reset on blur
   useEffect(() => {
     const onBlur = () => {
       if (move.current.active) {
@@ -177,6 +172,7 @@ export default function DualStickControls() {
         move.current.pointerId = null;
         move.current.dx = 0;
         move.current.dy = 0;
+        setMoveKnob({ dx: 0, dy: 0 });
         emit('move', 0, 0, false);
       }
       if (look.current.active) {
@@ -184,6 +180,7 @@ export default function DualStickControls() {
         look.current.pointerId = null;
         look.current.dx = 0;
         look.current.dy = 0;
+        setLookKnob({ dx: 0, dy: 0 });
         emit('look', 0, 0, false);
       }
     };
@@ -193,15 +190,14 @@ export default function DualStickControls() {
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
 
-  // Visual layout: safe-area aware, big comfy sticks
   const rootStyle: React.CSSProperties = {
     position: 'fixed',
     left: 0,
     right: 0,
     bottom: 0,
-    height: '42vh',
+    height: '44vh',
     pointerEvents: 'none',
-    zIndex: 50,
+    zIndex: 50, // sticks should be above Call button (which is 40)
   };
 
   const stickBaseCommon: React.CSSProperties = {
@@ -231,17 +227,19 @@ export default function DualStickControls() {
     boxShadow: '0 10px 22px rgba(0,0,0,0.22)',
   });
 
+  const bottom = `calc(env(safe-area-inset-bottom, 0px) + ${cfg.bottomOffset}px)`;
+
   const leftWrap: React.CSSProperties = {
     position: 'absolute',
     left: 18,
-    bottom: 'calc(env(safe-area-inset-bottom, 0px) + 18px)',
+    bottom,
     pointerEvents: 'auto',
   };
 
   const rightWrap: React.CSSProperties = {
     position: 'absolute',
     right: 18,
-    bottom: 'calc(env(safe-area-inset-bottom, 0px) + 18px)',
+    bottom,
     pointerEvents: 'auto',
   };
 
@@ -272,7 +270,7 @@ export default function DualStickControls() {
           onPointerCancel={(e) => end('move', e)}
           onLostPointerCapture={(e) => end('move', e)}
         >
-          <div style={knob(move.current.dx, move.current.dy)} />
+          <div style={knob(moveKnob.dx, moveKnob.dy)} />
         </div>
       </div>
 
@@ -288,7 +286,7 @@ export default function DualStickControls() {
           onPointerCancel={(e) => end('look', e)}
           onLostPointerCapture={(e) => end('look', e)}
         >
-          <div style={knob(look.current.dx, look.current.dy)} />
+          <div style={knob(lookKnob.dx, lookKnob.dy)} />
         </div>
       </div>
     </div>
