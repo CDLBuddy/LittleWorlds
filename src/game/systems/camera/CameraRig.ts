@@ -145,8 +145,6 @@ export class CameraRig {
 
   // External look feed (from PlayerController virtual right-stick / mouse-look)
   private externalLookEnabled = false;
-  private lastAppliedYaw = 0;
-  private lastAppliedPitch = 0;
 
   // Temp vectors (avoid allocations)
   private readonly _tmpA = new Vector3();
@@ -228,9 +226,6 @@ export class CameraRig {
   /**
    * Call this immediately after you spawn the player (or when switching worlds)
    * so the camera aligns with the player’s spawn forward.
-   *
-   * - spawnForward should be the direction the player is facing INTO the world.
-   * - This snaps the camera alpha so the camera sits behind the player.
    */
   snapBehindForward(spawnForward: Vector3): void {
     // Direction from target -> camera should be behind the player => -forward on XZ plane
@@ -264,8 +259,7 @@ export class CameraRig {
     this.currentMode = mode;
     this.targetSettings = { ...this.presets[mode] };
 
-    // Briefly steer toward the new preset so it feels intentional,
-    // then hands control back to the user.
+    // Brief steering window
     this.modeTransitionUntilMs = Date.now() + this.modeTransitionSeconds * 1000;
 
     if (mode === 'CELEBRATE') {
@@ -277,7 +271,6 @@ export class CameraRig {
     if (this.aimMode === enabled) return;
     this.aimMode = enabled;
 
-    // Nudge into a tighter feel, but still allow looking up.
     if (enabled) {
       this.camera.lowerRadiusLimit = Math.max(this.minRadius, 6);
       this.camera.upperRadiusLimit = Math.min(this.maxRadius, 14);
@@ -292,7 +285,6 @@ export class CameraRig {
       this.camera.inertia = 0.2;
     }
 
-    // Give a short transition window so the framing tightens smoothly.
     this.modeTransitionUntilMs = Date.now() + this.modeTransitionSeconds * 1000;
   }
 
@@ -310,17 +302,12 @@ export class CameraRig {
   /**
    * When true, camera rotation should be driven by external look (joystick/controller),
    * not ArcRotate pointer drag. This prevents ArcRotate from fighting your on-screen joystick.
-   *
-   * Placement / usage:
-   * - Call setExternalLookEnabled(true) when your joystick UI is mounted/active.
-   * - Call setExternalLookEnabled(false) when joystick UI is hidden or for desktop-only.
    */
   setExternalLookEnabled(enabled: boolean): void {
     if (this.externalLookEnabled === enabled) return;
     this.externalLookEnabled = enabled;
 
-    // If joystick is driving look, disable ArcRotate pointer rotation to prevent fights.
-    // We keep zoom inputs by re-adding wheel when unlocked.
+    // Disable ArcRotate pointer rotation to prevent fights.
     this.lockRotation(enabled);
 
     // Treat as "recent user input" so recenter doesn't yank immediately.
@@ -330,26 +317,18 @@ export class CameraRig {
 
   /**
    * Apply look angles from PlayerController (mouse-look or right-stick).
-   * yaw/pitch are radians (same units as controller).
-   *
-   * Wire this from PlayerController action handlers:
-   *   controller.setActionHandlers({
-   *     onLook: (yaw, pitch) => cameraRig.applyLook(yaw, pitch),
-   *   })
+   * yaw/pitch are radians.
    */
   applyLook(yaw: number, pitch: number): void {
-    this.lastAppliedYaw = yaw;
-    this.lastAppliedPitch = pitch;
-
     if (!this.externalLookEnabled) return;
 
-    // In external-look mode, the joystick/controller is authoritative.
+    // In external-look mode, joystick/controller is authoritative.
     // Keep both camera alpha and behindAlpha aligned so aim/recenter logic stays coherent.
     this.behindAlpha = yaw;
     this.camera.alpha = yaw;
 
     // Map controller pitch into ArcRotate beta.
-    // We keep the current preset as a "base framing" and let pitch offset it.
+    // Keep preset as base framing, apply pitch offset.
     const lower = this.camera.lowerBetaLimit ?? this.minBeta;
     const upper = this.camera.upperBetaLimit ?? this.maxBeta;
 
@@ -357,20 +336,10 @@ export class CameraRig {
     const desiredBeta = Scalar.Clamp(baseBeta - pitch, lower, upper);
     this.camera.beta = Scalar.Clamp(desiredBeta, this.minBeta, this.maxBeta);
 
-    // Mark as recent input so free-look recenter doesn't fight the stick.
+    // Mark as recent input so recenter doesn't fight the stick.
     this.lastPointerMoveMs = Date.now();
   }
 
-  /**
-   * Update camera each frame.
-   *
-   * @param playerPos - player world position
-   * @param interestPos - optional override for look target (e.g. interact focus)
-   * @param dt - delta time (seconds)
-   * @param playerYawDelta - how much the player rotated this frame (radians).
-   *   If provided, we rotate BOTH camera.alpha and behindAlpha so the camera keeps its relative framing.
-   * @param moveIntent - player's movement state (for soft recenter logic)
-   */
   update(
     playerPos: Vector3,
     interestPos?: Vector3,
@@ -380,16 +349,13 @@ export class CameraRig {
   ): void {
     dt = Math.min(Math.max(dt, 0), 0.05);
 
-    // Apply player yaw to camera + behind reference (keeps "behind player" stable relative to player turns)
-    // If external look is enabled, applyLook() is authoritative; do not additionally rotate alpha here.
+    // If external look is enabled, applyLook() is authoritative; do not also rotate alpha here.
     if (!this.externalLookEnabled && playerYawDelta !== 0) {
-      // NOTE: sign depends on your player/controller convention.
-      // Your original code used alpha -= delta; we keep that behavior.
       this.camera.alpha -= playerYawDelta;
       this.behindAlpha -= playerYawDelta;
     }
 
-    // Target smoothing - add height offset for better third-person framing
+    // Target smoothing
     const desiredTarget = this._tmpA;
     if (interestPos) {
       desiredTarget.copyFrom(interestPos);
@@ -409,7 +375,7 @@ export class CameraRig {
 
     this.camera.setTarget(this.targetPosition);
 
-    // Determine desired preset (plus aim overlay)
+    // Desired preset (plus aim overlay)
     let desired = this.targetSettings;
     if (this.aimMode) {
       desired = {
@@ -419,16 +385,16 @@ export class CameraRig {
       };
     }
 
-    // Smooth preset blending (radius always; beta only during transitions)
     const s = 1 - Math.exp(-this.settingsLerp * 60 * dt);
 
+    // Radius always blends
     this.currentSettings.radius = Scalar.Lerp(this.currentSettings.radius, desired.radius, s);
     this.camera.radius = Scalar.Clamp(this.currentSettings.radius, this.minRadius, this.maxRadius);
 
     const now = Date.now();
     const isTransitioning = now < this.modeTransitionUntilMs;
 
-    // Only steer beta during transition windows (and only if the user isn't dragging AND we aren't in external-look mode)
+    // Beta steering only during transitions (and not while dragging or external look)
     if (isTransitioning && !this.userIsDraggingOrbit && !this.externalLookEnabled) {
       const lower = this.camera.lowerBetaLimit ?? this.minBeta;
       const upper = this.camera.upperBetaLimit ?? this.maxBeta;
@@ -436,7 +402,7 @@ export class CameraRig {
       this.camera.beta = Scalar.Clamp(Scalar.Lerp(this.camera.beta, targetBeta, s), this.minBeta, this.maxBeta);
     }
 
-    // Celebrate mode orbit
+    // Celebrate orbit
     if (this.currentMode === 'CELEBRATE') {
       const elapsed = (now - this.celebrateStartTime) / 1000;
       if (elapsed < this.celebrateDuration) {
@@ -447,21 +413,19 @@ export class CameraRig {
       return;
     }
 
-    // Aim assist: gently center behind player if user isn't dragging and external look isn't controlling
+    // Aim assist (no fights with external look)
     if (this.aimMode && !this.userIsDraggingOrbit && !this.externalLookEnabled) {
       const a = 1 - Math.exp(-this.aimAssistStrength * 60 * dt);
       this.camera.alpha = lerpAngle(this.camera.alpha, this.behindAlpha, a);
     }
 
-    // Free-look soft recenter
+    // Soft recenter
     const userRecentlyOriented =
       this.userIsDraggingOrbit || (now - this.lastPointerMoveMs) < this.recenterDelayMs;
 
     if (!this.aimMode && !userRecentlyOriented && moveIntent?.isMoving && !this.externalLookEnabled) {
-      // Only recenter when moving forward enough (not backing up or strafing)
       const forward = Math.max(0, moveIntent.forwardAmount ?? 0);
       if (forward > 0.5) {
-        // Strength scales with forward input so it feels "earned"
         const k = this.recenterStrength * forward;
         const a = 1 - Math.exp(-k * 60 * dt);
         this.camera.alpha = lerpAngle(this.camera.alpha, this.behindAlpha, a);
@@ -475,12 +439,10 @@ export class CameraRig {
 
   /**
    * Locks/unlocks pointer inputs (useful if you're rotating camera by joystick/controller).
-   * This clears all inputs (including pointer) when locked, and restores wheel+pointers when unlocked.
    *
    * NOTE:
    * - On mobile, pinch zoom is implemented via pointers; clearing pointer inputs can remove pinch.
-   *   If you want pinch while joystick is active, we can re-add pointers but suppress rotation
-   *   by overriding input behavior. For now, this is the safest "no fights" implementation.
+   *   Current implementation chooses "no fights" over pinch-while-sticking.
    */
   lockRotation(locked: boolean): void {
     if (locked) {
@@ -488,7 +450,6 @@ export class CameraRig {
       return;
     }
 
-    // Restore common inputs. Add more here if you use gamepad/keyboard camera inputs.
     this.camera.inputs.addMouseWheel();
     this.camera.inputs.addPointers();
   }
@@ -513,13 +474,10 @@ export class CameraRig {
     this.lastPointerMoveMs = Date.now();
 
     this.pointerObs = scene.onPointerObservable.add((pi) => {
-      // In external look mode, we don't want ArcRotate pointer gestures to "count" as user orbit.
-      // But we still track "recent touch" to avoid recenter yanks if needed.
+      // In external look mode, don't treat touches as orbit-drag,
+      // but still count them as "recent input" for recenter delays.
       if (this.externalLookEnabled) {
-        if (pi.type === PointerEventTypes.POINTERMOVE) {
-          this.lastPointerMoveMs = Date.now();
-        }
-        if (pi.type === PointerEventTypes.POINTERDOWN) {
+        if (pi.type === PointerEventTypes.POINTERMOVE || pi.type === PointerEventTypes.POINTERDOWN) {
           this.lastPointerMoveMs = Date.now();
         }
         return;
@@ -552,7 +510,6 @@ export class CameraRig {
    * Alpha = 0 means camera sits on +X axis relative to target.
    */
   private static alphaFromToCameraDir(dirToCamera: Vector3): number {
-    // dirToCamera should be normalized, y ignored.
     return Math.atan2(dirToCamera.z, dirToCamera.x);
   }
 }
