@@ -1,5 +1,5 @@
 // src/game/GameHost.tsx
-import { useEffect, useMemo, useRef, useState } from 'react';
+import { useEffect, useMemo, useRef } from 'react';
 import { GameApp } from './GameApp';
 import { eventBus } from './shared/events';
 import HUD from '@ui/hud/HUD';
@@ -31,8 +31,7 @@ export default function GameHost({ running, onReady }: GameHostProps) {
   const showSticks = useMemo(() => {
     if (typeof window === 'undefined') return false;
     const coarse = window.matchMedia?.('(pointer: coarse)').matches ?? false;
-    const touch =
-      'ontouchstart' in window || (navigator.maxTouchPoints ?? 0) > 0;
+    const touch = 'ontouchstart' in window || (navigator.maxTouchPoints ?? 0) > 0;
     return coarse || touch;
   }, []);
 
@@ -107,10 +106,7 @@ export default function GameHost({ running, onReady }: GameHostProps) {
   };
 
   return (
-    <div
-      className="game-host"
-      style={{ width: '100%', height: '100%', position: 'relative' }}
-    >
+    <div className="game-host" style={{ width: '100%', height: '100%', position: 'relative' }}>
       <canvas
         ref={canvasRef}
         id="lw-canvas"
@@ -129,11 +125,7 @@ export default function GameHost({ running, onReady }: GameHostProps) {
       {running && showSticks && !isPaused && <DualStickControls />}
 
       {running && isPaused && (
-        <PauseMenu
-          onResume={handleResume}
-          onSettings={handleSettings}
-          onQuit={handleQuit}
-        />
+        <PauseMenu onResume={handleResume} onSettings={handleSettings} onQuit={handleQuit} />
       )}
     </div>
   );
