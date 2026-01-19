@@ -73,10 +73,6 @@ export class GameApp {
   private uiLook = { x: 0, y: 0, active: false };
   private uiLookActive = false;
 
-  // Camera orbit speeds while using right stick (tuned for tablets/phones)
-  private uiLookYawSpeed = 2.4; // rad/sec
-  private uiLookPitchSpeed = 1.8; // rad/sec
-
   constructor(
     canvas: HTMLCanvasElement,
     private bus: typeof eventBus,
@@ -774,16 +770,6 @@ this.playerController.setVirtualInput({ isAiming: this.uiSticksEnabled });
       const interestPos = (this.companion && this.cameraRig) ? undefined : undefined;
 
       this.cameraRig.update(activePlayer.position, interestPos, dt, yawDelta, moveIntent);
-
-        // Yaw: right stick x rotates around target
-        cam.alpha -= this.uiLook.x * this.uiLookYawSpeed * dt;
-
-        // Pitch: clamp within camera's configured limits
-        const lower = (cam.lowerBetaLimit ?? 0.1);
-        const upper = (cam.upperBetaLimit ?? (Math.PI - 0.1));
-        const nextBeta = cam.beta + this.uiLook.y * this.uiLookPitchSpeed * dt;
-        cam.beta = Math.max(lower, Math.min(upper, nextBeta));
-      }
     }
 
     // Update campfire VFX

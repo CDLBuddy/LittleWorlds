@@ -26,14 +26,16 @@ export function ToolsTab({ items }: ToolsTabProps) {
       <div className={styles.itemGrid}>
         {items.map((itemId, idx) => {
           const itemData = ITEMS[itemId];
+          // Only show emoji icons for now (skip .png paths until assets are added)
+          const displayIcon = itemData?.icon && !itemData.icon.includes('.png') ? itemData.icon : '📦';
           
           return (
             <div key={`${itemId}-${idx}`} className={styles.itemCard}>
               <div className={styles.itemIcon}>
-                {itemData?.icon || '📦'}
+                {displayIcon}
               </div>
               <div className={styles.itemName}>
-                {formatItemName(itemId)}
+                {itemData?.name || formatItemName(itemId)}
               </div>
               {itemData?.description && (
                 <div className={styles.itemDescription}>
