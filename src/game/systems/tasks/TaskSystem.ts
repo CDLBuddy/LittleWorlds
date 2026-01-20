@@ -43,7 +43,10 @@ export class TaskSystem {
             { role: this.currentRole, count: this.inventory.size, epoch: this.roleEpoch }
           );
         }
-        this.broadcastInventory();
+        this.broadcastInventory(true); // Force broadcast even if signature unchanged
+      } else if (evt.type === 'game/targetHit') {
+        // Handle projectile hitting a target
+        this.handleTargetHit(evt.targetId, evt.roleId);
       }
     });
   }
@@ -267,6 +270,31 @@ export class TaskSystem {
     });
   }
 
+  /**
+   * Handle target hit from projectile (Phase v0.8.0 - Phase 8)
+   */
+  private handleTargetHit(targetId: string, roleId: RoleId): void {
+    // Ignore if not our current role
+    if (roleId !== this.currentRole) {
+      return;
+    }
+
+    const step = this.getCurrentStep();
+    if (!step) {
+      return;
+    }
+
+    // Check if this target matches the current task step
+    if (step.targetId === targetId) {
+      if (import.meta.env.DEV) {
+        console.log('[TaskSystem] Target hit matches current task:', targetId);
+      }
+
+      // Complete the step (treat target hits like interactions)
+      this.completeCurrentStep();
+    }
+  }
+
   private broadcastInventory(force = false): void {
     const items = Array.from(this.inventory);
     // Signature avoids identical payload spam (common during UI polling or repeated calls)
@@ -275,19 +303,24 @@ export class TaskSystem {
     if (!force && sig === this.lastInventorySignature) return;
     this.lastInventorySignature = sig;
 
-    // if (import.meta.env.DEV) {
-    //   console.log('[TaskSystem] Broadcasting inventory:', {
-    //     role: this.currentRole,
-    //     count: items.length,
-    //     epoch: this.roleEpoch,
-    //   });
-    // }
+    if (import.meta.env.DEV) {
+      console.log('[TaskSystem] Broadcasting inventory:', {
+        role: this.currentRole,
+        count: items.length,
+        items: items,
+        epoch: this.roleEpoch,
+      });
+    }
 
     this.eventBus.emit({
       type: 'game/inventoryUpdate',
       roleId: this.currentRole,
       items,
     });
+
+    if (import.meta.env.DEV) {
+      console.log('[TaskSystem] Inventory update emitted');
+    }
   }
 
   /**

@@ -492,13 +492,14 @@ export class PlayerController {
             return;
           }
 
-          const hit = this.pickWalkableAtScreen(this.scene.pointerX, this.scene.pointerY);
-          if (hit?.hit && hit.pickedPoint) {
-            const dist = Vector3.Distance(this.player.position, hit.pickedPoint);
-            if (dist > this.stopDistance) {
-              this.targetPosition = hit.pickedPoint.clone();
-            }
-          }
+          // Point-to-move disabled - causes conflicts with tool aiming/firing
+          // const hit = this.pickWalkableAtScreen(this.scene.pointerX, this.scene.pointerY);
+          // if (hit?.hit && hit.pickedPoint) {
+          //   const dist = Vector3.Distance(this.player.position, hit.pickedPoint);
+          //   if (dist > this.stopDistance) {
+          //     this.targetPosition = hit.pickedPoint.clone();
+          //   }
+          // }
         }
         return;
       }

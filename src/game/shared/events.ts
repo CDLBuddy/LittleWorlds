@@ -26,7 +26,13 @@ export type UiToGame =
   | { type: 'ui/getInventory' } // Request current inventory
   | { type: 'ui/getCollections' } // Request shared collections progress
   | { type: 'ui/switchCharacter'; roleId: 'boy' | 'girl' } // Switch active character
-  | { type: 'ui/toast'; level: 'info' | 'warning' | 'error'; message: string };
+  | { type: 'ui/toast'; level: 'info' | 'warning' | 'error'; message: string }
+  // Tool system events
+  | { type: 'ui/tool/equip'; toolId: string; roleId: 'boy' | 'girl' }
+  | { type: 'ui/tool/unequip'; roleId: 'boy' | 'girl' }
+  | { type: 'ui/tool/fire'; roleId: 'boy' | 'girl' }
+  | { type: 'ui/tool/aimStart'; roleId: 'boy' | 'girl' }
+  | { type: 'ui/tool/aimEnd'; roleId: 'boy' | 'girl' };
 
 // Game → UI events
 export type GameToUi =
@@ -45,7 +51,12 @@ export type GameToUi =
   | { type: 'game/areaRequest'; areaId: string; fromArea?: string; fromGateId?: string } // Request area transition (from gate)
   | { type: 'game/inventoryUpdate'; roleId: 'boy' | 'girl'; items: string[] } // Send current inventory to UI with role
   | { type: 'game/characterSwitch'; roleId: 'boy' | 'girl' } // Character switched
-  | { type: 'game/collectionsUpdate'; shared: { findsByArea: Record<string, string[]>; trophiesByArea: Record<string, boolean>; postcardsByArea: Record<string, boolean>; audioByArea: Record<string, boolean>; campUpgrades: string[] } }; // Shared collections progress
+  | { type: 'game/collectionsUpdate'; shared: { findsByArea: Record<string, string[]>; trophiesByArea: Record<string, boolean>; postcardsByArea: Record<string, boolean>; audioByArea: Record<string, boolean>; campUpgrades: string[] } } // Shared collections progress
+  // Tool system events
+  | { type: 'game/toolEquipped'; toolId: string | null; roleId: 'boy' | 'girl' }
+  | { type: 'game/toolAmmoUpdate'; toolId: string; ammo: number; maxAmmo: number; roleId: 'boy' | 'girl' }
+  | { type: 'game/toolError'; message: string; roleId: 'boy' | 'girl' }
+  | { type: 'game/targetHit'; targetId: string; position: { x: number; y: number; z: number }; roleId: 'boy' | 'girl' };
 
 export type AppEvent = UiToGame | GameToUi;
 

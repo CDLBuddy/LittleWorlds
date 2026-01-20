@@ -1,0 +1,219 @@
+/**
+ * Tool HUD Styles
+ * Phase v0.8.0 - Interactive Tool System
+ */
+
+/* Main Tool HUD Container */
+.toolHUD {
+  position: absolute;
+  top: 20px;
+  right: 96px; /* 64px (inventory button) + 12px gap + 20px original offset = 96px from right */
+  z-index: 100;
+  pointer-events: auto;
+}
+
+/* Tool Button Base */
+.toolButton {
+  position: relative;
+  width: 64px;
+  height: 64px;
+  border-radius: 12px;
+  border: 3px solid rgba(139, 111, 71, 0.6);
+  background: linear-gradient(145deg, rgba(42, 26, 10, 0.95), rgba(26, 10, 0, 0.95));
+  cursor: pointer;
+  transition: all 0.2s ease;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.5), inset 0 1px 0 rgba(255, 255, 255, 0.1);
+  overflow: hidden;
+}
+
+.toolButton:hover {
+  transform: scale(1.05);
+  border-color: rgba(212, 175, 55, 0.8);
+  box-shadow: 0 6px 16px rgba(0, 0, 0, 0.6), inset 0 1px 0 rgba(255, 255, 255, 0.2);
+}
+
+.toolButton:active {
+  transform: scale(0.98);
+}
+
+/* Empty state (no tool equipped) */
+.toolButton.empty {
+  border-color: rgba(139, 111, 71, 0.4);
+  background: linear-gradient(145deg, rgba(42, 26, 10, 0.7), rgba(26, 10, 0, 0.7));
+}
+
+.toolButton.empty .toolIcon {
+  color: rgba(139, 111, 71, 0.6);
+  font-size: 32px;
+  font-weight: 300;
+}
+
+/* Equipped state (has tool) */
+.toolButton.equipped {
+  border-color: rgba(212, 175, 55, 0.8);
+  animation: equippedPulse 2s ease-in-out infinite;
+}
+
+@keyframes equippedPulse {
+  0%, 100% {
+    box-shadow: 0 4px 12px rgba(0, 0, 0, 0.5), 
+                inset 0 1px 0 rgba(255, 255, 255, 0.1),
+                0 0 15px rgba(212, 175, 55, 0.3);
+  }
+  50% {
+    box-shadow: 0 4px 12px rgba(0, 0, 0, 0.5), 
+                inset 0 1px 0 rgba(255, 255, 255, 0.1),
+                0 0 25px rgba(212, 175, 55, 0.5);
+  }
+}
+
+/* Tool Icon */
+.toolIcon {
+  font-size: 36px;
+  filter: drop-shadow(0 2px 4px rgba(0, 0, 0, 0.4));
+  transition: transform 0.2s ease;
+}
+
+.toolButton:hover .toolIcon {
+  transform: scale(1.1);
+}
+
+/* Equipped glow indicator */
+.equippedGlow {
+  position: absolute;
+  top: -3px;
+  right: -3px;
+  width: 12px;
+  height: 12px;
+  background: linear-gradient(145deg, #4CAF50, #2E7D32);
+  border: 2px solid #fff;
+  border-radius: 50%;
+  box-shadow: 0 0 8px rgba(76, 175, 80, 0.8);
+  animation: glowPulse 1.5s ease-in-out infinite;
+}
+
+@keyframes glowPulse {
+  0%, 100% {
+    opacity: 1;
+    transform: scale(1);
+  }
+  50% {
+    opacity: 0.7;
+    transform: scale(1.1);
+  }
+}
+
+/* Tooltip */
+.toolTooltip {
+  position: absolute;
+  top: 50%;
+  left: calc(100% + 12px);
+  transform: translateY(-50%);
+  background: rgba(26, 10, 0, 0.95);
+  border: 2px solid rgba(212, 175, 55, 0.6);
+  border-radius: 8px;
+  padding: 8px 12px;
+  color: #f5deb3;
+  font-size: 14px;
+  font-weight: 600;
+  font-family: sans-serif;
+  white-space: nowrap;
+  pointer-events: none;
+  opacity: 0;
+  transition: opacity 0.2s ease;
+  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.6);
+  z-index: 1;
+}
+
+.toolButton:hover + .toolTooltip,
+.toolHUD:hover .toolTooltip {
+  opacity: 1;
+}
+
+/* Radial Selector Overlay (placeholder for Phase 3) */
+.radialOverlay {
+  position: fixed;
+  top: 0;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  background: rgba(0, 0, 0, 0.7);
+  backdrop-filter: blur(4px);
+  z-index: 200;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  animation: fadeIn 0.2s ease;
+}
+
+@keyframes fadeIn {
+  from {
+    opacity: 0;
+  }
+  to {
+    opacity: 1;
+  }
+}
+
+.radialPlaceholder {
+  background: linear-gradient(145deg, #2a1a0a, #1a0a00);
+  border: 3px solid #8b6f47;
+  border-radius: 16px;
+  padding: 40px 60px;
+  text-align: center;
+  color: #f5deb3;
+  font-family: sans-serif;
+}
+
+.radialPlaceholder p {
+  margin: 0 0 16px 0;
+  font-size: 18px;
+}
+
+.radialPlaceholder button {
+  background: linear-gradient(145deg, #8b6f47, #6b5437);
+  border: 2px solid #5a4527;
+  border-radius: 8px;
+  padding: 12px 32px;
+  color: #f5deb3;
+  font-size: 16px;
+  font-weight: 600;
+  cursor: pointer;
+  transition: all 0.2s ease;
+}
+
+.radialPlaceholder button:hover {
+  background: linear-gradient(145deg, #9b7f57, #7b6447);
+  transform: scale(1.05);
+}
+
+/* Mobile optimizations */
+@media (max-width: 768px) {
+  .toolHUD {
+    top: 16px;
+    left: 16px;
+  }
+
+  .toolButton {
+    width: 56px;
+    height: 56px;
+  }
+
+  .toolIcon {
+    font-size: 32px;
+  }
+
+  .toolTooltip {
+    display: none; /* Hide tooltip on mobile */
+  }
+}
+
+/* High DPI displays */
+@media (-webkit-min-device-pixel-ratio: 2), (min-resolution: 192dpi) {
+  .toolButton {
+    border-width: 2px;
+  }
+}

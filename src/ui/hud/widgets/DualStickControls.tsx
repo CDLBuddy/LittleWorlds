@@ -1,6 +1,6 @@
 // src/ui/hud/widgets/DualStickControls.tsx
 import React, { useEffect, useMemo, useRef, useState } from 'react';
-import { eventBus } from '@game/shared/events';
+import { eventBus, type AppEvent } from '@game/shared/events';
 
 type StickKind = 'move' | 'look';
 
@@ -47,6 +47,10 @@ export default function DualStickControls() {
   // Mirror dx/dy into state so the knob animates (refs alone don't re-render)
   const [moveKnob, setMoveKnob] = useState({ dx: 0, dy: 0 });
   const [lookKnob, setLookKnob] = useState({ dx: 0, dy: 0 });
+  
+  // Track if ranged tool is equipped for fire button visibility
+  const [hasRangedTool, setHasRangedTool] = useState(false);
+  const [currentRole, setCurrentRole] = useState<'boy' | 'girl'>('boy');
 
   // Tuning (px)
   const cfg = useMemo(
@@ -61,8 +65,23 @@ export default function DualStickControls() {
 
   useEffect(() => {
     (eventBus as any).emit({ type: 'ui/stick/enabled', enabled: true });
+    
+    // Listen for tool equipped events
+    const unsubscribe = eventBus.on((event: AppEvent) => {
+      if (event.type === 'game/toolEquipped') {
+        // Check if it's a ranged tool (has projectile config)
+        setHasRangedTool(true); // Assume slingshot for now
+        setCurrentRole(event.roleId);
+      } else if (event.type === 'game/characterSwitch' || event.type === 'ui/tool/unequip') {
+        setHasRangedTool(false);
+        if (event.type === 'game/characterSwitch') {
+          setCurrentRole(event.roleId);
+        }
+      }
+    });
 
     return () => {
+      unsubscribe();
       (eventBus as any).emit({ type: 'ui/stick/enabled', enabled: false });
       (eventBus as any).emit({ type: 'ui/stick/move', x: 0, y: 0, active: false });
       (eventBus as any).emit({ type: 'ui/stick/look', x: 0, y: 0, active: false });
@@ -164,6 +183,18 @@ export default function DualStickControls() {
     emit(kind, 0, 0, false);
   };
 
+  const handleFireDown = (e: React.PointerEvent<HTMLButtonElement>) => {
+    e.preventDefault();
+    e.stopPropagation();
+    (eventBus as any).emit({ type: 'ui/tool/fireDown', roleId: currentRole });
+  };
+
+  const handleFireUp = (e: React.PointerEvent<HTMLButtonElement>) => {
+    e.preventDefault();
+    e.stopPropagation();
+    (eventBus as any).emit({ type: 'ui/tool/fireUp', roleId: currentRole });
+  };
+
   // Hard failsafe: if browser drops pointerup/cancel, reset on blur
   useEffect(() => {
     const onBlur = () => {
@@ -256,6 +287,32 @@ export default function DualStickControls() {
     pointerEvents: 'none',
   };
 
+  const fireButtonWrap: React.CSSProperties = {
+    position: 'absolute',
+    left: '50%',
+    bottom,
+    transform: 'translateX(-50%)',
+    pointerEvents: 'auto',
+  };
+
+  const fireButtonStyle: React.CSSProperties = {
+    width: 90,
+    height: 90,
+    borderRadius: 999,
+    background: 'linear-gradient(135deg, rgba(255,80,40,0.8), rgba(255,150,40,0.8))',
+    border: '2px solid rgba(255,255,255,0.4)',
+    boxShadow: '0 10px 28px rgba(255,60,20,0.3), inset 0 2px 8px rgba(255,255,255,0.3)',
+    backdropFilter: 'blur(10px)',
+    WebkitBackdropFilter: 'blur(10px)',
+    touchAction: 'none',
+    display: 'grid',
+    placeItems: 'center',
+    fontSize: 32,
+    cursor: 'pointer',
+    transition: 'all 0.15s ease',
+    userSelect: 'none',
+  };
+
   return (
     <div style={rootStyle}>
       {/* LEFT: MOVE */}
@@ -289,6 +346,22 @@ export default function DualStickControls() {
           <div style={knob(lookKnob.dx, lookKnob.dy)} />
         </div>
       </div>
+
+      {/* FIRE BUTTON (only when ranged tool equipped) */}
+      {hasRangedTool && (
+        <div style={fireButtonWrap}>
+          <div style={{ ...labelStyle, top: -28 }}>FIRE</div>
+          <button
+            style={fireButtonStyle}
+            onPointerDown={handleFireDown}
+            onPointerUp={handleFireUp}
+            onPointerCancel={handleFireUp}
+            aria-label="Fire weapon"
+          >
+            🎯
+          </button>
+        </div>
+      )}
     </div>
   );
 }

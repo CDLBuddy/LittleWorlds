@@ -8,6 +8,7 @@ import { InventoryHUD } from '@ui/inventory/InventoryHUD';
 import CompanionCallButton from './widgets/CompanionCallButton';
 import ToastOverlay from './widgets/ToastOverlay';
 import DualStickControls from './widgets/DualStickControls';
+import { ToolHUD } from './widgets/ToolHUD';
 
 export default function HUD() {
   const {
@@ -69,6 +70,9 @@ export default function HUD() {
           <HintPulse key={prompt.id} icon={prompt.icon} dwellProgress={prompt.dwellProgress} />
         ))}
       </div>
+
+      {/* Tool HUD Widget - top left */}
+      <ToolHUD />
 
       {/* Inventory display - top right */}
       <InventoryHUD />

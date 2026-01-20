@@ -67,6 +67,13 @@ export function createTargetInteractable(
   mat.diffuseColor = color;
   mesh.material = mat;
 
+  // Mark as target for projectile hit detection
+  mesh.metadata = {
+    isTarget: true,
+    targetId: id,
+    canBeHit: true
+  };
+
   return {
     id,
     mesh,

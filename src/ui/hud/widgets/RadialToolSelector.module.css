@@ -1,0 +1,271 @@
+/**
+ * Radial Tool Selector Styles
+ * Phase v0.8.0 - Phase 3
+ */
+
+/* Backdrop overlay */
+.backdrop {
+  position: fixed;
+  top: 0;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  background: rgba(0, 0, 0, 0.6);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  z-index: 500;
+  pointer-events: auto;
+  animation: fadeIn 0.2s ease;
+}
+
+@keyframes fadeIn {
+  from {
+    opacity: 0;
+  }
+  to {
+    opacity: 1;
+  }
+}
+
+/* Main radial container */
+.radialContainer {
+  position: relative;
+  width: 400px;
+  height: 300px;
+  animation: scaleIn 0.3s cubic-bezier(0.34, 1.56, 0.64, 1);
+}
+
+@keyframes scaleIn {
+  from {
+    transform: scale(0.8);
+    opacity: 0;
+  }
+  to {
+    transform: scale(1);
+    opacity: 1;
+  }
+}
+
+/* Center anchor point (visual reference) */
+.centerAnchor {
+  position: absolute;
+  top: 50%;
+  left: 50%;
+  width: 12px;
+  height: 12px;
+  background: radial-gradient(circle, rgba(212, 175, 55, 0.8), transparent);
+  border-radius: 50%;
+  transform: translate(-50%, -50%);
+  pointer-events: none;
+  z-index: 1;
+}
+
+/* Tool slot button */
+.toolSlot {
+  position: absolute;
+  top: 50%;
+  left: 50%;
+  width: 72px;
+  height: 72px;
+  border-radius: 50%;
+  border: 3px solid rgba(139, 111, 71, 0.6);
+  background: linear-gradient(145deg, rgba(42, 26, 10, 0.95), rgba(26, 10, 0, 0.95));
+  cursor: pointer;
+  transition: all 0.2s ease;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: 2px;
+  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.5), inset 0 1px 0 rgba(255, 255, 255, 0.1);
+  animation: toolSlotAppear 0.3s ease backwards;
+  z-index: 2;
+}
+
+/* Stagger animation for tool slots */
+.toolSlot:nth-child(2) {
+  animation-delay: 0.05s;
+}
+.toolSlot:nth-child(3) {
+  animation-delay: 0.1s;
+}
+.toolSlot:nth-child(4) {
+  animation-delay: 0.15s;
+}
+.toolSlot:nth-child(5) {
+  animation-delay: 0.2s;
+}
+.toolSlot:nth-child(6) {
+  animation-delay: 0.25s;
+}
+
+@keyframes toolSlotAppear {
+  from {
+    transform: translate(-50%, -50%) scale(0.5);
+    opacity: 0;
+  }
+  to {
+    transform: translate(-50%, -50%) scale(1);
+    opacity: 1;
+  }
+}
+
+.toolSlot:hover {
+  transform: translate(-50%, -50%) scale(1.1);
+  border-color: rgba(212, 175, 55, 0.9);
+  box-shadow: 0 6px 16px rgba(0, 0, 0, 0.6), 0 0 20px rgba(212, 175, 55, 0.3);
+}
+
+.toolSlot:active {
+  transform: translate(-50%, -50%) scale(0.95);
+}
+
+/* Equipped tool highlight */
+.toolSlot.equipped {
+  border-color: rgba(212, 175, 55, 1);
+  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.5), 0 0 25px rgba(212, 175, 55, 0.5),
+    inset 0 0 10px rgba(212, 175, 55, 0.2);
+  animation: equippedPulse 2s ease-in-out infinite;
+}
+
+@keyframes equippedPulse {
+  0%,
+  100% {
+    box-shadow: 0 4px 12px rgba(0, 0, 0, 0.5), 0 0 25px rgba(212, 175, 55, 0.5),
+      inset 0 0 10px rgba(212, 175, 55, 0.2);
+  }
+  50% {
+    box-shadow: 0 4px 12px rgba(0, 0, 0, 0.5), 0 0 35px rgba(212, 175, 55, 0.7),
+      inset 0 0 15px rgba(212, 175, 55, 0.3);
+  }
+}
+
+/* Tool icon */
+.toolIcon {
+  font-size: 32px;
+  line-height: 1;
+  filter: drop-shadow(0 2px 4px rgba(0, 0, 0, 0.5));
+}
+
+/* Tool name label */
+.toolName {
+  font-size: 10px;
+  color: rgba(212, 175, 55, 0.9);
+  font-weight: 600;
+  text-align: center;
+  text-shadow: 0 1px 2px rgba(0, 0, 0, 0.8);
+  white-space: nowrap;
+  max-width: 68px;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+/* Unequip button at bottom */
+.unequipButton {
+  position: absolute;
+  bottom: 20px;
+  left: 50%;
+  transform: translateX(-50%);
+  width: 80px;
+  height: 40px;
+  border-radius: 20px;
+  border: 2px solid rgba(139, 111, 71, 0.6);
+  background: linear-gradient(145deg, rgba(42, 26, 10, 0.95), rgba(26, 10, 0, 0.95));
+  cursor: pointer;
+  transition: all 0.2s ease;
+  display: flex;
+  flex-direction: row;
+  align-items: center;
+  justify-content: center;
+  gap: 4px;
+  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.5);
+  animation: unequipButtonAppear 0.3s ease 0.3s backwards;
+  z-index: 2;
+}
+
+@keyframes unequipButtonAppear {
+  from {
+    transform: translateX(-50%) translateY(20px);
+    opacity: 0;
+  }
+  to {
+    transform: translateX(-50%) translateY(0);
+    opacity: 1;
+  }
+}
+
+.unequipButton:hover:not(:disabled) {
+  transform: translateX(-50%) scale(1.05);
+  border-color: rgba(212, 175, 55, 0.9);
+  box-shadow: 0 6px 16px rgba(0, 0, 0, 0.6), 0 0 15px rgba(212, 175, 55, 0.3);
+}
+
+.unequipButton:active:not(:disabled) {
+  transform: translateX(-50%) scale(0.95);
+}
+
+.unequipButton:disabled {
+  opacity: 0.4;
+  cursor: not-allowed;
+}
+
+.unequipIcon {
+  font-size: 16px;
+  color: rgba(212, 175, 55, 0.9);
+}
+
+.unequipText {
+  font-size: 11px;
+  color: rgba(212, 175, 55, 0.9);
+  font-weight: 600;
+  text-shadow: 0 1px 2px rgba(0, 0, 0, 0.8);
+}
+
+/* Mobile optimizations */
+@media (max-width: 768px) {
+  .radialContainer {
+    width: 320px;
+    height: 240px;
+  }
+
+  .toolSlot {
+    width: 64px;
+    height: 64px;
+  }
+
+  .toolIcon {
+    font-size: 28px;
+  }
+
+  .toolName {
+    font-size: 9px;
+    max-width: 60px;
+  }
+
+  .unequipButton {
+    width: 70px;
+    height: 36px;
+  }
+
+  .unequipIcon {
+    font-size: 14px;
+  }
+
+  .unequipText {
+    font-size: 10px;
+  }
+}
+
+/* Tablet optimizations */
+@media (min-width: 769px) and (max-width: 1024px) {
+  .radialContainer {
+    width: 360px;
+    height: 270px;
+  }
+
+  .toolSlot {
+    width: 68px;
+    height: 68px;
+  }
+}

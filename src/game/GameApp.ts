@@ -31,6 +31,10 @@ import { GATE_PAIR } from './content/gatePairs';
 import { setPendingSpawn } from './worlds/spawnState';
 import type { InteractableId } from './content/interactableIds';
 import { validateSpawnSystem } from './worlds/validateSpawnSystem';
+import { ToolEquipmentSystem } from './systems/tools/ToolEquipmentSystem';
+import { SlingshotAimSystem } from './systems/tools/SlingshotAimSystem';
+import { ProjectileSystem } from './systems/tools/ProjectileSystem';
+import { ToolInputHandler } from './systems/tools/ToolInputHandler';
 
 /**
  * GameApp - Main orchestrator for the Babylon.js game
@@ -65,6 +69,10 @@ export class GameApp {
   private progressionSystem: ProgressionSystem | null = null;
   private autosaveSystem: AutosaveSystem | null = null;
   private characterSwitchSystem: CharacterSwitchSystem | null = null;
+  private toolEquipmentSystem: ToolEquipmentSystem | null = null;
+  private slingshotAimSystem: SlingshotAimSystem | null = null;
+  private projectileSystem: ProjectileSystem | null = null;
+  private toolInputHandler: ToolInputHandler | null = null;
   private startParams: { roleId: RoleId; areaId: AreaId; fromArea?: AreaId };
 
   // --- UI sticks (mobile/tablet) ---------------------------------------------
@@ -491,6 +499,37 @@ this.playerController.setVirtualInput({ isAiming: this.uiSticksEnabled });
       this.characterSwitchSystem.setWorld(this.currentWorld);
     }
 
+    // Create tool equipment system (Phase v0.8.0)
+    this.toolEquipmentSystem = new ToolEquipmentSystem(this.scene, this.bus);
+    if (this.currentWorld && this.toolEquipmentSystem) {
+      this.toolEquipmentSystem.setPlayers(this.currentWorld.boyPlayer, this.currentWorld.girlPlayer);
+      this.toolEquipmentSystem.setCurrentRole(startRole);
+    }
+
+    // Create slingshot aim system (Phase v0.8.0 - Phase 5)
+    if (this.cameraRig) {
+      this.slingshotAimSystem = new SlingshotAimSystem(this.scene, this.cameraRig.getCamera(), this.bus);
+    }
+
+    // Create projectile system (Phase v0.8.0 - Phase 6)
+    this.projectileSystem = new ProjectileSystem(this.scene, this.bus);
+    
+    // Connect camera rig for shake effects
+    if (this.cameraRig) {
+      this.projectileSystem.setCameraRig(this.cameraRig);
+    }
+
+    // Create tool input handler (Phase v0.8.0 - Phase 7)
+    if (this.slingshotAimSystem && this.projectileSystem && this.currentWorld) {
+      this.toolInputHandler = new ToolInputHandler(
+        this.bus,
+        this.slingshotAimSystem,
+        this.projectileSystem,
+        () => this.currentWorld!.boyPlayer,
+        () => this.currentWorld!.girlPlayer
+      );
+    }
+
     // Create interaction system
     this.interactionSystem = new InteractionSystem(this.taskSystem, this.bus);
 
@@ -787,6 +826,12 @@ this.playerController.setVirtualInput({ isAiming: this.uiSticksEnabled });
       this.wakeRadiusSystem.update(activePlayer.position);
     }
 
+    // Update slingshot aim system
+    this.slingshotAimSystem?.update();
+
+    // Update projectile system
+    this.projectileSystem?.update(dt);
+
     // Update debug overlay (dev only)
     if (this.debugOverlay && activePlayer) {
       this.debugOverlay.updateFPS(this.engine.getFps());
@@ -863,6 +908,18 @@ this.playerController.setVirtualInput({ isAiming: this.uiSticksEnabled });
     this.interactionSystem?.dispose();
     this.interactionSystem = null;
     this.interactables = [];
+
+    this.toolEquipmentSystem?.dispose();
+    this.toolEquipmentSystem = null;
+
+    this.slingshotAimSystem?.dispose();
+    this.slingshotAimSystem = null;
+
+    this.projectileSystem?.dispose();
+    this.projectileSystem = null;
+
+    this.toolInputHandler?.dispose();
+    this.toolInputHandler = null;
 
     this.autosaveSystem?.dispose();
     this.autosaveSystem = null;

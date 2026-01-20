@@ -506,6 +506,44 @@ export class CameraRig {
   }
 
   /**
+   * Apply camera shake effect (for impacts, explosions, etc.)
+   * @param intensity - Shake strength (0-1, where 1 is max shake)
+   * @param duration - Shake duration in seconds
+   */
+  shake(intensity: number = 0.5, duration: number = 0.15): void {
+    const scene = this.camera.getScene();
+    const startTime = Date.now();
+    const originalTarget = this.camera.target.clone();
+    const shakeRadius = intensity * 0.3; // Max 0.3 units of shake
+    
+    let shakeObserver: Observer<Scene> | null = null;
+    shakeObserver = scene.onBeforeRenderObservable.add(() => {
+      const elapsed = (Date.now() - startTime) / 1000;
+      if (elapsed >= duration) {
+        if (shakeObserver) {
+          scene.onBeforeRenderObservable.remove(shakeObserver);
+        }
+        return;
+      }
+      
+      // Decay shake over time
+      const decay = 1 - (elapsed / duration);
+      const shake = shakeRadius * decay;
+      
+      // Random shake offset
+      const offsetX = (Math.random() - 0.5) * shake * 2;
+      const offsetY = (Math.random() - 0.5) * shake * 2;
+      const offsetZ = (Math.random() - 0.5) * shake * 2;
+      
+      // Apply shake to target
+      this.camera.target.copyFrom(originalTarget);
+      this.camera.target.x += offsetX;
+      this.camera.target.y += offsetY;
+      this.camera.target.z += offsetZ;
+    });
+  }
+
+  /**
    * Given a normalized XZ direction from target -> camera, compute ArcRotateCamera alpha.
    * Alpha = 0 means camera sits on +X axis relative to target.
    */
